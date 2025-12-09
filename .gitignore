@@ -4,19 +4,9 @@
 .DS_Store
 
 # ---------------------------
-# Xcode / iOS
-# ---------------------------
-build/
-DerivedData/
-xcuserdata/
-*.xcuserstate
-*.xcscmblueprint
-*.xccheckout
-*.moved-aside
-
-# ---------------------------
 # Python
 # ---------------------------
 .venv/
 .env
 __pycache__/
+*.egg-info
