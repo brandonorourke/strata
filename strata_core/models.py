@@ -38,27 +38,4 @@ class NewsArticle(Base):
     raw_html = Column(Text, nullable=True)
     clean_text = Column(Text, nullable=True)
 
-    processed_by_llm = Column(Boolean, default=False, nullable=False)
-
-    events = relationship("EntityEvent", back_populates="article")
-
-
-class EntityEvent(Base):
-    __tablename__ = "entity_events"
-
-    id = Column(Integer, primary_key=True, index=True)
-    article_id = Column(Integer, ForeignKey("news_articles.id"), nullable=False)
-
-    canonical_company_name = Column(String(500), nullable=False)
-    normalized_name = Column(String(500), nullable=False, index=True)
-
-    event_type = Column(String(100), nullable=False)    # "legal_action", "layoff", etc.
-    event_date = Column(DateTime, nullable=True)
-    is_primary_entity = Column(Boolean, default=False, nullable=False)
-
-    raw_mentions = Column(JSON, nullable=True)          # list of strings
-    event_description = Column(Text, nullable=True)
-    transaction_role = Column(String(100), nullable=True)
-    confidence = Column(Integer, nullable=True)         # or Float
-
-    article = relationship("NewsArticle", back_populates="events")
+    processed_by_llm_on = Column(DateTime, nullable=True)
