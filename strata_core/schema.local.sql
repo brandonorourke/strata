@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict v0qEpcjPqkVfS8eL8qM4e19T6qOHTwrDMmHI5r8oHKmhrcFsPSfbDX2UeJbj51j
+\restrict qyDRziiMrGqQRINkJRtZjq5SNiap6bkcc6cXbyK1rNchWEwbya4eA5CYySN2OoR
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -49,7 +49,7 @@ CREATE TABLE public.news_articles (
     ingested_at timestamp with time zone DEFAULT now(),
     raw_html text,
     clean_text text,
-    processed_by_llm_at timestamp with time zone
+    llm_raw jsonb
 );
 
 
@@ -114,5 +114,5 @@ CREATE INDEX ix_news_articles_published_at ON public.news_articles USING btree (
 -- PostgreSQL database dump complete
 --
 
-\unrestrict v0qEpcjPqkVfS8eL8qM4e19T6qOHTwrDMmHI5r8oHKmhrcFsPSfbDX2UeJbj51j
+\unrestrict qyDRziiMrGqQRINkJRtZjq5SNiap6bkcc6cXbyK1rNchWEwbya4eA5CYySN2OoR
 

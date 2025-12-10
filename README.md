@@ -7,10 +7,11 @@ We use Python 3.12.7
 ```bash
 cd strata
 pyenv local 3.12.7
-python3 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
+pip freeze > requirements.lock                # To make sure no changes
 
 # create a local env file and database (values should match your Postgres setup)
 cp infra/env.example .env  # adjust values inside if needed
@@ -25,6 +26,7 @@ pg_dump strata --schema-only --no-owner > strata_core/schema.local.sql
 
 - The canonical schema lives in `strata_core/schema.local.sql`. Load it into a fresh database with `psql "$DATABASE_URL" -f strata_core/schema.local.sql`.
 - Ad-hoc SQL migrations (if needed) live under `migrations/` and should be applied manually in order.
+- To run locally: `psql strata -f migrations/0001_drop_processed_by_llm_at.sql`
 - After changing the schema, rerun `pg_dump --schema-only --no-owner > strata_core/schema.local.sql` so the snapshot stays current.
 
 ### Production environment
