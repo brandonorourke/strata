@@ -10,6 +10,8 @@ from sqlalchemy import select
 from strata_core.db import AsyncSessionLocal
 from strata_core.models import NewsArticle, NewsSource
 
+from dotenv import load_dotenv
+load_dotenv()
 
 RSS_FEEDS: Dict[NewsSource, str] = {
     NewsSource.FREIGHTWAVES: "https://www.freightwaves.com/feed",
@@ -21,6 +23,7 @@ def _parse_published(entry) -> datetime | None:
     Convert feedparser's published_parsed (struct_time) to a timezone-aware datetime.
     If missing, return None.
     """
+    print(f"Entry published_parsed: {getattr(entry, 'published_parsed', None) or entry.get('published_parsed')}")
     t = getattr(entry, "published_parsed", None) or entry.get("published_parsed")
     if not t:
         return None
@@ -49,6 +52,9 @@ async def ingest_one_feed(session, source: NewsSource, feed_url: str) -> int:
 
     new_count = 0
 
+
+    print(f"Entry count: {len(parsed.entries)}")
+
     for entry in parsed.entries:
         url = getattr(entry, "link", None) or entry.get("link")
         title = getattr(entry, "title", None) or entry.get("title")
@@ -65,6 +71,8 @@ async def ingest_one_feed(session, source: NewsSource, feed_url: str) -> int:
 
         published_at = _parse_published(entry)
 
+        print(f"Ingesting new article from {source.value}: {title}")
+
         article = NewsArticle(
             source=source,
             url=url,
@@ -73,6 +81,8 @@ async def ingest_one_feed(session, source: NewsSource, feed_url: str) -> int:
             # raw_html=None, clean_text=None, processed defaults handled by model defaults
         )
         session.add(article)
+
+        print(f"  -> added article: {title} ({url})")
         new_count += 1
 
     return new_count

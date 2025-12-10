@@ -2,11 +2,8 @@
 import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from strata_core.settings import DATABASE_URL
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://postgres:password@localhost:5432/strata",
-)
 
 engine = create_async_engine(
     DATABASE_URL,

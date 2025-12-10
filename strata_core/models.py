@@ -1,7 +1,7 @@
 # strata_core/models.py
 from datetime import datetime
 from typing import Optional
-from enum import PyEnum
+from enum import Enum as PyEnum
 
 from sqlalchemy import (
     Column,

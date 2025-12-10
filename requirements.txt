@@ -5,3 +5,4 @@ sqlalchemy[asyncio]>=2.0
 feedparser>=6.0    # or httpx/requests if you prefer
 python-dotenv>=1.0
 openai>=1.0        # or other LLM client
+asyncpg>=0.29
