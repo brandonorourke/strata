@@ -7,8 +7,8 @@ import trafilatura
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
-from stratacore.db import AsyncSessionLocal
-from stratacore.models import NewsArticle
+from strata_core.db import AsyncSessionLocal
+from strata_core.models import NewsArticle
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -50,10 +50,15 @@ def extract_main_text(html: str) -> str | None:
 
     return text
 
+DEFAULT_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.8",
+}
 
 async def fetch_html(client: httpx.AsyncClient, url: str) -> str | None:
     try:
-        resp = await client.get(url, timeout=10.0)
+        resp = await client.get(url, timeout=10.0, headers=DEFAULT_HEADERS)
         if resp.status_code != 200:
             logger.warning("Non-200 status for %s: %s", url, resp.status_code)
             return None
@@ -80,7 +85,7 @@ async def fetch_pending_articles(session, limit: int = 20) -> list[NewsArticle]:
 async def process_batch(limit: int = 20) -> int:
     """
     Fetch up to `limit` articles without clean_text, fetch/parse HTML,
-    and populate clean_text + text_extracted_at.
+    and populate clean_text.
     Returns number of articles successfully updated.
     """
     async with AsyncSessionLocal() as session:

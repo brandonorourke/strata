@@ -2,10 +2,11 @@
 
 ### Quick start
 
-We use Python 3.12
+We use Python 3.12.7
 
 ```bash
 cd strata
+pyenv local 3.12.7
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip setuptools wheel
