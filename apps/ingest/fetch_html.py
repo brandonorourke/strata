@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import random
 
 import httpx
 from sqlalchemy import select
@@ -22,6 +23,10 @@ DEFAULT_HEADERS = {
     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.8",
 }
+
+
+async def polite_sleep():
+    await asyncio.sleep(random.uniform(1.0, 3.0))
 
 
 async def fetch_html(client: httpx.AsyncClient, url: str) -> str | None:
@@ -67,6 +72,7 @@ async def process_batch(limit: int = 20) -> int:
 
         async with httpx.AsyncClient(follow_redirects=True) as client:
             for article in articles:
+                await polite_sleep()
                 logger.info("Fetching HTML for [%s] %s", article.id, article.url)
                 html = await fetch_html(client, article.url)
                 if not html:
