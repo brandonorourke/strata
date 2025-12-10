@@ -23,10 +23,12 @@ def _parse_published(entry) -> datetime | None:
     Convert feedparser's published_parsed (struct_time) to a timezone-aware datetime.
     If missing, return None.
     """
-    print(f"Entry published_parsed: {getattr(entry, 'published_parsed', None) or entry.get('published_parsed')}")
     t = getattr(entry, "published_parsed", None) or entry.get("published_parsed")
     if not t:
+        print("No published_parsed found.")
         return None
+    
+    print(f"Parsed time struct: {t}")
 
     # feedparser gives a time.struct_time; map first 6 fields
     return datetime(
@@ -51,7 +53,6 @@ async def ingest_one_feed(session, source: NewsSource, feed_url: str) -> int:
         return 0
 
     new_count = 0
-
 
     print(f"Entry count: {len(parsed.entries)}")
 

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Y9SLspH1kgaufL5fF7riIY4xJNk5s0v8byf5VuZzTLOey9GqjQMuP4gl5atmlFm
+\restrict v0qEpcjPqkVfS8eL8qM4e19T6qOHTwrDMmHI5r8oHKmhrcFsPSfbDX2UeJbj51j
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -45,10 +45,11 @@ CREATE TABLE public.news_articles (
     source public.news_source_enum NOT NULL,
     url text NOT NULL,
     title text NOT NULL,
-    published_at timestamp without time zone NOT NULL,
+    published_at timestamp with time zone NOT NULL,
+    ingested_at timestamp with time zone DEFAULT now(),
     raw_html text,
     clean_text text,
-    processed_by_llm_on timestamp without time zone
+    processed_by_llm_at timestamp with time zone
 );
 
 
@@ -113,5 +114,5 @@ CREATE INDEX ix_news_articles_published_at ON public.news_articles USING btree (
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Y9SLspH1kgaufL5fF7riIY4xJNk5s0v8byf5VuZzTLOey9GqjQMuP4gl5atmlFm
+\unrestrict v0qEpcjPqkVfS8eL8qM4e19T6qOHTwrDMmHI5r8oHKmhrcFsPSfbDX2UeJbj51j
 

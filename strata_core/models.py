@@ -12,7 +12,8 @@ from sqlalchemy import (
     JSON,
     Boolean,
     ForeignKey,
-    Enum
+    Enum,
+    func
 )
 from sqlalchemy.orm import relationship
 
@@ -33,9 +34,10 @@ class NewsArticle(Base):
     source = Column(Enum(NewsSource, name="news_source_enum"), nullable=False)
     url = Column(Text, nullable=False, unique=True)
     title = Column(Text, nullable=False)
-    published_at = Column(DateTime, nullable=False, index=True)
+    published_at = Column(DateTime(timezone=True), nullable=False, index=True)
+    ingested_at = Column(DateTime(timezone=True), server_default=func.now())
 
     raw_html = Column(Text, nullable=True)
     clean_text = Column(Text, nullable=True)
 
-    processed_by_llm_on = Column(DateTime, nullable=True)
+    processed_by_llm_at = Column(DateTime(timezone=True), nullable=True)

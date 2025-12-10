@@ -13,11 +13,11 @@ pip install -r requirements.txt
 
 # create a local env file and database (values should match your Postgres setup)
 cp infra/env.example .env  # adjust values inside if needed
-createdb strata_local || true
-psql "$DATABASE_URL" -f db/schema.local.sql  # optional: load base schema snapshot
+createdb strata || true
+psql strata -f db/schema.local.sql  # optional: load base schema snapshot
 
 # Optional: capture schema snapshot for reference
-pg_dump "$DATABASE_URL" --schema-only --no-owner > strata_core/schema.local.sql
+pg_dump strata --schema-only --no-owner > strata_core/schema.local.sql
 ```
 
 ### Database schema
