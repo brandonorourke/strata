@@ -1,8 +1,8 @@
+# apps/ingest/clean_text.py
+
 import asyncio
 import logging
-from datetime import datetime, timezone
 
-import httpx
 import trafilatura
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
@@ -14,12 +14,10 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 
-# ---------- HTML → clean text via trafilatura ----------
-
 def extract_main_text(html: str) -> str | None:
     """
-    Use trafilatura to extract the main article text.
-    This is intentionally simple for MVP.
+    Use trafilatura to extract the main article text from stored HTML.
+    No network involved.
     """
     if not html:
         return None
@@ -31,7 +29,7 @@ def extract_main_text(html: str) -> str | None:
             include_images=False,
             include_tables=False,
             include_comments=False,
-            no_fallback=True,  # return None instead of junk if it can't extract
+            no_fallback=True,
         )
     except Exception as e:
         logger.warning("trafilatura.extract failed: %s", e)
@@ -40,7 +38,6 @@ def extract_main_text(html: str) -> str | None:
     if not text:
         return None
 
-    # Normalize a bit and cap very long pages
     text = text.strip()
     if not text:
         return None
@@ -50,31 +47,15 @@ def extract_main_text(html: str) -> str | None:
 
     return text
 
-DEFAULT_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "en-US,en;q=0.8",
-}
 
-async def fetch_html(client: httpx.AsyncClient, url: str) -> str | None:
-    try:
-        resp = await client.get(url, timeout=10.0, headers=DEFAULT_HEADERS)
-        if resp.status_code != 200:
-            logger.warning("Non-200 status for %s: %s", url, resp.status_code)
-            return None
-        # trafilatura expects text/html, the raw response body is fine
-        return resp.text
-    except httpx.HTTPError as e:
-        logger.warning("HTTP error fetching %s: %s", url, e)
-        return None
-
-
-# ---------- DB helpers ----------
-
-async def fetch_pending_articles(session, limit: int = 20) -> list[NewsArticle]:
+async def fetch_articles_needing_clean_text(
+    session,
+    limit: int = 20,
+) -> list[NewsArticle]:
     stmt = (
         select(NewsArticle)
         .where(NewsArticle.clean_text.is_(None))
+        .where(NewsArticle.raw_html.is_not(None))
         .order_by(NewsArticle.id.asc())
         .limit(limit)
     )
@@ -84,42 +65,28 @@ async def fetch_pending_articles(session, limit: int = 20) -> list[NewsArticle]:
 
 async def process_batch(limit: int = 20) -> int:
     """
-    Fetch up to `limit` articles without clean_text, fetch/parse HTML,
-    and populate clean_text.
-    Returns number of articles successfully updated.
+    For up to `limit` articles where raw_html IS NOT NULL
+    and clean_text IS NULL, extract main text and store in clean_text.
+
+    No network calls here.
     """
     async with AsyncSessionLocal() as session:
-        articles = await fetch_pending_articles(session, limit=limit)
+        articles = await fetch_articles_needing_clean_text(session, limit=limit)
         if not articles:
-            logger.info("No pending articles to process.")
+            logger.info("No articles need clean_text.")
             return 0
 
-        logger.info("Processing %d articles for clean_text extraction", len(articles))
-
+        logger.info("Extracting clean_text for %d article(s)", len(articles))
         updated_count = 0
 
-        async with httpx.AsyncClient(follow_redirects=True) as client:
-            for article in articles:
-                if not article.url:
-                    logger.warning("Article %s has no URL, skipping", article.id)
-                    continue
+        for article in articles:
+            text = extract_main_text(article.raw_html)
+            if not text:
+                logger.warning("No clean text extracted for [%s]", article.id)
+                continue
 
-                logger.info("Fetching HTML for [%s] %s", article.id, article.url)
-                html = await fetch_html(client, article.url)
-                if not html:
-                    continue
-
-                text = extract_main_text(html)
-                if not text:
-                    logger.warning(
-                        "No clean text extracted for [%s] %s",
-                        article.id,
-                        article.url,
-                    )
-                    continue
-
-                article.clean_text = text
-                updated_count += 1
+            article.clean_text = text
+            updated_count += 1
 
         try:
             await session.commit()
@@ -133,7 +100,6 @@ async def process_batch(limit: int = 20) -> int:
 
 
 async def main():
-    # Single batch for now; later this becomes a scheduled job.
     await process_batch(limit=20)
 
 
