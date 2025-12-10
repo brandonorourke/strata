@@ -43,22 +43,19 @@ If information is unknown, return null rather than guessing, except:
 Your output must always be valid JSON and conform strictly to the schema provided in the user message.
 """
 
-def build_user_prompt(article: NewsArticle) -> str:
-    # You can refine (truncate, etc.) later
-    return f"""
+PROMPT_TEMPLATE = """
 Extract structured information from the following article.
 
-ARTICLE TITLE: {article.title or ""}
+ARTICLE TITLE: {title}
 
 ARTICLE:
-{article.clean_text}
-
+{article}
 
 Return JSON with the following schema:
 
-{
+{{
   "entities": [
-    {
+    {{
       "canonical_company_name": string | null,
       "raw_mentions": [string],
       "is_primary_entity": boolean,
@@ -67,9 +64,9 @@ Return JSON with the following schema:
       "event_description": string | null,
       "event_date": string | null,
       "confidence": float
-    }
+    }}
   ]
-}
+}}
 
 Field requirements:
 
@@ -147,10 +144,14 @@ Additional rules:
 - Exclude purely generic mentions (e.g., "Wall Street", "the market") unless they refer to a specific company or entity.
 
 Only output JSON that strictly conforms to the schema above. Do not include any commentary, explanation, or text outside the JSON.
-
-
-
 """
+
+def build_user_prompt(article: NewsArticle) -> str:
+    # You can refine (truncate, etc.) later
+    return PROMPT_TEMPLATE.format(
+        title=article.title or "",
+        article=article.clean_text or "",
+    )
 
 
 async def fetch_pending_articles(session, limit: int = 5) -> list[NewsArticle]:
@@ -234,7 +235,7 @@ async def process_batch(limit: int = 5) -> int:
 
 
 async def main():
-    processed = await process_batch(limit=1)
+    processed = await process_batch(limit=5)
     logger.info("Done. Processed batch size: %d", processed)
 
 
