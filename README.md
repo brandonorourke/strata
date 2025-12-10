@@ -8,7 +8,7 @@ We use Python 3.12
 cd strata
 python3 -m venv .venv
 source .venv/bin/activate
-pip install --upgrade pip
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 
 # create a local env file and database (values should match your Postgres setup)

@@ -1,8 +1,21 @@
+# Local package
 -e .
-fastapi>=0.115
-uvicorn[standard]>=0.30
-sqlalchemy[asyncio]>=2.0
-feedparser>=6.0    # or httpx/requests if you prefer
-python-dotenv>=1.0
-openai>=1.0        # or other LLM client
-asyncpg>=0.29
+
+# Web server (not used yet — keep >= unless you're actively building the API)
+fastapi==0.115
+uvicorn[standard]==0.30
+
+# Database + ORM
+sqlalchemy[asyncio]==2.0.25
+asyncpg==0.29.0
+
+# RSS + HTTP + Parsing
+feedparser==6.0.11
+httpx[http2]==0.27.0
+trafilatura==1.7.0
+
+# Environment
+python-dotenv==1.0.1
+
+# LLM client
+openai==1.55.3
