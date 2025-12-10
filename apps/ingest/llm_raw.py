@@ -216,6 +216,9 @@ async def process_batch(limit: int = 5) -> int:
 
         for article in articles:
             user_prompt = build_user_prompt(article)
+
+            logging.info("Calling LLM for article [%s]: %s", article.id, article.title)
+
             data = await call_llm(SYSTEM_PROMPT, user_prompt)
             if data is None:
                 continue
