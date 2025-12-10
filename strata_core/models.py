@@ -13,8 +13,9 @@ from sqlalchemy import (
     Boolean,
     ForeignKey,
     Enum,
-    func
+    func,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 from .db import Base
@@ -39,5 +40,4 @@ class NewsArticle(Base):
 
     raw_html = Column(Text, nullable=True)
     clean_text = Column(Text, nullable=True)
-
-    processed_by_llm_at = Column(DateTime(timezone=True), nullable=True)
+    llm_raw = Column(JSONB, nullable=True)
