@@ -219,11 +219,9 @@ PoC is done when:
 
 ### Primary ICP
 
-Lean teams that can monetize “ranked attention + evidence” without demanding a full workflow suite:
+Primary ICP: opportunistic credit teams (small pods) that need ranked attention + evidence-backed company timelines to monitor themes/watchlists and surface emerging situations.
 
-- Distressed / special situations funds (small pods)
-- Opportunistic credit funds (stressed/rescue/secondary capable)
-- Family offices with a dedicated credit PM doing opportunistic credit
+Secondary ICP: distressed/special sits funds and special situations PE, as a heavier “process/courts/UCC” lens later.
 
 ### Not primary (for this identity)
 
