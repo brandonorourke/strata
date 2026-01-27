@@ -63,7 +63,20 @@ Return JSON with the following schema:
       "transaction_role": string | null,
       "event_description": string | null,
       "event_date": string | null,
-      "confidence": float
+      "confidence": float,
+      "entity_type": string | null,
+      "jurisdiction": string | null,
+      "fingerprint": {{
+        "hq_city": string | null,
+        "hq_region": string | null,
+        "hq_country": string | null,
+        "primary_sector": string | null,
+        "keywords": [string],
+        "is_financial_sponsor": boolean | null,
+        "is_government_or_regulator": boolean | null,
+        "website_url": string | null,
+        "linkedin_url": string | null
+      }}
     }}
   ]
 }}
@@ -71,16 +84,20 @@ Return JSON with the following schema:
 Field requirements:
 
 - canonical_company_name:
-  - The normalized, canonical name of the company or entity, if it can be inferred (e.g., "KKR & Co. Inc.", "Hyatt Regency Tokyo").
+  - The normalized, canonical name of the company or entity, if it can be inferred
+    (e.g., "KKR & Co. Inc.", "Hyatt Regency Tokyo").
   - If unclear, set to the clearest form mentioned in the article.
   - If you cannot determine a canonical name, set to null.
 
 - raw_mentions:
-  - All distinct textual forms used in the article for this entity (e.g., ["KKR", "KKR & Co."]).
+  - All distinct textual forms used in the article for this entity
+    (e.g., ["KKR", "KKR & Co."]).
 
 - is_primary_entity:
-  - true if this entity is one of the main subjects of the article (headline/lead focus or undergoing a material event).
-  - false if it is only a contextual or secondary mention (e.g., prior employer, investor, comparison company, vendor).
+  - true if this entity is one of the main subjects of the article
+    (headline/lead focus or undergoing a material event).
+  - false if it is only a contextual or secondary mention
+    (e.g., prior employer, investor, comparison company, vendor).
 
 - event_type:
   - One of:
@@ -100,11 +117,16 @@ Field requirements:
   - Choose the single best label for the main event affecting this entity in this article.
   - Use:
     - "acquisition" when the entity is clearly involved in buying a company or asset.
-    - "disposition" when the entity is clearly selling a company or asset (e.g., portfolio exit, asset sale).
-    - "mna_transaction" when there is clearly an M&A-related transaction but the direction (buy vs sell) is ambiguous or not clearly described.
-  - "legal_action" for enforcement actions, settlements, lawsuits, or regulatory charges.
-  - "regulatory" for non-enforcement regulatory decisions, approvals, rule changes, or supervisory actions.
-  - "performance_update" for earnings, guidance changes, operational performance metrics, or major business KPIs.
+    - "disposition" when the entity is clearly selling a company or asset
+      (e.g., portfolio exit, asset sale).
+    - "mna_transaction" when there is clearly an M&A-related transaction but
+      the direction (buy vs sell) is ambiguous or not clearly described.
+  - "legal_action" for enforcement actions, settlements, lawsuits,
+    or regulatory charges.
+  - "regulatory" for non-enforcement regulatory decisions, approvals,
+    rule changes, or supervisory actions.
+  - "performance_update" for earnings, guidance changes, operational performance
+    metrics, or major business KPIs.
   - Use "other" if none of the above fits.
 
 - transaction_role:
@@ -120,9 +142,11 @@ Field requirements:
   - If the entity is not part of any M&A/transaction event, set transaction_role to null.
 
 - event_description:
-  - 1–3 sentences in plain English briefly describing the event for this entity in the context of this article.
+  - 1–3 sentences in plain English briefly describing the event for this entity
+    in the context of this article.
   - Focus on the core action and its financial/corporate significance.
-  - Example: "KKR led a consortium that sold its stake in the Hyatt Regency Tokyo for over $800 million."
+  - Example: "KKR led a consortium that sold its stake in the Hyatt Regency Tokyo
+    for over $800 million."
 
 - event_date:
   - Normalize the date of the event as precisely as the article allows.
@@ -134,16 +158,77 @@ Field requirements:
     - Do NOT invent or guess a specific day-of-month when it is not stated.
 
 - confidence:
-  - A float between 0.0 and 1.0 representing how confident you are that this entity and event_type/event_description pairing is correct.
+  - A float between 0.0 and 1.0 representing how confident you are that this
+    entity and event_type/event_description pairing is correct.
   - Higher = more confident.
+
+- entity_type:
+  - A coarse classification of what this entity is.
+  - One of:
+    [
+      "operating_company",
+      "financial_sponsor",
+      "lender",
+      "government_agency",
+      "court",
+      "regulator",
+      "individual",
+      "other"
+    ]
+  - If unclear, use "other" or null.
+
+- jurisdiction:
+  - The primary jurisdiction explicitly mentioned in the article for this entity,
+    if any (e.g., "Florida", "Japan", "United States", "Delaware").
+  - This may be the country of operation or state of incorporation.
+  - If not stated, return null. Do NOT guess.
+
+- fingerprint:
+  - A small object with optional fields that can help later with entity resolution.
+  - All fields inside fingerprint are optional; use null when the article does not provide the information.
+  - hq_city:
+    - Headquarter city if clearly stated (e.g., "Tokyo", "New York").
+  - hq_region:
+    - State/province/region, if provided (e.g., "California", "Texas").
+  - hq_country:
+    - Headquarter country if clearly stated.
+  - primary_sector:
+    - Short description of the main industry or sector this entity operates in,
+      based on the article (e.g., "trucking", "logistics", "enterprise software").
+  - keywords:
+    - 2–8 short keywords or phrases (if available) that describe the business,
+      products, or markets of this entity in this article.
+      Example: ["autonomous trucks", "Class 8", "freight brokerage"].
+  - is_financial_sponsor:
+    - true if this entity is clearly a PE fund, VC, hedge fund, credit fund, or
+      other financial sponsor.
+    - false if it is clearly *not* a sponsor (e.g., an operating company).
+    - null if unclear.
+  - is_government_or_regulator:
+    - true if this entity is clearly a government body, agency, or regulator
+      (e.g., DOJ, SEC).
+    - false if clearly not.
+    - null if unclear.
+  - website_url:
+    - If the article explicitly includes a website URL for this entity, return it as an absolute URL string.
+    - If no website is shown in the article text, return null. Do NOT guess.
+  - linkedin_url:
+    - If the article explicitly includes a LinkedIn URL for this entity, return it as an absolute URL string.
+    - If no LinkedIn URL is shown in the article text, return null. Do NOT guess or search.
 
 Additional rules:
 
-- If the article contains multiple unrelated mini-stories (e.g., a roundup), you may mark multiple entities as is_primary_entity = true, one per distinct story anchor.
-- Always include all entities that are materially involved in a transaction or legal/regulatory event, even if they are not primary.
-- Exclude purely generic mentions (e.g., "Wall Street", "the market") unless they refer to a specific company or entity.
+- Do NOT invent fingerprint fields that are not clearly implied by the article.
+  Use null instead.
+- If the article contains multiple unrelated mini-stories (e.g., a roundup),
+  you may mark multiple entities as is_primary_entity = true, one per distinct story anchor.
+- Always include all entities that are materially involved in a transaction or
+  legal/regulatory event, even if they are not primary.
+- Exclude purely generic mentions (e.g., "Wall Street", "the market")
+  unless they refer to a specific company or entity.
 
-Only output JSON that strictly conforms to the schema above. Do not include any commentary, explanation, or text outside the JSON.
+Only output JSON that strictly conforms to the schema above.
+Do not include any commentary, explanation, or text outside the JSON.
 """
 
 def build_user_prompt(article: NewsArticle) -> str:
@@ -238,7 +323,7 @@ async def process_batch(limit: int = 5) -> int:
 
 
 async def main():
-    processed = await process_batch(limit=5)
+    processed = await process_batch(limit=1)
     logger.info("Done. Processed batch size: %d", processed)
 
 
