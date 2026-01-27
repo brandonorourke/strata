@@ -275,3 +275,41 @@ I’m building a lightweight “situation radar” tool: it monitors a universe 
 - What is the smallest output that would create weekly value?
 - ranked list, alerts, company timelines, exports, etc.
 - What tools are you currently paying for (Reorg/Debtwire/9fin/UniCourt/etc.) and what’s missing?
+
+## 5) Adjacent Ideas (Captured, Not Driving v0)
+
+Strata’s v0 wedge remains: public signals → entity/event spine → ranked screens + company timelines (credit/special sits ICP).
+
+The following are explicitly captured as later-stage options, so they do not derail v0 execution:
+
+### A) VC / Startup Ontology Lens (Stage 4+)
+Idea: a startup/company + people + relationship ontology that helps VCs discover who to meet and what is emerging.
+
+Why it’s on-path:
+- It uses the same ontology spine (entities, events, relationships, time).
+- It becomes compelling once Strata has proven ranking + explainable narratives and can personalize via internal sensors.
+
+Why it is not a v0 wedge:
+- Risks drifting into “PitchBook-lite” and long sales cycles / high noise interest.
+- Requires either uniquely comprehensive coverage or personalization to a firm’s activity to be defensible.
+
+When to revisit:
+- After v1/v2 proves a paid ICP and a reliable ranking surface.
+- As a lens (“Opportunity Discovery”) sold on top of the same spine.
+
+### B) Text-Based Scheduling / Calendar Assistant (Stage 3 sensor, not identity)
+Idea: a lightweight scheduling tool (text → calendar invite) for investors.
+
+Role in Strata:
+- A sensor to ingest meeting metadata (who met whom, when, topic) to improve relationship memory and attention ranking.
+- Not a standalone product identity.
+
+Why it is not a v0 wedge:
+- Pulls the company toward workflow/utility.
+- Can become its own company; high risk of distraction.
+
+When to revisit:
+- Once the ontology spine exists and Strata needs internal data to personalize ranking and memory.
+
+### Sequencing rule (anti-drift)
+If an idea does not strengthen the ontology spine or improve ranked attention + evidence for the current ICP, it is captured as a “later-stage lens/sensor” and does not enter v0 scope.
