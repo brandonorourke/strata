@@ -170,121 +170,108 @@ For each unprocessed news_articles row:
     }
   ]
 }
+```
 
 For each extracted entity:
 
-compute legal_name_normalized and loose_name_normalized
+- compute legal_name_normalized and loose_name_normalized
 
-upsert entities by legal_name_normalized (strict)
+- upsert entities by legal_name_normalized (strict)
 
-insert extracted_events
+- insert extracted_events
 
 Gating:
 
-Only insert extracted_events if confidence >= threshold (default 0.6).
+- Only insert extracted_events if confidence >= threshold (default 0.6).
 
 Everything must be source-backed (url, date, title stored).
 
-C) Screen + company timeline queries
+#### C) Screen + company timeline queries
 
 “Most Changed (7d)” ranked list:
 
-rank by event_type weights + recency
-
-optional: multi-source confirmation boosts score
+- rank by event_type weights + recency
+- optional: multi-source confirmation boosts score
 
 Company page:
 
-list events in reverse chronological order with source links
+- list events in reverse chronological order with source links
 
-Definition of done (PoC)
+### Definition of done (PoC)
 
 PoC is done when:
 
-Ingestion pulls ~50–200 items into news_articles (clean_text populated).
+- Ingestion pulls ~50–200 items into news_articles (clean_text populated).
+- Extraction populates entities + extracted_events with acceptable cleanliness.
+- Screen query produces a ranked list for last 7 days.
+- Company timeline query works for any entity.
 
-Extraction populates entities + extracted_events with acceptable cleanliness.
+### Quality bars
 
-Screen query produces a ranked list for last 7 days.
+- Prefer false negatives over false positives.
+- Conservative entity merging: strict match only.
+- Outputs must be evidence-backed (links + dates).
+- No claims beyond retrieved sources.
 
-Company timeline query works for any entity.
+---
 
-Quality bars
+## 3) Customer Profile (v1 ICP) — Investor Intelligence OS
 
-Prefer false negatives over false positives.
-
-Conservative entity merging: strict match only.
-
-Outputs must be evidence-backed (links + dates).
-
-No claims beyond retrieved sources.
-
-3) Customer Profile (v1 ICP) — Investor Intelligence OS
-Primary ICP
+### Primary ICP
 
 Lean teams that can monetize “ranked attention + evidence” without demanding a full workflow suite:
 
-Distressed / special situations funds (small pods)
+- Distressed / special situations funds (small pods)
+- Opportunistic credit funds (stressed/rescue/secondary capable)
+- Family offices with a dedicated credit PM doing opportunistic credit
 
-Opportunistic credit funds (stressed/rescue/secondary capable)
-
-Family offices with a dedicated credit PM doing opportunistic credit
-
-Not primary (for this identity)
+### Not primary (for this identity)
 
 ABL lenders / factors / MCA operators as the primary ICP
 
 They care deeply about UCC, but often pull product toward ops/workflow needs.
 
-Job-to-be-done (what they buy)
+### Job-to-be-done (what they buy)
 
 “Keep my universe warm: show me what changed, what matters, and why, with evidence and a clean timeline per company.”
 
-What “win” looks like
+### What “win” looks like
 
-They check Strata to orient quickly (daily/weekly).
+- They check Strata to orient quickly (daily/weekly).
+- They surface a small number of names worth a second look faster than before.
+- They reduce misses (early warnings) and reduce time-to-triage.
 
-They surface a small number of names worth a second look faster than before.
+---
 
-They reduce misses (early warnings) and reduce time-to-triage.
+## 4) Outreach Script (discovery-first, low-commitment)
 
-4) Outreach Script (discovery-first, low-commitment)
-Target titles
+### Target titles
 
-Portfolio Manager, Credit / Opportunistic Credit
+- Portfolio Manager, Credit / Opportunistic Credit
+- Head of Credit
+- Special Situations PM / Distressed PM
+- Director / Head of Credit Research (good discovery; may not be budget owner)
+- At FOs: credit PM (preferred), sometimes CIO as gatekeeper
 
-Head of Credit
-
-Special Situations PM / Distressed PM
-
-Director / Head of Credit Research (good discovery; may not be budget owner)
-
-At FOs: credit PM (preferred), sometimes CIO as gatekeeper
-
-Core message (PM / investor)
+### Core message (PM / investor)
 
 Subject: Early signal screen for watchlists / themes
 
 Body:
 I’m building a small intelligence tool for opportunistic credit/special sits. It watches a universe (watchlist or theme) and surfaces the most important changes using public signals (enforcement/legal/news now; UCC later), with evidence links and a clean event timeline per company. I’m trying to sanity-check which signals actually matter and what a “no false positives” bar looks like in practice. Open to a quick 20-minute call?
 
-Advisor variant (distribution intel)
+### Advisor variant (distribution intel)
 
 Subject: Situation radar (signals → ranked screen)
 
 Body:
 I’m building a lightweight “situation radar” tool: it monitors a universe and surfaces emerging stress proxies with source links and a company timeline (enforcement/legal/news now; UCC later). I’d love 20 minutes to learn which signals you trust and how you currently spot situations early.
 
-What to ask on the call (minimum set)
+### What to ask on the call (minimum set)
 
-How do you currently source / triage new situations?
-
-Which public signals do you trust most (and least)?
-
-What false-positive rate is unusable vs acceptable for an “early proxy” screen?
-
-What is the smallest output that would create weekly value?
-
-ranked list, alerts, company timelines, exports, etc.
-
-What tools are you currently paying for (Reorg/Debtwire/9fin/UniCourt/etc.) and what’s missing?
+- How do you currently source / triage new situations?
+- Which public signals do you trust most (and least)?
+- What false-positive rate is unusable vs acceptable for an “early proxy” screen?
+- What is the smallest output that would create weekly value?
+- ranked list, alerts, company timelines, exports, etc.
+- What tools are you currently paying for (Reorg/Debtwire/9fin/UniCourt/etc.) and what’s missing?
