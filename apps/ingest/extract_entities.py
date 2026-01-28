@@ -53,7 +53,7 @@ async def _get_or_create_entity(session, canonical_name: str, first_seen_at):
         return entity
 
     entity = ExtractedEntity(
-        canonical_name=canonical_name,
+        extracted_name=canonical_name,
         legal_name_normalized=legal_name,
         loose_name_normalized=normalize_loose_name(canonical_name),
         first_seen_at=first_seen_at,
@@ -96,7 +96,7 @@ async def process_article(session, article: NewsArticle) -> int:
         event = ExtractedEvent(
             article_id=article.id,
             entity_id=entity.id,
-            canonical_company_name=canonical_name,
+            extracted_name=canonical_name,
             is_primary_entity=bool(payload.get("is_primary_entity")),
             event_type=payload.get("event_type"),
             transaction_role=payload.get("transaction_role"),

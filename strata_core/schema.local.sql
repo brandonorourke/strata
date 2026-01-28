@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Oifq4nLNhZpPsb8ZqMubWvpnEGHv8C6DuoeMBK9e8dyLv2bKRsZzNUSfME4xqE0
+\restrict LuulOR4V9MTDWS4DAqgHusOL76u3SpnKdrbeoidD1Jh7mSA6wv72jMZIrLI45YO
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -42,7 +42,7 @@ SET default_table_access_method = heap;
 
 CREATE TABLE public.extracted_entities (
     id integer NOT NULL,
-    canonical_name text NOT NULL,
+    extracted_name text NOT NULL,
     legal_name_normalized text NOT NULL,
     loose_name_normalized text,
     created_from text DEFAULT 'news'::text NOT NULL,
@@ -79,7 +79,7 @@ CREATE TABLE public.extracted_events (
     id integer NOT NULL,
     article_id integer NOT NULL,
     entity_id integer NOT NULL,
-    canonical_company_name text NOT NULL,
+    extracted_name text NOT NULL,
     is_primary_entity boolean DEFAULT false NOT NULL,
     event_type text,
     transaction_role text,
@@ -271,5 +271,5 @@ ALTER TABLE ONLY public.extracted_events
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Oifq4nLNhZpPsb8ZqMubWvpnEGHv8C6DuoeMBK9e8dyLv2bKRsZzNUSfME4xqE0
+\unrestrict LuulOR4V9MTDWS4DAqgHusOL76u3SpnKdrbeoidD1Jh7mSA6wv72jMZIrLI45YO
 

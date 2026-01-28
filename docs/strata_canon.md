@@ -103,7 +103,7 @@ Indexes:
 
 #### `extracted_entities` (companies only in v0)
 - id (uuid, PK)
-- canonical_name (text)
+- extracted_name (text)
 - legal_name_normalized (text, UNIQUE)
   - lowercased, punctuation stripped, spaces normalized
   - keep suffixes like inc/llc/corp here
@@ -121,7 +121,7 @@ Policy:
 - id (uuid, PK)
 - article_id (uuid, FK → news_articles.id)
 - entity_id (uuid, FK → extracted_entities.id)
-- canonical_company_name (text) — as extracted
+- extracted_name (text) — as extracted
 - is_primary_entity (boolean)
 - event_type (text)
   - examples: enforcement, legal_action, restructuring, shutdown, mna_transaction, financing

@@ -50,7 +50,7 @@ class ExtractedEntity(Base):
     __tablename__ = "extracted_entities"
 
     id = Column(Integer, primary_key=True, index=True)
-    canonical_name = Column(Text, nullable=False)
+    extracted_name = Column(Text, nullable=False)
     legal_name_normalized = Column(Text, nullable=False, unique=True)
     loose_name_normalized = Column(Text, nullable=True)
     created_from = Column(Text, nullable=False, server_default="news")
@@ -66,7 +66,7 @@ class ExtractedEvent(Base):
     id = Column(Integer, primary_key=True, index=True)
     article_id = Column(Integer, ForeignKey("news_articles.id"), nullable=False)
     entity_id = Column(Integer, ForeignKey("extracted_entities.id"), nullable=False)
-    canonical_company_name = Column(Text, nullable=False)
+    extracted_name = Column(Text, nullable=False)
     is_primary_entity = Column(Boolean, nullable=False, default=False)
     event_type = Column(Text, nullable=True)
     transaction_role = Column(Text, nullable=True)
