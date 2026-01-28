@@ -41,7 +41,7 @@ pg_dump strata --schema-only --no-owner > strata_core/schema.local.sql
 
 ---
 
-## Git branching strategy
+### Git branching strategy
 
 ```
 # Merge from develop
@@ -56,4 +56,13 @@ git checkout develop
 git pull --ff-only
 git merge --ff-only main     # <- fast-forward or fail
 git push origin develop
+```
+
+### Running the pipeline
+```
+  python apps/ingest/ingest_rss.py
+  python apps/ingest/fetch_html.py
+  python apps/ingest/clean_text.py
+  python apps/ingest/llm_raw.py
+  python apps/ingest/extract_entities.py
 ```
