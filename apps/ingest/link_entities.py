@@ -18,6 +18,8 @@ from strata_core.normalize import normalize_legal_name, normalize_loose_name
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
+_ALLOWED_ENTITY_TYPES = {"operating_company", "financial_sponsor", "lender"}
+
 
 async def _find_canonical_exact(session, legal_name: str, jurisdiction: str):
     stmt = select(CanonicalEntity).where(
@@ -94,6 +96,8 @@ async def process_batch(limit: int = 200) -> int:
 
         linked = 0
         for extracted in extracted_entities:
+            if extracted.entity_type and extracted.entity_type not in _ALLOWED_ENTITY_TYPES:
+                continue
             legal_name = extracted.legal_name_normalized
             if not legal_name:
                 legal_name = normalize_legal_name(extracted.extracted_name)
