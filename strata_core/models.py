@@ -9,6 +9,8 @@ from sqlalchemy import (
     String,
     Text,
     DateTime,
+    Date,
+    Float,
     JSON,
     Boolean,
     ForeignKey,
@@ -41,3 +43,36 @@ class NewsArticle(Base):
     raw_html = Column(Text, nullable=True)
     clean_text = Column(Text, nullable=True)
     llm_raw = Column(JSONB, nullable=True)
+
+
+class ExtractedEntity(Base):
+    __tablename__ = "extracted_entities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    canonical_name = Column(Text, nullable=False)
+    legal_name_normalized = Column(Text, nullable=False, unique=True)
+    loose_name_normalized = Column(Text, nullable=True)
+    created_from = Column(Text, nullable=False, server_default="news")
+    first_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    last_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    extracted_events = relationship("ExtractedEvent", back_populates="entity")
+
+
+class ExtractedEvent(Base):
+    __tablename__ = "extracted_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    article_id = Column(Integer, ForeignKey("news_articles.id"), nullable=False)
+    entity_id = Column(Integer, ForeignKey("extracted_entities.id"), nullable=False)
+    canonical_company_name = Column(Text, nullable=False)
+    is_primary_entity = Column(Boolean, nullable=False, default=False)
+    event_type = Column(Text, nullable=True)
+    transaction_role = Column(Text, nullable=True)
+    event_date = Column(Date, nullable=True)
+    event_description = Column(Text, nullable=True)
+    confidence = Column(Float, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    article = relationship("NewsArticle")
+    entity = relationship("ExtractedEntity", back_populates="extracted_events")

@@ -101,7 +101,7 @@ Rationale: high-signal inputs, relatively clean ingestion, lower legal risk post
 Indexes:
 - unique(source_name, external_id) when external_id exists; else unique(url)
 
-#### `entities` (companies only in v0)
+#### `extracted_entities` (companies only in v0)
 - id (uuid, PK)
 - canonical_name (text)
 - legal_name_normalized (text, UNIQUE)
@@ -120,7 +120,7 @@ Policy:
 (one row per article/entity pair)
 - id (uuid, PK)
 - article_id (uuid, FK → news_articles.id)
-- entity_id (uuid, FK → entities.id)
+- entity_id (uuid, FK → extracted_entities.id)
 - canonical_company_name (text) — as extracted
 - is_primary_entity (boolean)
 - event_type (text)
@@ -137,7 +137,7 @@ Indexes:
 
 #### `entity_identifiers` (optional, future-proof)
 - id (uuid, PK)
-- entity_id (uuid, FK → entities.id)
+- entity_id (uuid, FK → extracted_entities.id)
 - id_type (text) — sec_cik, website_domain, etc.
 - id_value (text)
 - created_at (timestamptz)
@@ -176,7 +176,7 @@ For each extracted entity:
 
 - compute legal_name_normalized and loose_name_normalized
 
-- upsert entities by legal_name_normalized (strict)
+- upsert extracted_entities by legal_name_normalized (strict)
 
 - insert extracted_events
 
