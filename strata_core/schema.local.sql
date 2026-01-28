@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict qyDRziiMrGqQRINkJRtZjq5SNiap6bkcc6cXbyK1rNchWEwbya4eA5CYySN2OoR
+\restrict hXmGqqnOYszXyxRWsGrnk17Y4ZAGLlYyeHAcnMOPYPDY7kQEgeDTM9Epem5k124
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -35,6 +35,80 @@ CREATE TYPE public.news_source_enum AS ENUM (
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: extracted_entities; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.extracted_entities (
+    id integer NOT NULL,
+    canonical_name text NOT NULL,
+    legal_name_normalized text NOT NULL,
+    loose_name_normalized text,
+    created_from text DEFAULT 'news'::text NOT NULL,
+    first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_seen_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: extracted_entities_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.extracted_entities_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: extracted_entities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.extracted_entities_id_seq OWNED BY public.extracted_entities.id;
+
+
+--
+-- Name: extracted_events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.extracted_events (
+    id integer NOT NULL,
+    article_id integer NOT NULL,
+    entity_id integer NOT NULL,
+    canonical_company_name text NOT NULL,
+    is_primary_entity boolean DEFAULT false NOT NULL,
+    event_type text,
+    transaction_role text,
+    event_date date,
+    event_description text,
+    confidence double precision,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: extracted_events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.extracted_events_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: extracted_events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.extracted_events_id_seq OWNED BY public.extracted_events.id;
+
 
 --
 -- Name: news_articles; Type: TABLE; Schema: public; Owner: -
@@ -74,10 +148,48 @@ ALTER SEQUENCE public.news_articles_id_seq OWNED BY public.news_articles.id;
 
 
 --
+-- Name: extracted_entities id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.extracted_entities ALTER COLUMN id SET DEFAULT nextval('public.extracted_entities_id_seq'::regclass);
+
+
+--
+-- Name: extracted_events id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.extracted_events ALTER COLUMN id SET DEFAULT nextval('public.extracted_events_id_seq'::regclass);
+
+
+--
 -- Name: news_articles id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.news_articles ALTER COLUMN id SET DEFAULT nextval('public.news_articles_id_seq'::regclass);
+
+
+--
+-- Name: extracted_entities extracted_entities_legal_name_normalized_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.extracted_entities
+    ADD CONSTRAINT extracted_entities_legal_name_normalized_key UNIQUE (legal_name_normalized);
+
+
+--
+-- Name: extracted_entities extracted_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.extracted_entities
+    ADD CONSTRAINT extracted_entities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: extracted_events extracted_events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.extracted_events
+    ADD CONSTRAINT extracted_events_pkey PRIMARY KEY (id);
 
 
 --
@@ -97,6 +209,27 @@ ALTER TABLE ONLY public.news_articles
 
 
 --
+-- Name: ix_extracted_entities_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_extracted_entities_id ON public.extracted_entities USING btree (id);
+
+
+--
+-- Name: ix_extracted_events_entity_id_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_extracted_events_entity_id_created_at ON public.extracted_events USING btree (entity_id, created_at);
+
+
+--
+-- Name: ix_extracted_events_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_extracted_events_id ON public.extracted_events USING btree (id);
+
+
+--
 -- Name: ix_news_articles_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -111,8 +244,31 @@ CREATE INDEX ix_news_articles_published_at ON public.news_articles USING btree (
 
 
 --
+-- Name: ux_extracted_events_article_entity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_extracted_events_article_entity ON public.extracted_events USING btree (article_id, entity_id);
+
+
+--
+-- Name: extracted_events extracted_events_article_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.extracted_events
+    ADD CONSTRAINT extracted_events_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.news_articles(id);
+
+
+--
+-- Name: extracted_events extracted_events_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.extracted_events
+    ADD CONSTRAINT extracted_events_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.extracted_entities(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict qyDRziiMrGqQRINkJRtZjq5SNiap6bkcc6cXbyK1rNchWEwbya4eA5CYySN2OoR
+\unrestrict hXmGqqnOYszXyxRWsGrnk17Y4ZAGLlYyeHAcnMOPYPDY7kQEgeDTM9Epem5k124
 
