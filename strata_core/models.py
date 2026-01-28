@@ -51,6 +51,8 @@ class ExtractedEntity(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     extracted_name = Column(Text, nullable=False)
+    entity_type = Column(Text, nullable=True)
+    jurisdiction = Column(Text, nullable=True)
     legal_name_normalized = Column(Text, nullable=False, unique=True)
     loose_name_normalized = Column(Text, nullable=True)
     created_from = Column(Text, nullable=False, server_default="news")

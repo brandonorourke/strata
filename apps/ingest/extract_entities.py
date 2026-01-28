@@ -39,7 +39,13 @@ def _extract_entities_payload(llm_raw: dict | None) -> list[dict]:
     return [e for e in entities if isinstance(e, dict)]
 
 
-async def _get_or_create_entity(session, canonical_name: str, first_seen_at):
+async def _get_or_create_entity(
+    session,
+    canonical_name: str,
+    first_seen_at,
+    entity_type: str | None,
+    jurisdiction: str | None,
+):
     legal_name = normalize_legal_name(canonical_name)
     if not legal_name:
         return None
@@ -48,12 +54,18 @@ async def _get_or_create_entity(session, canonical_name: str, first_seen_at):
     result = await session.execute(stmt)
     entity = result.scalar_one_or_none()
     if entity:
+        if entity.entity_type is None and entity_type:
+            entity.entity_type = entity_type
+        if entity.jurisdiction is None and jurisdiction:
+            entity.jurisdiction = jurisdiction
         if first_seen_at and (entity.last_seen_at is None or first_seen_at > entity.last_seen_at):
             entity.last_seen_at = first_seen_at
         return entity
 
     entity = ExtractedEntity(
         extracted_name=canonical_name,
+        entity_type=entity_type,
+        jurisdiction=jurisdiction,
         legal_name_normalized=legal_name,
         loose_name_normalized=normalize_loose_name(canonical_name),
         first_seen_at=first_seen_at,
@@ -79,7 +91,13 @@ async def process_article(session, article: NewsArticle) -> int:
         if not canonical_name or not isinstance(canonical_name, str):
             continue
 
-        entity = await _get_or_create_entity(session, canonical_name, article.published_at)
+        entity = await _get_or_create_entity(
+            session,
+            canonical_name,
+            article.published_at,
+            payload.get("entity_type"),
+            payload.get("jurisdiction"),
+        )
         if entity is None:
             continue
 

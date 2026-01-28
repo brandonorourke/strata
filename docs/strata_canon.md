@@ -104,6 +104,8 @@ Indexes:
 #### `extracted_entities` (companies only in v0)
 - id (uuid, PK)
 - extracted_name (text)
+- entity_type (text, nullable)
+- jurisdiction (text, nullable)
 - legal_name_normalized (text, UNIQUE)
   - lowercased, punctuation stripped, spaces normalized
   - keep suffixes like inc/llc/corp here

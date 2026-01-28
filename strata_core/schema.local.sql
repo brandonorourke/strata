@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict LuulOR4V9MTDWS4DAqgHusOL76u3SpnKdrbeoidD1Jh7mSA6wv72jMZIrLI45YO
+\restrict Nctf7yAw0hk9zmQYPcVGKlXNHdbOZLIKwoq0bhm7JsJIpZIQe5jsi4C5wOE5vqh
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -47,7 +47,9 @@ CREATE TABLE public.extracted_entities (
     loose_name_normalized text,
     created_from text DEFAULT 'news'::text NOT NULL,
     first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
-    last_seen_at timestamp with time zone DEFAULT now() NOT NULL
+    last_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+    entity_type text,
+    jurisdiction text
 );
 
 
@@ -271,5 +273,5 @@ ALTER TABLE ONLY public.extracted_events
 -- PostgreSQL database dump complete
 --
 
-\unrestrict LuulOR4V9MTDWS4DAqgHusOL76u3SpnKdrbeoidD1Jh7mSA6wv72jMZIrLI45YO
+\unrestrict Nctf7yAw0hk9zmQYPcVGKlXNHdbOZLIKwoq0bhm7JsJIpZIQe5jsi4C5wOE5vqh
 
