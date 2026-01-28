@@ -252,6 +252,148 @@ CREATE INDEX ix_news_articles_published_at ON public.news_articles USING btree (
 
 CREATE UNIQUE INDEX ux_extracted_events_article_entity ON public.extracted_events USING btree (article_id, entity_id);
 
+--
+-- Name: canonical_entities; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.canonical_entities (
+    id integer NOT NULL,
+    canonical_name text NOT NULL,
+    legal_name_normalized text NOT NULL,
+    loose_name_normalized text,
+    jurisdiction text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: canonical_entities_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.canonical_entities_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: canonical_entities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.canonical_entities_id_seq OWNED BY public.canonical_entities.id;
+
+
+--
+-- Name: canonical_entities id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.canonical_entities ALTER COLUMN id SET DEFAULT nextval('public.canonical_entities_id_seq'::regclass);
+
+
+--
+-- Name: entity_links; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.entity_links (
+    id integer NOT NULL,
+    extracted_entity_id integer NOT NULL,
+    canonical_entity_id integer NOT NULL,
+    link_confidence double precision,
+    link_method text,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: entity_links_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.entity_links_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: entity_links_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.entity_links_id_seq OWNED BY public.entity_links.id;
+
+
+--
+-- Name: entity_links id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_links ALTER COLUMN id SET DEFAULT nextval('public.entity_links_id_seq'::regclass);
+
+
+--
+-- Name: canonical_entities canonical_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.canonical_entities
+    ADD CONSTRAINT canonical_entities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: entity_links entity_links_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_links
+    ADD CONSTRAINT entity_links_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: entity_links entity_links_canonical_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_links
+    ADD CONSTRAINT entity_links_canonical_entity_id_fkey FOREIGN KEY (canonical_entity_id) REFERENCES public.canonical_entities(id);
+
+
+--
+-- Name: entity_links entity_links_extracted_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.entity_links
+    ADD CONSTRAINT entity_links_extracted_entity_id_fkey FOREIGN KEY (extracted_entity_id) REFERENCES public.extracted_entities(id);
+
+
+--
+-- Name: ix_canonical_entities_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_canonical_entities_id ON public.canonical_entities USING btree (id);
+
+
+--
+-- Name: ix_entity_links_canonical_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_entity_links_canonical_entity_id ON public.entity_links USING btree (canonical_entity_id);
+
+
+--
+-- Name: ix_entity_links_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_entity_links_id ON public.entity_links USING btree (id);
+
+
+--
+-- Name: ux_entity_links_extracted_entity; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_entity_links_extracted_entity ON public.entity_links USING btree (extracted_entity_id);
+
 
 --
 -- Name: extracted_events extracted_events_article_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
@@ -274,4 +416,3 @@ ALTER TABLE ONLY public.extracted_events
 --
 
 \unrestrict Nctf7yAw0hk9zmQYPcVGKlXNHdbOZLIKwoq0bhm7JsJIpZIQe5jsi4C5wOE5vqh
-

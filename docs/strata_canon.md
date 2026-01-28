@@ -86,6 +86,7 @@ Start with 1 source, then add:
 Rationale: high-signal inputs, relatively clean ingestion, lower legal risk posture.
 
 ### Core data model (4 tables)
+Note: v0.1 adds a conservative canonicalization layer: `canonical_entities` + `entity_links`.
 
 #### `news_articles`
 - id (uuid, PK)
@@ -182,13 +183,20 @@ For each extracted entity:
 
 - insert extracted_events
 
+#### C) Canonicalization (conservative linking)
+For each extracted_entity:
+- Link to a canonical_entity using strict legal_name_normalized + jurisdiction when present.
+- If jurisdiction is missing, link on legal_name_normalized with lower confidence.
+- If ambiguous, create a new canonical_entity.
+- Store link in entity_links with confidence + method.
+
 Gating:
 
 - Only insert extracted_events if confidence >= threshold (default 0.6).
 
 Everything must be source-backed (url, date, title stored).
 
-#### C) Screen + company timeline queries
+#### D) Screen + company timeline queries
 
 “Most Changed (7d)” ranked list:
 
