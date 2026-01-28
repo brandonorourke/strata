@@ -48,6 +48,7 @@ async def _create_canonical(session, extracted: ExtractedEntity) -> CanonicalEnt
         jurisdiction=extracted.jurisdiction,
     )
     session.add(canonical)
+    await session.flush()
     return canonical
 
 
@@ -58,6 +59,8 @@ async def _create_link(
     confidence: float,
     method: str,
 ):
+    if canonical.id is None:
+        await session.flush()
     link = EntityLink(
         extracted_entity_id=extracted.id,
         canonical_entity_id=canonical.id,
