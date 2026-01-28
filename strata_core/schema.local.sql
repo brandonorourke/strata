@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict F96AZ8oKDhrhMSo7swdfAZbV1bb2xHC0Yo2HmYTEirXR9WhyxV6SwAoRNIU9xm7
+\restrict 6nRjPXp2PKhacVWIJgT3EJsWubeHYHnwmsCd6eYuTZAz9q8kqJwZ1H9fdvBtBA8
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -47,7 +47,8 @@ CREATE TABLE public.canonical_entities (
     loose_name_normalized text,
     jurisdiction text,
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
+    updated_at timestamp with time zone DEFAULT now(),
+    status text DEFAULT 'provisional'::text NOT NULL
 );
 
 
@@ -416,5 +417,5 @@ ALTER TABLE ONLY public.extracted_events
 -- PostgreSQL database dump complete
 --
 
-\unrestrict F96AZ8oKDhrhMSo7swdfAZbV1bb2xHC0Yo2HmYTEirXR9WhyxV6SwAoRNIU9xm7
+\unrestrict 6nRjPXp2PKhacVWIJgT3EJsWubeHYHnwmsCd6eYuTZAz9q8kqJwZ1H9fdvBtBA8
 

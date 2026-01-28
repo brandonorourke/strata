@@ -34,13 +34,17 @@ async def _find_canonical_exact(session, legal_name: str, jurisdiction: str):
 
 async def _find_canonical_legal_only(session, legal_name: str):
     stmt = select(CanonicalEntity).where(
-        CanonicalEntity.legal_name_normalized == legal_name
+        and_(
+            CanonicalEntity.legal_name_normalized == legal_name,
+            CanonicalEntity.status == "confirmed",
+        )
     ).limit(1)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
 
 async def _create_canonical(session, extracted: ExtractedEntity) -> CanonicalEntity:
+    status = "confirmed" if extracted.jurisdiction else "provisional"
     canonical = CanonicalEntity(
         canonical_name=extracted.extracted_name,
         legal_name_normalized=extracted.legal_name_normalized
@@ -48,6 +52,7 @@ async def _create_canonical(session, extracted: ExtractedEntity) -> CanonicalEnt
         loose_name_normalized=extracted.loose_name_normalized
         or normalize_loose_name(extracted.extracted_name),
         jurisdiction=extracted.jurisdiction,
+        status=status,
     )
     session.add(canonical)
     await session.flush()
@@ -108,6 +113,8 @@ async def process_batch(limit: int = 200) -> int:
                     session, legal_name, extracted.jurisdiction
                 )
                 if canonical:
+                    if canonical.status != "confirmed":
+                        canonical.status = "confirmed"
                     await _create_link(
                         session,
                         extracted,
@@ -125,7 +132,7 @@ async def process_batch(limit: int = 200) -> int:
                     extracted,
                     canonical,
                     confidence=0.7,
-                    method="exact_legal",
+                    method="exact_legal_confirmed",
                 )
                 linked += 1
                 continue

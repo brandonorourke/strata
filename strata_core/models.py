@@ -91,6 +91,7 @@ class CanonicalEntity(Base):
     legal_name_normalized = Column(Text, nullable=False)
     loose_name_normalized = Column(Text, nullable=True)
     jurisdiction = Column(Text, nullable=True)
+    status = Column(Text, nullable=False, server_default="provisional")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now())
 
