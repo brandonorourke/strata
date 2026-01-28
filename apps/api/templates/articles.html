@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+  <table>
+    <thead>
+      <tr>
+        <th>Published</th>
+        <th>Article</th>
+        <th>Entities / Events</th>
+        <th>Links</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for article in articles %}
+      <tr>
+        <td>
+          <div>{{ article.published_at.strftime("%Y-%m-%d %H:%M") if article.published_at else "" }}</div>
+          <div class="meta">{{ article.source.value if article.source else "" }}</div>
+        </td>
+        <td>
+          <div><a href="/articles/{{ article.id }}">{{ article.title }}</a></div>
+        </td>
+        <td>
+          {% if article.extracted_events %}
+            <div class="events">
+              {% for event in article.extracted_events %}
+                <div class="event">
+                  <strong>{{ event.extracted_name }}</strong>
+                  <div class="meta">
+                    {{ event.event_type or "event" }}
+                    {% if event.transaction_role %}· {{ event.transaction_role }}{% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="meta">No extracted events</div>
+          {% endif %}
+        </td>
+        <td class="actions">
+          <a href="/articles/{{ article.id }}">clean text</a>
+          <a href="{{ article.url }}" target="_blank" rel="noopener">source</a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

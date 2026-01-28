@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="meta">
+    <div>{{ article.published_at.strftime("%Y-%m-%d %H:%M") if article.published_at else "" }}</div>
+    <div>{{ article.source.value if article.source else "" }}</div>
+  </div>
+  <h2>{{ article.title }}</h2>
+  <div class="actions">
+    <a href="{{ article.url }}" target="_blank" rel="noopener">open source</a>
+  </div>
+
+  <h3>Extracted events</h3>
+  {% if article.extracted_events %}
+    <div class="events">
+      {% for event in article.extracted_events %}
+        <div class="event">
+          <strong>{{ event.extracted_name }}</strong>
+          <div class="meta">
+            {{ event.event_type or "event" }}
+            {% if event.transaction_role %}· {{ event.transaction_role }}{% endif %}
+          </div>
+          {% if event.event_description %}
+            <div>{{ event.event_description }}</div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="meta">No extracted events.</div>
+  {% endif %}
+
+  <h3>Clean text</h3>
+  {% if article.clean_text %}
+    <div class="article-text">{{ article.clean_text }}</div>
+  {% else %}
+    <div class="meta">Clean text not available.</div>
+  {% endif %}
+{% endblock %}

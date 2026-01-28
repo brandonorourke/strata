@@ -45,6 +45,8 @@ class NewsArticle(Base):
     llm_raw = Column(JSONB, nullable=True)
     entities_extracted_at = Column(DateTime(timezone=True), nullable=True)
 
+    extracted_events = relationship("ExtractedEvent", back_populates="article")
+
 
 class ExtractedEntity(Base):
     __tablename__ = "extracted_entities"
@@ -77,5 +79,5 @@ class ExtractedEvent(Base):
     confidence = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    article = relationship("NewsArticle")
+    article = relationship("NewsArticle", back_populates="extracted_events")
     entity = relationship("ExtractedEntity", back_populates="extracted_events")
