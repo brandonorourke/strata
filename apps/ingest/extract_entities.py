@@ -3,7 +3,7 @@
 import asyncio
 import logging
 import re
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Any
 
 from sqlalchemy import select, exists, and_
@@ -66,6 +66,7 @@ async def _get_or_create_entity(session, canonical_name: str, first_seen_at):
 async def process_article(session, article: NewsArticle) -> int:
     entities_payload = _extract_entities_payload(article.llm_raw)
     if not entities_payload:
+        article.entities_extracted_at = datetime.now(timezone.utc)
         return 0
 
     inserted = 0
@@ -106,6 +107,7 @@ async def process_article(session, article: NewsArticle) -> int:
         session.add(event)
         inserted += 1
 
+    article.entities_extracted_at = datetime.now(timezone.utc)
     return inserted
 
 
@@ -113,6 +115,7 @@ async def fetch_articles_with_llm(session, limit: int = 20) -> list[NewsArticle]
     stmt = (
         select(NewsArticle)
         .where(NewsArticle.llm_raw.is_not(None))
+        .where(NewsArticle.entities_extracted_at.is_(None))
         .where(
             ~exists().where(ExtractedEvent.article_id == NewsArticle.id)
         )

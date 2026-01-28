@@ -43,6 +43,7 @@ class NewsArticle(Base):
     raw_html = Column(Text, nullable=True)
     clean_text = Column(Text, nullable=True)
     llm_raw = Column(JSONB, nullable=True)
+    entities_extracted_at = Column(DateTime(timezone=True), nullable=True)
 
 
 class ExtractedEntity(Base):

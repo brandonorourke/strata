@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict hXmGqqnOYszXyxRWsGrnk17Y4ZAGLlYyeHAcnMOPYPDY7kQEgeDTM9Epem5k124
+\restrict Oifq4nLNhZpPsb8ZqMubWvpnEGHv8C6DuoeMBK9e8dyLv2bKRsZzNUSfME4xqE0
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -123,7 +123,8 @@ CREATE TABLE public.news_articles (
     ingested_at timestamp with time zone DEFAULT now(),
     raw_html text,
     clean_text text,
-    llm_raw jsonb
+    llm_raw jsonb,
+    entities_extracted_at timestamp with time zone
 );
 
 
@@ -270,5 +271,5 @@ ALTER TABLE ONLY public.extracted_events
 -- PostgreSQL database dump complete
 --
 
-\unrestrict hXmGqqnOYszXyxRWsGrnk17Y4ZAGLlYyeHAcnMOPYPDY7kQEgeDTM9Epem5k124
+\unrestrict Oifq4nLNhZpPsb8ZqMubWvpnEGHv8C6DuoeMBK9e8dyLv2bKRsZzNUSfME4xqE0
 
