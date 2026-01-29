@@ -26,22 +26,16 @@ async def _find_confirmed_canonical_by_cluster(
     session,
     legal_name: str,
     entity_type: str,
-    hq_country: str | None,
-    hq_region: str | None,
+    hq_country: str,
+    hq_region: str,
 ):
     filters = [
         CanonicalEntity.legal_name_normalized == legal_name,
         CanonicalEntity.entity_type == entity_type,
         CanonicalEntity.confirmed_domain.is_not(None),
+        CanonicalEntity.hq_country == hq_country,
+        CanonicalEntity.hq_region == hq_region,
     ]
-    if hq_country is None:
-        filters.append(CanonicalEntity.hq_country.is_(None))
-    else:
-        filters.append(CanonicalEntity.hq_country == hq_country)
-    if hq_region is None:
-        filters.append(CanonicalEntity.hq_region.is_(None))
-    else:
-        filters.append(CanonicalEntity.hq_region == hq_region)
 
     stmt = select(CanonicalEntity).where(and_(*filters)).limit(1)
     result = await session.execute(stmt)
@@ -75,22 +69,16 @@ async def _find_provisional_cluster(
     session,
     legal_name: str,
     entity_type: str,
-    hq_country: str | None,
-    hq_region: str | None,
+    hq_country: str,
+    hq_region: str,
 ):
     filters = [
         CanonicalEntity.legal_name_normalized == legal_name,
         CanonicalEntity.entity_type == entity_type,
         CanonicalEntity.confirmed_domain.is_(None),
+        CanonicalEntity.hq_country == hq_country,
+        CanonicalEntity.hq_region == hq_region,
     ]
-    if hq_country is None:
-        filters.append(CanonicalEntity.hq_country.is_(None))
-    else:
-        filters.append(CanonicalEntity.hq_country == hq_country)
-    if hq_region is None:
-        filters.append(CanonicalEntity.hq_region.is_(None))
-    else:
-        filters.append(CanonicalEntity.hq_region == hq_region)
 
     stmt = select(CanonicalEntity).where(and_(*filters)).limit(1)
     result = await session.execute(stmt)
@@ -178,6 +166,9 @@ async def process_batch(limit: int = 200) -> int:
                 linked += 1
                 continue
 
+            if not extracted.hq_country or not extracted.hq_region:
+                continue
+
             canonical = await _find_confirmed_canonical_by_cluster(
                 session,
                 legal_name,
@@ -194,9 +185,6 @@ async def process_batch(limit: int = 200) -> int:
                     method="confirmed_cluster_match",
                 )
                 linked += 1
-                continue
-
-            if not extracted.hq_country and not extracted.hq_region:
                 continue
 
             canonical = await _find_provisional_cluster(
