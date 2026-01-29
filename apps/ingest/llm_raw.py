@@ -23,7 +23,7 @@ Your tasks:
 1. Identify all companies and key entities mentioned.
 2. Identify the primary company or companies—the ones the article is materially about.
 3. Identify secondary or contextual entities that are mentioned but not the main focus.
-4. Normalize company names to canonical form when possible.
+4. Preserve names as written; do not invent identifiers.
 5. Classify the event type.
 6. For M&A / portfolio events, identify each entity's role in the transaction.
 7. Only output valid JSON. No commentary, no explanations.
@@ -32,7 +32,7 @@ Definitions:
 
 - Primary entities:
   - Are in the headline or lead paragraphs, OR
-  - Undergo a material corporate event (financing, bankruptcy, layoffs, leadership change, legal/regulatory action, acquisition/disposition/M&A, major performance update).
+  - Are clearly the main subject the article is principally about.
 
 - Context entities:
   - Vendors, partners, prior employers, investors, platforms, or comparison companies that are not the main subject of the article.
@@ -73,9 +73,7 @@ Return JSON with the following schema:
         "primary_sector": string | null,
         "keywords": [string],
         "is_financial_sponsor": boolean | null,
-        "is_government_or_regulator": boolean | null,
-        "website_url": string | null,
-        "linkedin_url": string | null
+        "is_government_or_regulator": boolean | null
       }}
     }}
   ]
@@ -95,7 +93,7 @@ Field requirements:
 
 - is_primary_entity:
   - true if this entity is one of the main subjects of the article
-    (headline/lead focus or undergoing a material event).
+    (headline/lead focus OR the entity the article is principally about).
   - false if it is only a contextual or secondary mention
     (e.g., prior employer, investor, comparison company, vendor).
 
@@ -114,6 +112,8 @@ Field requirements:
       "performance_update",
       "other"
     ]
+  - If this entity is not directly undergoing or participating in a material event in this article (i.e., it is only contextual), set event_type = null and event_description = null and event_date = null.
+  - Participation means the entity is directly involved in the event (e.g., buyer/seller/target; plaintiff/defendant; regulator bringing action), not merely mentioned.
   - Choose the single best label for the main event affecting this entity in this article.
   - Use:
     - "acquisition" when the entity is clearly involved in buying a company or asset.
@@ -128,6 +128,7 @@ Field requirements:
   - "performance_update" for earnings, guidance changes, operational performance
     metrics, or major business KPIs.
   - Use "other" if none of the above fits.
+  - Prefer null over "other" for contextual entities; use "other" only when there is clearly a material event but none of the labels fit.
 
 - transaction_role:
   - Only set this field for entities involved in M&A / portfolio / transaction events
@@ -139,7 +140,7 @@ Field requirements:
     - The company or asset being acquired/sold -> "target"
     - Investment banks, brokers, or real estate services firms running the sale -> "advisor"
     - If involved but not fitting the above, use "other".
-  - If the entity is not part of any M&A/transaction event, set transaction_role to null.
+  - If the entity is not actually part of the transaction described, set transaction_role to null.
 
 - event_description:
   - 1–3 sentences in plain English briefly describing the event for this entity
@@ -161,6 +162,7 @@ Field requirements:
   - A float between 0.0 and 1.0 representing how confident you are that this
     entity and event_type/event_description pairing is correct.
   - Higher = more confident.
+  - If event_type is null (context-only entity), set confidence to reflect only entity extraction certainty (typically 0.3–0.6).
 
 - entity_type:
   - A coarse classification of what this entity is.
@@ -175,13 +177,15 @@ Field requirements:
       "individual",
       "other"
     ]
-  - If unclear, use "other" or null.
+  - If unclear, use null only if you truly cannot classify it from the article text. Use "other" only if it is clearly an entity but does not fit any category above.
 
 - jurisdiction:
   - The primary jurisdiction explicitly mentioned in the article for this entity,
     if any (e.g., "Florida", "Japan", "United States", "Delaware").
   - This may be the country of operation or state of incorporation.
   - If not stated, return null. Do NOT guess.
+  - Set jurisdiction only if explicitly stated for the entity itself (HQ/base/incorporation). Do NOT use this field for court venue or enforcement district; include venue in event_description if needed. If ambiguous, return null.
+
 
 - fingerprint:
   - A small object with optional fields that can help later with entity resolution.
@@ -209,12 +213,6 @@ Field requirements:
       (e.g., DOJ, SEC).
     - false if clearly not.
     - null if unclear.
-  - website_url:
-    - If the article explicitly includes a website URL for this entity, return it as an absolute URL string.
-    - If no website is shown in the article text, return null. Do NOT guess.
-  - linkedin_url:
-    - If the article explicitly includes a LinkedIn URL for this entity, return it as an absolute URL string.
-    - If no LinkedIn URL is shown in the article text, return null. Do NOT guess or search.
 
 Additional rules:
 
