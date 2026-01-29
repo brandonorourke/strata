@@ -21,17 +21,6 @@ logging.basicConfig(level=logging.INFO)
 _ALLOWED_ENTITY_TYPES = {"operating_company", "financial_sponsor", "lender"}
 
 
-async def _find_canonical_exact(session, legal_name: str, jurisdiction: str):
-    stmt = select(CanonicalEntity).where(
-        and_(
-            CanonicalEntity.legal_name_normalized == legal_name,
-            CanonicalEntity.jurisdiction == jurisdiction,
-        )
-    ).limit(1)
-    result = await session.execute(stmt)
-    return result.scalar_one_or_none()
-
-
 async def _find_canonical_legal_only(session, legal_name: str):
     stmt = select(CanonicalEntity).where(
         and_(
@@ -44,7 +33,7 @@ async def _find_canonical_legal_only(session, legal_name: str):
 
 
 async def _create_canonical(session, extracted: ExtractedEntity) -> CanonicalEntity:
-    status = "confirmed" if extracted.jurisdiction else "provisional"
+    status = "provisional"
     canonical = CanonicalEntity(
         canonical_name=extracted.extracted_name,
         legal_name_normalized=extracted.legal_name_normalized
@@ -106,24 +95,6 @@ async def process_batch(limit: int = 200) -> int:
             legal_name = extracted.legal_name_normalized
             if not legal_name:
                 legal_name = normalize_legal_name(extracted.extracted_name)
-
-            canonical = None
-            if extracted.jurisdiction:
-                canonical = await _find_canonical_exact(
-                    session, legal_name, extracted.jurisdiction
-                )
-                if canonical:
-                    if canonical.status != "confirmed":
-                        canonical.status = "confirmed"
-                    await _create_link(
-                        session,
-                        extracted,
-                        canonical,
-                        confidence=0.95,
-                        method="exact_legal+jurisdiction",
-                    )
-                    linked += 1
-                    continue
 
             canonical = await _find_canonical_legal_only(session, legal_name)
             if canonical:
