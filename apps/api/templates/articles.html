@@ -33,7 +33,11 @@
               {% endfor %}
             </div>
           {% else %}
-            <div class="meta">No extracted events</div>
+            {% if article.entities_extracted_at %}
+              <div class="meta">Processed: no extracted events</div>
+            {% else %}
+              <div class="meta">Not processed yet</div>
+            {% endif %}
           {% endif %}
         </td>
         <td class="actions">
