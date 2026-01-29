@@ -5,7 +5,7 @@
     <thead>
       <tr>
         <th>Entity</th>
-        <th>Confirmed</th>
+        <th>Type</th>
         <th>Score</th>
         <th>Claims</th>
         <th>Top Events</th>
@@ -15,11 +15,11 @@
     {% for row in rows %}
       <tr>
         <td>
-          <a href="/admin/canonicals/{{ row.canonical.id }}">{{ row.canonical.canonical_name }}</a>
+          <a href="/screen/cluster?legal_name={{ row.legal_name|urlencode }}&entity_type={{ row.entity_type|urlencode }}">
+            {{ row.display_name }}
+          </a>
         </td>
-        <td class="meta">
-          {% if row.canonical.confirmed_domain %}yes{% else %}no{% endif %}
-        </td>
+        <td class="meta">{{ row.entity_type }}</td>
         <td class="score">{{ "%.2f"|format(row.score) }}</td>
         <td class="meta">{{ row.claims_count }} claims · {{ row.sources_count }} sources</td>
         <td>

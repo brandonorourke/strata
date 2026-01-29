@@ -4,11 +4,18 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select, func
+from sqlalchemy import select, func, and_
 from sqlalchemy.orm import selectinload
 
 from strata_core.db import AsyncSessionLocal
-from strata_core.models import NewsArticle, ExtractedEvent, CanonicalEntity, EntityLink, ArticleDomain, ExtractedEntity
+from strata_core.models import (
+    NewsArticle,
+    ExtractedEvent,
+    CanonicalEntity,
+    EntityLink,
+    ArticleDomain,
+    ExtractedEntity,
+)
 
 app = FastAPI(title="Strata UI")
 templates = Jinja2Templates(directory="apps/api/templates")
@@ -118,28 +125,40 @@ async def most_changed(request: Request, days: int = 7, limit: int = 50):
 
     async with AsyncSessionLocal() as session:
         stmt = (
-            select(CanonicalEntity, ExtractedEvent, NewsArticle)
-            .join(EntityLink, EntityLink.canonical_entity_id == CanonicalEntity.id)
-            .join(ExtractedEvent, ExtractedEvent.entity_id == EntityLink.extracted_entity_id)
+            select(ExtractedEntity, ExtractedEvent, NewsArticle)
+            .join(ExtractedEvent, ExtractedEvent.entity_id == ExtractedEntity.id)
             .join(NewsArticle, NewsArticle.id == ExtractedEvent.article_id)
             .where(NewsArticle.published_at >= window_start)
+            .where(ExtractedEntity.entity_type.in_(["operating_company", "financial_sponsor", "lender"]))
         )
         result = await session.execute(stmt)
         rows = result.all()
 
-    canonicals = {}
-    for canonical, event, article in rows:
-        bucket = canonicals.setdefault(
-            canonical.id,
+    clusters = {}
+    for entity, event, article in rows:
+        if not entity.legal_name_normalized or not entity.entity_type:
+            continue
+
+        cluster_key = f"{entity.legal_name_normalized}::{entity.entity_type}"
+        bucket = clusters.setdefault(
+            cluster_key,
             {
-                "canonical": canonical,
+                "cluster_key": cluster_key,
+                "legal_name": entity.legal_name_normalized,
+                "entity_type": entity.entity_type,
+                "display_name": entity.extracted_name,
                 "events": [],
+                "latest_published_at": None,
             },
         )
 
         published_at = article.published_at
         if published_at is None:
             continue
+
+        if bucket["latest_published_at"] is None or published_at > bucket["latest_published_at"]:
+            bucket["latest_published_at"] = published_at
+            bucket["display_name"] = entity.extracted_name or bucket["display_name"]
 
         days_since = int((now - published_at).total_seconds() // 86400)
         if days_since < 0:
@@ -172,8 +191,7 @@ async def most_changed(request: Request, days: int = 7, limit: int = 50):
         )
 
     ranked = []
-    for bucket in canonicals.values():
-        canonical = bucket["canonical"]
+    for bucket in clusters.values():
         events = bucket["events"]
 
         per_type = {}
@@ -188,14 +206,15 @@ async def most_changed(request: Request, days: int = 7, limit: int = 50):
         kept_events.sort(key=lambda x: x["event_score"], reverse=True)
 
         entity_score = sum(item["event_score"] for item in kept_events)
-        if canonical.confirmed_domain is None:
-            entity_score *= 0.8
 
-        source_ids = {item["article"].id for item in kept_events if item.get("article")}
+        source_ids = {item["article"].source for item in kept_events if item.get("article")}
 
         ranked.append(
             {
-                "canonical": canonical,
+                "cluster_key": bucket["cluster_key"],
+                "legal_name": bucket["legal_name"],
+                "entity_type": bucket["entity_type"],
+                "display_name": bucket["display_name"],
                 "score": entity_score,
                 "events": kept_events[:3],
                 "claims_count": len(kept_events),
@@ -211,6 +230,45 @@ async def most_changed(request: Request, days: int = 7, limit: int = 50):
             "request": request,
             "rows": ranked[:limit],
             "days": days,
+        },
+    )
+
+
+@app.get("/screen/cluster")
+async def cluster_evidence(
+    request: Request,
+    legal_name: str,
+    entity_type: str,
+    days: int = 30,
+    all_time: int = 0,
+):
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(days=days)
+
+    async with AsyncSessionLocal() as session:
+        stmt = (
+            select(ExtractedEvent, NewsArticle, ExtractedEntity)
+            .join(ExtractedEntity, ExtractedEntity.id == ExtractedEvent.entity_id)
+            .join(NewsArticle, NewsArticle.id == ExtractedEvent.article_id)
+            .where(ExtractedEntity.legal_name_normalized == legal_name)
+            .where(ExtractedEntity.entity_type == entity_type)
+            .order_by(NewsArticle.published_at.desc())
+        )
+        if not all_time:
+            stmt = stmt.where(NewsArticle.published_at >= window_start)
+
+        result = await session.execute(stmt)
+        rows = list(result.all())
+
+    return templates.TemplateResponse(
+        "cluster_evidence.html",
+        {
+            "request": request,
+            "legal_name": legal_name,
+            "entity_type": entity_type,
+            "rows": rows,
+            "days": days,
+            "all_time": all_time,
         },
     )
 
