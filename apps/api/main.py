@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
 from strata_core.db import AsyncSessionLocal
@@ -29,8 +29,34 @@ _EVENT_TYPE_WEIGHTS = {
 
 
 @app.get("/")
-async def list_articles(request: Request, limit: int = 500):
+async def most_changed_root(request: Request):
+    return await most_changed(request=request)
+
+
+@app.get("/admin")
+async def admin_home(request: Request):
+    return templates.TemplateResponse(
+        "admin_home.html",
+        {"request": request},
+    )
+
+
+@app.get("/admin/articles")
+async def list_articles(request: Request, page: int = 1, page_size: int = 50):
+    if page < 1:
+        page = 1
+    if page_size < 1:
+        page_size = 50
+    if page_size > 200:
+        page_size = 200
+
+    offset = (page - 1) * page_size
+
     async with AsyncSessionLocal() as session:
+        count_stmt = select(func.count()).select_from(NewsArticle)
+        count_result = await session.execute(count_stmt)
+        total = int(count_result.scalar() or 0)
+
         stmt = (
             select(NewsArticle)
             .options(
@@ -39,18 +65,28 @@ async def list_articles(request: Request, limit: int = 500):
                 )
             )
             .order_by(NewsArticle.published_at.desc())
-            .limit(limit)
+            .offset(offset)
+            .limit(page_size)
         )
         result = await session.execute(stmt)
         articles = list(result.scalars().all())
 
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
     return templates.TemplateResponse(
         "articles.html",
-        {"request": request, "articles": articles},
+        {
+            "request": request,
+            "articles": articles,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+        },
     )
 
 
-@app.get("/articles/{article_id}")
+@app.get("/admin/articles/{article_id}")
 async def article_detail(request: Request, article_id: int):
     async with AsyncSessionLocal() as session:
         stmt = (
@@ -75,8 +111,7 @@ async def article_detail(request: Request, article_id: int):
 
 
 @app.get("/screen")
-async def most_changed(request: Request, days: int = 60, limit: int = 50):
-    print(f"Generating most changed screen for last {days} days")
+async def most_changed(request: Request, days: int = 7, limit: int = 50):
     now = datetime.now(timezone.utc)
     window_start = now - timedelta(days=days)
 
@@ -109,13 +144,11 @@ async def most_changed(request: Request, days: int = 60, limit: int = 50):
         if days_since < 0:
             days_since = 0
 
-        recency_weight = 1.0 - (0.75 / 30.0) * days_since
+        recency_weight = 1.0 - (0.75 / 7.0) * days_since
         if recency_weight < 0.25:
             recency_weight = 0.25
         if recency_weight > 1.0:
             recency_weight = 1.0
-
-        recency_weight = 1
 
         event_type = event.event_type or "other"
         type_weight = _EVENT_TYPE_WEIGHTS.get(event_type, 1)
@@ -181,9 +214,22 @@ async def most_changed(request: Request, days: int = 60, limit: int = 50):
     )
 
 
-@app.get("/canonicals")
-async def list_canonicals(request: Request, limit: int = 100):
+@app.get("/admin/canonicals")
+async def list_canonicals(request: Request, page: int = 1, page_size: int = 50):
+    if page < 1:
+        page = 1
+    if page_size < 1:
+        page_size = 50
+    if page_size > 200:
+        page_size = 200
+
+    offset = (page - 1) * page_size
+
     async with AsyncSessionLocal() as session:
+        count_stmt = select(func.count()).select_from(CanonicalEntity)
+        count_result = await session.execute(count_stmt)
+        total = int(count_result.scalar() or 0)
+
         stmt = (
             select(CanonicalEntity)
             .options(
@@ -192,18 +238,28 @@ async def list_canonicals(request: Request, limit: int = 100):
                 )
             )
             .order_by(CanonicalEntity.id.asc())
-            .limit(limit)
+            .offset(offset)
+            .limit(page_size)
         )
         result = await session.execute(stmt)
         canonicals = list(result.scalars().all())
 
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
     return templates.TemplateResponse(
         "canonicals.html",
-        {"request": request, "canonicals": canonicals},
+        {
+            "request": request,
+            "canonicals": canonicals,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+        },
     )
 
 
-@app.get("/canonicals/{canonical_id}")
+@app.get("/admin/canonicals/{canonical_id}")
 async def canonical_detail(request: Request, canonical_id: int, limit: int = 200):
     async with AsyncSessionLocal() as session:
         stmt = (

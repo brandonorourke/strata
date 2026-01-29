@@ -15,7 +15,7 @@
     {% for row in rows %}
       <tr>
         <td>
-          <a href="/canonicals/{{ row.canonical.id }}">{{ row.canonical.canonical_name }}</a>
+          <a href="/admin/canonicals/{{ row.canonical.id }}">{{ row.canonical.canonical_name }}</a>
         </td>
         <td>
           <span class="status {{ row.canonical.status }}">{{ row.canonical.status }}</span>

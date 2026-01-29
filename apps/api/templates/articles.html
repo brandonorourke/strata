@@ -17,7 +17,7 @@
           <div class="meta">{{ article.source.value if article.source else "" }}</div>
         </td>
         <td>
-          <div><a href="/articles/{{ article.id }}">{{ article.title }}</a></div>
+          <div><a href="/admin/articles/{{ article.id }}">{{ article.title }}</a></div>
         </td>
         <td>
           {% if article.extracted_events %}
@@ -41,11 +41,23 @@
           {% endif %}
         </td>
         <td class="actions">
-          <a href="/articles/{{ article.id }}">clean text</a>
+          <a href="/admin/articles/{{ article.id }}">clean text</a>
           <a href="{{ article.url }}" target="_blank" rel="noopener">source</a>
         </td>
       </tr>
     {% endfor %}
     </tbody>
   </table>
+
+  {% if total_pages and total_pages > 1 %}
+    <div class="meta" style="margin-top: 12px;">
+      {% if page > 1 %}
+        <a href="/admin/articles?page={{ page - 1 }}&page_size={{ page_size }}">Prev</a>
+      {% endif %}
+      <span>Page {{ page }} of {{ total_pages }}</span>
+      {% if page < total_pages %}
+        <a href="/admin/articles?page={{ page + 1 }}&page_size={{ page_size }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
 {% endblock %}

@@ -14,7 +14,7 @@
     {% for canonical in canonicals %}
       <tr>
         <td>{{ canonical.id }}</td>
-        <td><a href="/canonicals/{{ canonical.id }}">{{ canonical.canonical_name }}</a></td>
+        <td><a href="/admin/canonicals/{{ canonical.id }}">{{ canonical.canonical_name }}</a></td>
         <td>{{ canonical.jurisdiction or "" }}</td>
         <td>
           <span class="status {{ canonical.status }}">
@@ -36,4 +36,16 @@
     {% endfor %}
     </tbody>
   </table>
+
+  {% if total_pages and total_pages > 1 %}
+    <div class="meta" style="margin-top: 12px;">
+      {% if page > 1 %}
+        <a href="/admin/canonicals?page={{ page - 1 }}&page_size={{ page_size }}">Prev</a>
+      {% endif %}
+      <span>Page {{ page }} of {{ total_pages }}</span>
+      {% if page < total_pages %}
+        <a href="/admin/canonicals?page={{ page + 1 }}&page_size={{ page_size }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
 {% endblock %}
