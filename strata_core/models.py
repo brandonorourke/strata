@@ -44,8 +44,10 @@ class NewsArticle(Base):
     clean_text = Column(Text, nullable=True)
     llm_raw = Column(JSONB, nullable=True)
     entities_extracted_at = Column(DateTime(timezone=True), nullable=True)
+    domains_extracted_at = Column(DateTime(timezone=True), nullable=True)
 
     extracted_events = relationship("ExtractedEvent", back_populates="article")
+    article_domains = relationship("ArticleDomain", back_populates="article")
 
 
 class ExtractedEntity(Base):
@@ -111,3 +113,14 @@ class EntityLink(Base):
 
     extracted_entity = relationship("ExtractedEntity", back_populates="entity_links")
     canonical_entity = relationship("CanonicalEntity", back_populates="entity_links")
+
+
+class ArticleDomain(Base):
+    __tablename__ = "article_domains"
+
+    id = Column(Integer, primary_key=True, index=True)
+    article_id = Column(Integer, ForeignKey("news_articles.id"), nullable=False)
+    domain = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    article = relationship("NewsArticle", back_populates="article_domains")

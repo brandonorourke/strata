@@ -47,4 +47,13 @@
   {% else %}
     <div class="meta">No LLM output yet.</div>
   {% endif %}
+
+  <h3>Article domains</h3>
+  {% if article.article_domains %}
+    {% for d in article.article_domains %}
+      <span class="pill">{{ d.domain }}</span>
+    {% endfor %}
+  {% else %}
+    <div class="meta">No domains extracted yet.</div>
+  {% endif %}
 {% endblock %}

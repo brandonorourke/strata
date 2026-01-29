@@ -196,7 +196,8 @@ CREATE TABLE public.news_articles (
     raw_html text,
     clean_text text,
     llm_raw jsonb,
-    entities_extracted_at timestamp with time zone
+    entities_extracted_at timestamp with time zone,
+    domains_extracted_at timestamp with time zone
 );
 
 
@@ -373,6 +374,81 @@ CREATE INDEX ix_news_articles_published_at ON public.news_articles USING btree (
 
 CREATE UNIQUE INDEX ux_entity_links_extracted_entity ON public.entity_links USING btree (extracted_entity_id);
 
+--
+-- Name: article_domains; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.article_domains (
+    id integer NOT NULL,
+    article_id integer NOT NULL,
+    domain text NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: article_domains_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.article_domains_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: article_domains_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.article_domains_id_seq OWNED BY public.article_domains.id;
+
+
+--
+-- Name: article_domains id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.article_domains ALTER COLUMN id SET DEFAULT nextval('public.article_domains_id_seq'::regclass);
+
+
+--
+-- Name: article_domains article_domains_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.article_domains
+    ADD CONSTRAINT article_domains_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: article_domains article_domains_article_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.article_domains
+    ADD CONSTRAINT article_domains_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.news_articles(id);
+
+
+--
+-- Name: ix_article_domains_article_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_article_domains_article_id ON public.article_domains USING btree (article_id);
+
+
+--
+-- Name: ix_article_domains_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_article_domains_id ON public.article_domains USING btree (id);
+
+
+--
+-- Name: ux_article_domains_article_domain; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_article_domains_article_domain ON public.article_domains USING btree (article_id, domain);
+
 
 --
 -- Name: ux_extracted_events_article_entity; Type: INDEX; Schema: public; Owner: -
@@ -418,4 +494,3 @@ ALTER TABLE ONLY public.extracted_events
 --
 
 \unrestrict 6nRjPXp2PKhacVWIJgT3EJsWubeHYHnwmsCd6eYuTZAz9q8kqJwZ1H9fdvBtBA8
-

@@ -94,7 +94,8 @@ async def article_detail(request: Request, article_id: int):
             .options(
                 selectinload(NewsArticle.extracted_events).selectinload(
                     ExtractedEvent.entity
-                )
+                ),
+                selectinload(NewsArticle.article_domains),
             )
             .where(NewsArticle.id == article_id)
         )

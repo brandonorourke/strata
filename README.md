@@ -64,6 +64,7 @@ git push origin develop
   python apps/ingest/fetch_html.py         -- Fetches and stores raw HTML for articles
   python apps/ingest/clean_text.py         -- Takes raw HTML and converts it to text, no links, images, etc
   python apps/ingest/llm_raw.py            -- Calls OpenAI API to convert clean text to structured JSON
+  python apps/ingest/extract_domains.py    -- Extracts candidate domains from raw HTML
   python apps/ingest/extract_entities.py   -- Extracts entities and events from LLM JSON
   python apps/ingest/link_entities.py      -- Links entities to canonical entities
 ```
