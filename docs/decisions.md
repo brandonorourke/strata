@@ -11,3 +11,7 @@
 - Scope: Only canonicalize `entity_type` in `{operating_company, financial_sponsor, lender}` for v0.
 - Status: `provisional` means “no jurisdiction or strong identifier yet”; `confirmed` requires jurisdiction (v0).
 - Next: Add identifiers (domain/CIK/address) and a review workflow to safely reduce duplicates.
+
+## 2026-01-28 — Individuals excluded from v0 canonical UI
+- Decision: Individuals may be extracted but are not canonicalized or shown in v0 screens.
+- Rationale: Investor screens should focus on companies and avoid noise until person-level features are defined.
