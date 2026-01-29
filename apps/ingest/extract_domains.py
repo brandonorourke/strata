@@ -18,6 +18,12 @@ logging.basicConfig(level=logging.INFO)
 
 _URL_RE = re.compile(r"https?://[^\s\"'<>]+", re.IGNORECASE)
 _DENY_DOMAINS = {
+    "prnewswire.com",
+    "bbc.com",
+    "businesswire.com",
+    "cnbc.com",
+    "youtube.com",
+    "reuters.com",
     "freightwaves.com",
     "finance.yahoo.com",
     "truthsocial.com",
@@ -25,6 +31,21 @@ _DENY_DOMAINS = {
     "x.com",
     "twitter.com",
     "facebook.com",
+    "linkedin.com",
+    "instagram.com",
+    "tiktok.com",
+    "threads.net",
+    "reddit.com",
+    "doubleclick.net",
+    "googletagmanager.com",
+    "google-analytics.com",
+    "gstatic.com",
+    "scorecardresearch.com",
+    "taboola.com",
+    "outbrain.com",
+    "criteo.com",
+    "adnxs.com",
+    "facebook.net",
 }
 
 
