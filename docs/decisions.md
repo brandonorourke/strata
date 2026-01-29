@@ -19,3 +19,7 @@
 ## 2026-01-28 — UI styling approach
 - Decision: Keep UI styling minimal and custom in v0; avoid UI frameworks for now.
 - Note: Consider Tailwind later if the UI expands or needs faster iteration.
+
+## 2026-01-29 — Extracted entities are per-article mentions
+- Decision: Treat `extracted_entities` as per-article mentions to avoid false global merges on name alone.
+- Impact: One entity row per article + name; canonicalization handles cross-article identity.
