@@ -60,9 +60,10 @@ git push origin develop
 
 ### Running the pipeline
 ```
-  python apps/ingest/ingest_rss.py
-  python apps/ingest/fetch_html.py
-  python apps/ingest/clean_text.py
-  python apps/ingest/llm_raw.py
-  python apps/ingest/extract_entities.py
+  python apps/ingest/ingest_rss.py         -- Processes top level RSS feeds (right now just FreightWaves)
+  python apps/ingest/fetch_html.py         -- Fetches and stores raw HTML for articles
+  python apps/ingest/clean_text.py         -- Takes raw HTML and converts it to text, no links, images, etc
+  python apps/ingest/llm_raw.py            -- Calls OpenAI API to convert clean text to structured JSON
+  python apps/ingest/extract_entities.py   -- Extracts entities and events from LLM JSON
+  python apps/ingest/link_entities.py      -- Links entities to canonical entities
 ```
