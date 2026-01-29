@@ -39,4 +39,11 @@
   {% else %}
     <div class="meta">Clean text not available.</div>
   {% endif %}
+
+  <h3>LLM JSON output</h3>
+  {% if article.llm_raw %}
+    <div class="article-text">{{ article.llm_raw | tojson(indent=2) }}</div>
+  {% else %}
+    <div class="meta">No LLM output yet.</div>
+  {% endif %}
 {% endblock %}
