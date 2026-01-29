@@ -36,6 +36,12 @@ _DENY_DOMAINS = {
     "tiktok.com",
     "threads.net",
     "reddit.com",
+    "politico.com",
+    "commercialappeal.com",
+    "kcrg.com",
+    "wlky.com",
+    "trains.com",
+    "constructionequipmentguide.com",
     "doubleclick.net",
     "googletagmanager.com",
     "google-analytics.com",
@@ -47,6 +53,14 @@ _DENY_DOMAINS = {
     "adnxs.com",
     "facebook.net",
 }
+
+_TRAILING_JUNK_RE = re.compile(r"[\)\]\}\.,;:]+$")
+
+
+def _clean_domain(netloc: str) -> str:
+    netloc = netloc.strip().lower()
+    netloc = _TRAILING_JUNK_RE.sub("", netloc)
+    return netloc
 
 
 def _extract_domains(html: str) -> set[str]:
@@ -74,7 +88,7 @@ def _extract_domains(html: str) -> set[str]:
             parsed = urlparse(match)
         except Exception:
             continue
-        netloc = parsed.netloc.lower()
+        netloc = _clean_domain(parsed.netloc)
         if not netloc:
             continue
         if netloc.startswith("www."):
