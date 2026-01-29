@@ -56,7 +56,7 @@ Return JSON with the following schema:
 {{
   "entities": [
     {{
-      "canonical_company_name": string | null,
+      "entity_name": string | null,
       "raw_mentions": [string],
       "is_primary_entity": boolean,
       "event_type": string | null,
@@ -83,11 +83,11 @@ Return JSON with the following schema:
 
 Field requirements:
 
-- canonical_company_name:
-  - The normalized, canonical name of the company or entity, if it can be inferred
-    (e.g., "KKR & Co. Inc.", "Hyatt Regency Tokyo").
+- entity_name:
+  - The best name for the entity as written in the article
+    (company or individual).
   - If unclear, set to the clearest form mentioned in the article.
-  - If you cannot determine a canonical name, set to null.
+  - If you cannot determine a name, set to null.
 
 - raw_mentions:
   - All distinct textual forms used in the article for this entity

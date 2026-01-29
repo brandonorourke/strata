@@ -83,7 +83,7 @@ async def process_article(session, article: NewsArticle) -> int:
 
     inserted = 0
     for payload in entities_payload:
-        canonical_name = payload.get("canonical_company_name") or None
+        canonical_name = payload.get("entity_name") or payload.get("canonical_company_name") or None  # A previous prompt version used canonical_company_name for the field name
         if not canonical_name:
             raw_mentions = payload.get("raw_mentions") or []
             if raw_mentions and isinstance(raw_mentions, list):

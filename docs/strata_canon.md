@@ -162,7 +162,7 @@ For each unprocessed news_articles row:
 {
   "entities": [
     {
-      "canonical_company_name": "...",
+      "entity_name": "...",
       "raw_mentions": ["...", "..."],
       "is_primary_entity": true,
       "event_type": "...",
