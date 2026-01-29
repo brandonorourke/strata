@@ -15,3 +15,7 @@
 ## 2026-01-28 — Individuals excluded from v0 canonical UI
 - Decision: Individuals may be extracted but are not canonicalized or shown in v0 screens.
 - Rationale: Investor screens should focus on companies and avoid noise until person-level features are defined.
+
+## 2026-01-28 — UI styling approach
+- Decision: Keep UI styling minimal and custom in v0; avoid UI frameworks for now.
+- Note: Consider Tailwind later if the UI expands or needs faster iteration.
