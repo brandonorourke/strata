@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="meta">Most Changed ({{ days }}d)</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Entity</th>
+        <th>Status</th>
+        <th>Score</th>
+        <th>Claims</th>
+        <th>Top Events</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for row in rows %}
+      <tr>
+        <td>
+          <a href="/canonicals/{{ row.canonical.id }}">{{ row.canonical.canonical_name }}</a>
+        </td>
+        <td>
+          <span class="status {{ row.canonical.status }}">{{ row.canonical.status }}</span>
+        </td>
+        <td class="score">{{ "%.2f"|format(row.score) }}</td>
+        <td class="meta">{{ row.claims_count }} claims · {{ row.sources_count }} sources</td>
+        <td>
+          {% if row.events %}
+            <div class="events">
+              {% for item in row.events %}
+                <div class="event">
+                  <strong>{{ item.event.event_type or "other" }}</strong>
+                  {% if item.event.event_description %}
+                    <div>{{ item.event.event_description }}</div>
+                  {% else %}
+                    <div class="meta">{{ item.event.extracted_name }}</div>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <span class="meta">No events</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}

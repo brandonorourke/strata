@@ -323,7 +323,7 @@ async def process_batch(limit: int = 5) -> int:
 
 
 async def main():
-    processed = await process_batch(limit=1)
+    processed = await process_batch(limit=5)
     logger.info("Done. Processed batch size: %d", processed)
 
 

@@ -14,7 +14,7 @@
     {% for canonical in canonicals %}
       <tr>
         <td>{{ canonical.id }}</td>
-        <td>{{ canonical.canonical_name }}</td>
+        <td><a href="/canonicals/{{ canonical.id }}">{{ canonical.canonical_name }}</a></td>
         <td>{{ canonical.jurisdiction or "" }}</td>
         <td>
           <span class="status {{ canonical.status }}">

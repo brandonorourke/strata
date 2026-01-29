@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="meta">
+    <span class="status {{ canonical.status }}">{{ canonical.status }}</span>
+    {% if canonical.jurisdiction %}· {{ canonical.jurisdiction }}{% endif %}
+  </div>
+  <h2>{{ canonical.canonical_name }}</h2>
+
+  <h3>Linked extracted entities</h3>
+  {% if canonical.entity_links %}
+    {% for link in canonical.entity_links %}
+      {% if link.extracted_entity %}
+        <span class="pill">{{ link.extracted_entity.extracted_name }}</span>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <div class="meta">No extracted entities linked.</div>
+  {% endif %}
+
+  <h3>Events</h3>
+  {% if events %}
+    <table>
+      <thead>
+        <tr>
+          <th>Published</th>
+          <th>Event</th>
+          <th>Article</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for event, article in events %}
+        <tr>
+          <td>{{ article.published_at.strftime("%Y-%m-%d %H:%M") if article.published_at else "" }}</td>
+          <td>
+            <strong>{{ event.event_type or "other" }}</strong>
+            {% if event.event_description %}
+              <div>{{ event.event_description }}</div>
+            {% else %}
+              <div class="meta">{{ event.extracted_name }}</div>
+            {% endif %}
+          </td>
+          <td>
+            <a href="/articles/{{ article.id }}">{{ article.title }}</a>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="meta">No events yet.</div>
+  {% endif %}
+{% endblock %}
