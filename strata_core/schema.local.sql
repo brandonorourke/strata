@@ -112,6 +112,7 @@ ALTER SEQUENCE public.entity_links_id_seq OWNED BY public.entity_links.id;
 
 CREATE TABLE public.extracted_entities (
     id integer NOT NULL,
+    article_id integer NOT NULL,
     extracted_name text NOT NULL,
     legal_name_normalized text NOT NULL,
     loose_name_normalized text,
@@ -273,11 +274,11 @@ ALTER TABLE ONLY public.entity_links
 
 
 --
--- Name: extracted_entities extracted_entities_legal_name_normalized_key; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: extracted_entities extracted_entities_article_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.extracted_entities
-    ADD CONSTRAINT extracted_entities_legal_name_normalized_key UNIQUE (legal_name_normalized);
+    ADD CONSTRAINT extracted_entities_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.news_articles(id);
 
 
 --
@@ -338,6 +339,13 @@ CREATE INDEX ix_entity_links_id ON public.entity_links USING btree (id);
 --
 
 CREATE INDEX ix_extracted_entities_id ON public.extracted_entities USING btree (id);
+
+
+--
+-- Name: ux_extracted_entities_article_legal; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_extracted_entities_article_legal ON public.extracted_entities USING btree (article_id, legal_name_normalized);
 
 
 --

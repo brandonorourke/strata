@@ -54,10 +54,11 @@ class ExtractedEntity(Base):
     __tablename__ = "extracted_entities"
 
     id = Column(Integer, primary_key=True, index=True)
+    article_id = Column(Integer, ForeignKey("news_articles.id"), nullable=False)
     extracted_name = Column(Text, nullable=False)
     entity_type = Column(Text, nullable=True)
     jurisdiction = Column(Text, nullable=True)
-    legal_name_normalized = Column(Text, nullable=False, unique=True)
+    legal_name_normalized = Column(Text, nullable=False)
     loose_name_normalized = Column(Text, nullable=True)
     created_from = Column(Text, nullable=False, server_default="news")
     first_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
@@ -65,6 +66,7 @@ class ExtractedEntity(Base):
 
     extracted_events = relationship("ExtractedEvent", back_populates="entity")
     entity_links = relationship("EntityLink", back_populates="extracted_entity")
+    article = relationship("NewsArticle")
 
 
 class ExtractedEvent(Base):

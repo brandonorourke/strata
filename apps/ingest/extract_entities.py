@@ -41,6 +41,7 @@ def _extract_entities_payload(llm_raw: dict | None) -> list[dict]:
 
 async def _get_or_create_entity(
     session,
+    article_id: int,
     canonical_name: str,
     first_seen_at,
     entity_type: str | None,
@@ -50,7 +51,12 @@ async def _get_or_create_entity(
     if not legal_name:
         return None
 
-    stmt = select(ExtractedEntity).where(ExtractedEntity.legal_name_normalized == legal_name).limit(1)
+    stmt = (
+        select(ExtractedEntity)
+        .where(ExtractedEntity.article_id == article_id)
+        .where(ExtractedEntity.legal_name_normalized == legal_name)
+        .limit(1)
+    )
     result = await session.execute(stmt)
     entity = result.scalar_one_or_none()
     if entity:
@@ -63,6 +69,7 @@ async def _get_or_create_entity(
         return entity
 
     entity = ExtractedEntity(
+        article_id=article_id,
         extracted_name=canonical_name,
         entity_type=entity_type,
         jurisdiction=jurisdiction,
@@ -93,6 +100,7 @@ async def process_article(session, article: NewsArticle) -> int:
 
         entity = await _get_or_create_entity(
             session,
+            article.id,
             canonical_name,
             article.published_at,
             payload.get("entity_type"),
