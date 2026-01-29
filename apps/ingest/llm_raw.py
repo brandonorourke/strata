@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 client = OpenAI()  # uses OPENAI_API_KEY from env
 
 SYSTEM_PROMPT = """
-You are an analyst that extracts structured information about private and public companies from unstructured news articles.
+You are an analyst that extracts structured information about companies and other key entities (including individuals) from unstructured news articles.
 
 Your tasks:
 1. Identify all companies and key entities mentioned.
@@ -32,7 +32,8 @@ Definitions:
 
 - Primary entities:
   - Are in the headline or lead paragraphs, OR
-  - Are clearly the main subject the article is principally about.
+  - Are clearly the main subject the article is principally about, OR
+  - Undergo a material corporate event (financing, bankruptcy, layoffs, leadership change, legal/regulatory action, acquisition/disposition/M&A, major performance update).
 
 - Context entities:
   - Vendors, partners, prior employers, investors, platforms, or comparison companies that are not the main subject of the article.
