@@ -17,6 +17,15 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 _URL_RE = re.compile(r"https?://[^\s\"'<>]+", re.IGNORECASE)
+_DENY_DOMAINS = {
+    "freightwaves.com",
+    "finance.yahoo.com",
+    "truthsocial.com",
+    "abcnews.go.com",
+    "x.com",
+    "twitter.com",
+    "facebook.com",
+}
 
 
 def _extract_domains(html: str) -> set[str]:
@@ -50,6 +59,8 @@ def _extract_domains(html: str) -> set[str]:
         if netloc.startswith("www."):
             netloc = netloc[4:]
         if "." not in netloc:
+            continue
+        if netloc in _DENY_DOMAINS:
             continue
         domains.add(netloc)
     return domains
