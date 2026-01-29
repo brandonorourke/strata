@@ -2,13 +2,13 @@
 
 from datetime import datetime, timedelta, timezone
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 
 from strata_core.db import AsyncSessionLocal
-from strata_core.models import NewsArticle, ExtractedEvent, CanonicalEntity, EntityLink
+from strata_core.models import NewsArticle, ExtractedEvent, CanonicalEntity, EntityLink, ArticleDomain, ExtractedEntity
 
 app = FastAPI(title="Strata UI")
 templates = Jinja2Templates(directory="apps/api/templates")
@@ -278,6 +278,17 @@ async def canonical_detail(request: Request, canonical_id: int, limit: int = 200
         if canonical is None:
             raise HTTPException(status_code=404, detail="Canonical not found")
 
+        domains_stmt = (
+            select(ArticleDomain.domain, func.count(ArticleDomain.domain))
+            .join(ExtractedEntity, ExtractedEntity.article_id == ArticleDomain.article_id)
+            .join(EntityLink, EntityLink.extracted_entity_id == ExtractedEntity.id)
+            .where(EntityLink.canonical_entity_id == canonical_id)
+            .group_by(ArticleDomain.domain)
+            .order_by(func.count(ArticleDomain.domain).desc())
+        )
+        domains_result = await session.execute(domains_stmt)
+        candidate_domains = list(domains_result.all())
+
         events_stmt = (
             select(ExtractedEvent, NewsArticle)
             .join(EntityLink, EntityLink.extracted_entity_id == ExtractedEvent.entity_id)
@@ -295,5 +306,33 @@ async def canonical_detail(request: Request, canonical_id: int, limit: int = 200
             "request": request,
             "canonical": canonical,
             "events": events,
+            "candidate_domains": candidate_domains,
         },
+    )
+
+
+@app.post("/admin/canonicals/{canonical_id}/confirm-domain")
+async def confirm_canonical_domain(request: Request, canonical_id: int, domain: str = Form(...)):
+    domain = domain.strip().lower()
+    if not domain:
+        raise HTTPException(status_code=400, detail="Domain is required")
+
+    async with AsyncSessionLocal() as session:
+        stmt = select(CanonicalEntity).where(CanonicalEntity.id == canonical_id)
+        result = await session.execute(stmt)
+        canonical = result.scalar_one_or_none()
+        if canonical is None:
+            raise HTTPException(status_code=404, detail="Canonical not found")
+
+        canonical.confirmed_domain = domain
+        try:
+            await session.commit()
+            await session.refresh(canonical)
+        except Exception as e:
+            await session.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
+
+    return templates.TemplateResponse(
+        "canonical_confirmed.html",
+        {"request": request, "canonical": canonical},
     )

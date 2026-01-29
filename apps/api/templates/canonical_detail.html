@@ -6,6 +6,21 @@
   </div>
   <h2>{{ canonical.canonical_name }}</h2>
 
+  <h3>Confirm domain</h3>
+  {% if candidate_domains %}
+    <form method="post" action="/admin/canonicals/{{ canonical.id }}/confirm-domain">
+      <label for="domain">Select domain</label>
+      <select id="domain" name="domain">
+        {% for domain, count in candidate_domains %}
+          <option value="{{ domain }}">{{ domain }} ({{ count }})</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Confirm domain</button>
+    </form>
+  {% else %}
+    <div class="meta">No candidate domains found for this canonical.</div>
+  {% endif %}
+
   <h3>Linked extracted entities</h3>
   {% if canonical.entity_links %}
     {% for link in canonical.entity_links %}

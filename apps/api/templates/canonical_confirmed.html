@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Domain confirmed</h2>
+  <div class="meta">
+    {{ canonical.canonical_name }} → {{ canonical.confirmed_domain }}
+  </div>
+  <div class="actions" style="margin-top: 10px;">
+    <a href="/admin/canonicals/{{ canonical.id }}">Back to canonical</a>
+    <a href="/admin/canonicals">All canonicals</a>
+  </div>
+{% endblock %}
