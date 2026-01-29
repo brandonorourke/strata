@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
   <div class="meta">
-    <span class="status {{ canonical.status }}">{{ canonical.status }}</span>
-    {% if canonical.jurisdiction %}· {{ canonical.jurisdiction }}{% endif %}
+    {% if canonical.confirmed_domain %}{{ canonical.confirmed_domain }}{% endif %}
+    {% if canonical.jurisdiction %}{% if canonical.confirmed_domain %} · {% endif %}{{ canonical.jurisdiction }}{% endif %}
   </div>
   <h2>{{ canonical.canonical_name }}</h2>
 

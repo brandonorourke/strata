@@ -5,7 +5,7 @@
     <thead>
       <tr>
         <th>Entity</th>
-        <th>Status</th>
+        <th>Confirmed</th>
         <th>Score</th>
         <th>Claims</th>
         <th>Top Events</th>
@@ -17,8 +17,8 @@
         <td>
           <a href="/admin/canonicals/{{ row.canonical.id }}">{{ row.canonical.canonical_name }}</a>
         </td>
-        <td>
-          <span class="status {{ row.canonical.status }}">{{ row.canonical.status }}</span>
+        <td class="meta">
+          {% if row.canonical.confirmed_domain %}yes{% else %}no{% endif %}
         </td>
         <td class="score">{{ "%.2f"|format(row.score) }}</td>
         <td class="meta">{{ row.claims_count }} claims · {{ row.sources_count }} sources</td>

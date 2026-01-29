@@ -8,7 +8,7 @@
         <th>Type</th>
         <th>HQ</th>
         <th>Jurisdiction</th>
-        <th>Status</th>
+        <th>Domain</th>
         <th>Extracted Entities</th>
       </tr>
     </thead>
@@ -24,11 +24,7 @@
           {% endif %}
         </td>
         <td>{{ canonical.jurisdiction or "" }}</td>
-        <td>
-          <span class="status {{ canonical.status }}">
-            {{ canonical.status }}
-          </span>
-        </td>
+        <td>{{ canonical.confirmed_domain or "" }}</td>
         <td>
           {% if canonical.entity_links %}
             {% for link in canonical.entity_links %}

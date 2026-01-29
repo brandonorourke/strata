@@ -9,7 +9,7 @@
 - Decision: Treat `canonical_entities` as “best-known nodes,” not perfectly resolved identities.
 - Rule: Prefer duplicates over wrong merges; only auto-merge with strong identifiers.
 - Scope: Only canonicalize `entity_type` in `{operating_company, financial_sponsor, lender}` for v0.
-- Status: `provisional` means “no jurisdiction or strong identifier yet”; `confirmed` requires jurisdiction (v0).
+- Status: drop explicit status; treat `confirmed_domain` as the confirmation signal.
 - Next: Add identifiers (domain/CIK/address) and a review workflow to safely reduce duplicates.
 
 ## 2026-01-28 — Individuals excluded from v0 canonical UI

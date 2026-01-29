@@ -101,7 +101,7 @@ class CanonicalEntity(Base):
     jurisdiction = Column(Text, nullable=True)
     hq_country = Column(Text, nullable=True)
     hq_region = Column(Text, nullable=True)
-    status = Column(Text, nullable=False, server_default="provisional")
+    confirmed_domain = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now())
 

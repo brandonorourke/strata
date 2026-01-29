@@ -49,9 +49,9 @@ CREATE TABLE public.canonical_entities (
     jurisdiction text,
     hq_country text,
     hq_region text,
+    confirmed_domain text,
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    status text DEFAULT 'provisional'::text NOT NULL
+    updated_at timestamp with time zone DEFAULT now()
 );
 
 

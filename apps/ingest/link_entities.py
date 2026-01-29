@@ -12,6 +12,7 @@ from strata_core.models import (
     ExtractedEntity,
     CanonicalEntity,
     EntityLink,
+    ArticleDomain,
 )
 from strata_core.normalize import normalize_legal_name, normalize_loose_name
 
@@ -21,14 +22,51 @@ logging.basicConfig(level=logging.INFO)
 _ALLOWED_ENTITY_TYPES = {"operating_company", "financial_sponsor", "lender"}
 
 
-async def _find_confirmed_canonical(session, legal_name: str, entity_type: str):
-    stmt = select(CanonicalEntity).where(
-        and_(
-            CanonicalEntity.legal_name_normalized == legal_name,
-            CanonicalEntity.status == "confirmed",
-            CanonicalEntity.entity_type == entity_type,
+async def _find_confirmed_canonical_by_cluster(
+    session,
+    legal_name: str,
+    entity_type: str,
+    hq_country: str | None,
+    hq_region: str | None,
+):
+    filters = [
+        CanonicalEntity.legal_name_normalized == legal_name,
+        CanonicalEntity.entity_type == entity_type,
+        CanonicalEntity.confirmed_domain.is_not(None),
+    ]
+    if hq_country is None:
+        filters.append(CanonicalEntity.hq_country.is_(None))
+    else:
+        filters.append(CanonicalEntity.hq_country == hq_country)
+    if hq_region is None:
+        filters.append(CanonicalEntity.hq_region.is_(None))
+    else:
+        filters.append(CanonicalEntity.hq_region == hq_region)
+
+    stmt = select(CanonicalEntity).where(and_(*filters)).limit(1)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def _find_confirmed_canonical_by_domain(
+    session,
+    legal_name: str,
+    entity_type: str,
+    article_id: int,
+):
+    stmt = (
+        select(CanonicalEntity)
+        .join(ArticleDomain, ArticleDomain.domain == CanonicalEntity.confirmed_domain)
+        .where(
+            and_(
+                CanonicalEntity.legal_name_normalized == legal_name,
+                CanonicalEntity.entity_type == entity_type,
+                CanonicalEntity.confirmed_domain.is_not(None),
+                ArticleDomain.article_id == article_id,
+            )
         )
-    ).limit(1)
+        .limit(1)
+    )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -43,7 +81,7 @@ async def _find_provisional_cluster(
     filters = [
         CanonicalEntity.legal_name_normalized == legal_name,
         CanonicalEntity.entity_type == entity_type,
-        CanonicalEntity.status == "provisional",
+        CanonicalEntity.confirmed_domain.is_(None),
     ]
     if hq_country is None:
         filters.append(CanonicalEntity.hq_country.is_(None))
@@ -60,7 +98,6 @@ async def _find_provisional_cluster(
 
 
 async def _create_canonical(session, extracted: ExtractedEntity) -> CanonicalEntity:
-    status = "provisional"
     canonical = CanonicalEntity(
         canonical_name=extracted.extracted_name,
         entity_type=extracted.entity_type,
@@ -71,7 +108,6 @@ async def _create_canonical(session, extracted: ExtractedEntity) -> CanonicalEnt
         jurisdiction=extracted.jurisdiction,
         hq_country=extracted.hq_country,
         hq_region=extracted.hq_region,
-        status=status,
     )
     session.add(canonical)
     await session.flush()
@@ -128,8 +164,26 @@ async def process_batch(limit: int = 200) -> int:
             if not legal_name:
                 legal_name = normalize_legal_name(extracted.extracted_name)
 
-            canonical = await _find_confirmed_canonical(
-                session, legal_name, extracted.entity_type
+            canonical = await _find_confirmed_canonical_by_domain(
+                session, legal_name, extracted.entity_type, extracted.article_id
+            )
+            if canonical:
+                await _create_link(
+                    session,
+                    extracted,
+                    canonical,
+                    confidence=0.9,
+                    method="confirmed_domain_match",
+                )
+                linked += 1
+                continue
+
+            canonical = await _find_confirmed_canonical_by_cluster(
+                session,
+                legal_name,
+                extracted.entity_type,
+                extracted.hq_country,
+                extracted.hq_region,
             )
             if canonical:
                 await _create_link(
@@ -137,7 +191,7 @@ async def process_batch(limit: int = 200) -> int:
                     extracted,
                     canonical,
                     confidence=0.7,
-                    method="exact_legal_confirmed",
+                    method="confirmed_cluster_match",
                 )
                 linked += 1
                 continue

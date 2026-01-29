@@ -12,7 +12,7 @@ Scoring definition:
   - `event_score = base * confidence_clamped` (confidence default 1.0, clamped to [0,1]).
 - Duplicate suppression: per (canonical_entity, event_type), keep top N=2 events in the window.
 - Entity score: sum of event_scores.
-- Provisional penalty: `entity_score *= 0.8` if status = `provisional`.
+- Provisional penalty: `entity_score *= 0.8` if `confirmed_domain` is null.
 
 Weights (credit-biased):
 - bankruptcy: 6
@@ -28,5 +28,5 @@ Weights (credit-biased):
 - other: 1
 
 UI:
-- `/screen` view shows name, status, score, claims count, source count, and top events.
+- `/screen` view shows name, confirmed flag, score, claims count, source count, and top events.
 - Canonical detail page shows timeline of linked events.

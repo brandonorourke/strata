@@ -188,7 +188,7 @@ async def most_changed(request: Request, days: int = 7, limit: int = 50):
         kept_events.sort(key=lambda x: x["event_score"], reverse=True)
 
         entity_score = sum(item["event_score"] for item in kept_events)
-        if canonical.status == "provisional":
+        if canonical.confirmed_domain is None:
             entity_score *= 0.8
 
         source_ids = {item["article"].id for item in kept_events if item.get("article")}
