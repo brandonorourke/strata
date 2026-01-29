@@ -62,6 +62,7 @@ class ExtractedEntity(Base):
     last_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     extracted_events = relationship("ExtractedEvent", back_populates="entity")
+    entity_links = relationship("EntityLink", back_populates="extracted_entity")
 
 
 class ExtractedEvent(Base):
@@ -108,5 +109,5 @@ class EntityLink(Base):
     link_method = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    extracted_entity = relationship("ExtractedEntity")
+    extracted_entity = relationship("ExtractedEntity", back_populates="entity_links")
     canonical_entity = relationship("CanonicalEntity", back_populates="entity_links")

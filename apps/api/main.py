@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from strata_core.db import AsyncSessionLocal
-from strata_core.models import NewsArticle, ExtractedEvent
+from strata_core.models import NewsArticle, ExtractedEvent, CanonicalEntity, EntityLink
 
 app = FastAPI(title="Strata UI")
 templates = Jinja2Templates(directory="apps/api/templates")
@@ -55,4 +55,26 @@ async def article_detail(request: Request, article_id: int):
     return templates.TemplateResponse(
         "article_detail.html",
         {"request": request, "article": article},
+    )
+
+
+@app.get("/canonicals")
+async def list_canonicals(request: Request, limit: int = 100):
+    async with AsyncSessionLocal() as session:
+        stmt = (
+            select(CanonicalEntity)
+            .options(
+                selectinload(CanonicalEntity.entity_links).selectinload(
+                    EntityLink.extracted_entity
+                )
+            )
+            .order_by(CanonicalEntity.id.asc())
+            .limit(limit)
+        )
+        result = await session.execute(stmt)
+        canonicals = list(result.scalars().all())
+
+    return templates.TemplateResponse(
+        "canonicals.html",
+        {"request": request, "canonicals": canonicals},
     )

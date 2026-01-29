@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Canonical</th>
+        <th>Jurisdiction</th>
+        <th>Status</th>
+        <th>Extracted Entities</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for canonical in canonicals %}
+      <tr>
+        <td>{{ canonical.id }}</td>
+        <td>{{ canonical.canonical_name }}</td>
+        <td>{{ canonical.jurisdiction or "" }}</td>
+        <td>
+          <span class="status {{ canonical.status }}">
+            {{ canonical.status }}
+          </span>
+        </td>
+        <td>
+          {% if canonical.entity_links %}
+            {% for link in canonical.entity_links %}
+              {% if link.extracted_entity %}
+                <span class="pill">{{ link.extracted_entity.extracted_name }}</span>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            <span class="meta">No links</span>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+{% endblock %}
