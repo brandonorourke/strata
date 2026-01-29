@@ -43,9 +43,12 @@ SET default_table_access_method = heap;
 CREATE TABLE public.canonical_entities (
     id integer NOT NULL,
     canonical_name text NOT NULL,
+    entity_type text,
     legal_name_normalized text NOT NULL,
     loose_name_normalized text,
     jurisdiction text,
+    hq_country text,
+    hq_region text,
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     status text DEFAULT 'provisional'::text NOT NULL
@@ -120,7 +123,9 @@ CREATE TABLE public.extracted_entities (
     first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
     last_seen_at timestamp with time zone DEFAULT now() NOT NULL,
     entity_type text,
-    jurisdiction text
+    jurisdiction text,
+    hq_country text,
+    hq_region text
 );
 
 

@@ -98,6 +98,10 @@ async def process_article(session, article: NewsArticle) -> int:
         if not canonical_name or not isinstance(canonical_name, str):
             continue
 
+        fingerprint = payload.get("fingerprint") or {}
+        if not isinstance(fingerprint, dict):
+            fingerprint = {}
+
         entity = await _get_or_create_entity(
             session,
             article.id,
@@ -132,6 +136,11 @@ async def process_article(session, article: NewsArticle) -> int:
         )
         session.add(event)
         inserted += 1
+
+        if entity.hq_country is None:
+            entity.hq_country = fingerprint.get("hq_country")
+        if entity.hq_region is None:
+            entity.hq_region = fingerprint.get("hq_region")
 
     article.entities_extracted_at = datetime.now(timezone.utc)
     return inserted

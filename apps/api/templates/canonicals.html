@@ -5,6 +5,8 @@
       <tr>
         <th>ID</th>
         <th>Canonical</th>
+        <th>Type</th>
+        <th>HQ</th>
         <th>Jurisdiction</th>
         <th>Status</th>
         <th>Extracted Entities</th>
@@ -15,6 +17,12 @@
       <tr>
         <td>{{ canonical.id }}</td>
         <td><a href="/admin/canonicals/{{ canonical.id }}">{{ canonical.canonical_name }}</a></td>
+        <td>{{ canonical.entity_type or "" }}</td>
+        <td>
+          {% if canonical.hq_country or canonical.hq_region %}
+            {{ canonical.hq_region or "" }}{% if canonical.hq_region and canonical.hq_country %}, {% endif %}{{ canonical.hq_country or "" }}
+          {% endif %}
+        </td>
         <td>{{ canonical.jurisdiction or "" }}</td>
         <td>
           <span class="status {{ canonical.status }}">

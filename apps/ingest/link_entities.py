@@ -21,13 +21,40 @@ logging.basicConfig(level=logging.INFO)
 _ALLOWED_ENTITY_TYPES = {"operating_company", "financial_sponsor", "lender"}
 
 
-async def _find_canonical_legal_only(session, legal_name: str):
+async def _find_confirmed_canonical(session, legal_name: str, entity_type: str):
     stmt = select(CanonicalEntity).where(
         and_(
             CanonicalEntity.legal_name_normalized == legal_name,
             CanonicalEntity.status == "confirmed",
+            CanonicalEntity.entity_type == entity_type,
         )
     ).limit(1)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def _find_provisional_cluster(
+    session,
+    legal_name: str,
+    entity_type: str,
+    hq_country: str | None,
+    hq_region: str | None,
+):
+    filters = [
+        CanonicalEntity.legal_name_normalized == legal_name,
+        CanonicalEntity.entity_type == entity_type,
+        CanonicalEntity.status == "provisional",
+    ]
+    if hq_country is None:
+        filters.append(CanonicalEntity.hq_country.is_(None))
+    else:
+        filters.append(CanonicalEntity.hq_country == hq_country)
+    if hq_region is None:
+        filters.append(CanonicalEntity.hq_region.is_(None))
+    else:
+        filters.append(CanonicalEntity.hq_region == hq_region)
+
+    stmt = select(CanonicalEntity).where(and_(*filters)).limit(1)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
@@ -36,11 +63,14 @@ async def _create_canonical(session, extracted: ExtractedEntity) -> CanonicalEnt
     status = "provisional"
     canonical = CanonicalEntity(
         canonical_name=extracted.extracted_name,
+        entity_type=extracted.entity_type,
         legal_name_normalized=extracted.legal_name_normalized
         or normalize_legal_name(extracted.extracted_name),
         loose_name_normalized=extracted.loose_name_normalized
         or normalize_loose_name(extracted.extracted_name),
         jurisdiction=extracted.jurisdiction,
+        hq_country=extracted.hq_country,
+        hq_region=extracted.hq_region,
         status=status,
     )
     session.add(canonical)
@@ -92,11 +122,15 @@ async def process_batch(limit: int = 200) -> int:
         for extracted in extracted_entities:
             if extracted.entity_type and extracted.entity_type not in _ALLOWED_ENTITY_TYPES:
                 continue
+            if not extracted.entity_type:
+                continue
             legal_name = extracted.legal_name_normalized
             if not legal_name:
                 legal_name = normalize_legal_name(extracted.extracted_name)
 
-            canonical = await _find_canonical_legal_only(session, legal_name)
+            canonical = await _find_confirmed_canonical(
+                session, legal_name, extracted.entity_type
+            )
             if canonical:
                 await _create_link(
                     session,
@@ -108,13 +142,34 @@ async def process_batch(limit: int = 200) -> int:
                 linked += 1
                 continue
 
+            if not extracted.hq_country and not extracted.hq_region:
+                continue
+
+            canonical = await _find_provisional_cluster(
+                session,
+                legal_name,
+                extracted.entity_type,
+                extracted.hq_country,
+                extracted.hq_region,
+            )
+            if canonical:
+                await _create_link(
+                    session,
+                    extracted,
+                    canonical,
+                    confidence=0.5,
+                    method="provisional_cluster",
+                )
+                linked += 1
+                continue
+
             canonical = await _create_canonical(session, extracted)
             await _create_link(
                 session,
                 extracted,
                 canonical,
-                confidence=1.0,
-                method="new_canonical",
+                confidence=0.5,
+                method="new_provisional_cluster",
             )
             linked += 1
 
