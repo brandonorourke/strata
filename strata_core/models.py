@@ -26,7 +26,9 @@ class NewsSource(PyEnum):
     FREIGHTWAVES = "freightwaves"
     PRNEWSWIRE = "prnewswire"
     BUSINESSWIRE = "businesswire"
-    SEC = "sec"
+    SEC_PRESS_RELEASES = "sec_press_releases"
+    SEC_LITIGATION_RELEASES = "sec_litigation_releases"
+    SEC_ADMIN_PROCEEDINGS = "sec_admin_proceedings"
     DOJ = "doj"
 
 

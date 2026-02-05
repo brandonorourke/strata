@@ -2,7 +2,7 @@
 
 import asyncio
 from datetime import datetime, timezone
-from typing import Dict
+from typing import Dict, List, Tuple
 
 import feedparser
 from sqlalchemy import select
@@ -13,9 +13,12 @@ from strata_core.models import NewsArticle, NewsSource
 from dotenv import load_dotenv
 load_dotenv()
 
-RSS_FEEDS: Dict[NewsSource, str] = {
-    NewsSource.FREIGHTWAVES: "https://www.freightwaves.com/feed",
-}
+RSS_FEEDS: List[Tuple[NewsSource, str]] = [
+    (NewsSource.FREIGHTWAVES, "https://www.freightwaves.com/feed"),
+    (NewsSource.SEC_PRESS_RELEASES, "https://www.sec.gov/news/pressreleases.rss"),
+    (NewsSource.SEC_LITIGATION_RELEASES, "https://www.sec.gov/enforcement-litigation/litigation-releases/rss"),
+    (NewsSource.SEC_ADMIN_PROCEEDINGS, "https://www.sec.gov/enforcement-litigation/administrative-proceedings/rss"),
+]
 
 
 def _parse_published(entry) -> datetime | None:
@@ -99,7 +102,7 @@ async def main() -> None:
 
     async with AsyncSessionLocal() as session:
         total_new = 0
-        for source, url in RSS_FEEDS.items():
+        for source, url in RSS_FEEDS:
             try:
                 new_for_source = await ingest_one_feed(session, source, url)
                 total_new += new_for_source

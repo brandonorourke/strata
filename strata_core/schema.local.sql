@@ -27,7 +27,9 @@ CREATE TYPE public.news_source_enum AS ENUM (
     'FREIGHTWAVES',
     'PRNEWSWIRE',
     'BUSINESSWIRE',
-    'SEC',
+    'SEC_PRESS_RELEASES',
+    'SEC_LITIGATION_RELEASES',
+    'SEC_ADMIN_PROCEEDINGS',
     'DOJ'
 );
 
