@@ -83,7 +83,7 @@ Start with 1 source, then add:
     - https://www.sec.gov/about/rss-feeds
         - Press Releases: https://www.sec.gov/news/pressreleases.rss
         - Litigation Releases: https://www.sec.gov/enforcement-litigation/litigation-releases/rss
-        - Administrative Proceedings: https://www.sec.gov/enforcement-litigation/administrative-proceedings/rss
+        - Administrative Proceedings: https://www.sec.gov/enforcement-litigation/administrative-proceedings/rss (PDFs)
         
 - DOJ press releases (RSS / Office of Public Affairs topics)
 - FreightWaves (RSS or targeted feeds) (optional after SEC/DOJ)

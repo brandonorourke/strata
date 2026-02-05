@@ -4,6 +4,7 @@ import asyncio
 import io
 import logging
 import random
+from urllib.parse import urlparse
 
 import httpx
 from pypdf import PdfReader
@@ -26,14 +27,31 @@ DEFAULT_HEADERS = {
     "Accept-Language": "en-US,en;q=0.8",
 }
 
+SEC_HEADERS = {
+    "User-Agent": "StrataBot/0.1 (contact: admin@example.com)",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.8",
+}
 
-async def polite_sleep():
+
+def _headers_for_url(url: str) -> dict:
+    host = urlparse(url).hostname or ""
+    if host.endswith("sec.gov"):
+        return SEC_HEADERS
+    return DEFAULT_HEADERS
+
+
+async def polite_sleep(url: str):
+    host = urlparse(url).hostname or ""
+    if host.endswith("sec.gov"):
+        await asyncio.sleep(random.uniform(1.5, 3.5))
+        return
     await asyncio.sleep(random.uniform(1.0, 3.0))
 
 
 async def fetch_content(client: httpx.AsyncClient, url: str) -> httpx.Response | None:
     try:
-        resp = await client.get(url, timeout=15.0, headers=DEFAULT_HEADERS)
+        resp = await client.get(url, timeout=15.0, headers=_headers_for_url(url))
     except httpx.HTTPError as e:
         logger.warning("HTTP error fetching %s: %s", url, e)
         return None
@@ -97,7 +115,7 @@ async def process_batch(limit: int = 20) -> int:
 
         async with httpx.AsyncClient(follow_redirects=True) as client:
             for article in articles:
-                await polite_sleep()
+                await polite_sleep(article.url)
                 logger.info("Fetching content for [%s] %s", article.id, article.url)
                 resp = await fetch_content(client, article.url)
                 if not resp:

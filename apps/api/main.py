@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI, Request, HTTPException, Form
+from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, and_
 from sqlalchemy.orm import selectinload
@@ -116,6 +117,22 @@ async def article_detail(request: Request, article_id: int):
         "article_detail.html",
         {"request": request, "article": article},
     )
+
+
+@app.get("/admin/articles/{article_id}/raw", response_class=HTMLResponse)
+async def article_raw_html(article_id: int):
+    async with AsyncSessionLocal() as session:
+        stmt = select(NewsArticle).where(NewsArticle.id == article_id)
+        result = await session.execute(stmt)
+        article = result.scalar_one_or_none()
+
+    if article is None:
+        raise HTTPException(status_code=404, detail="Article not found")
+
+    if not article.raw_html:
+        raise HTTPException(status_code=404, detail="No raw_html stored")
+
+    return HTMLResponse(content=article.raw_html)
 
 
 @app.get("/screen")
