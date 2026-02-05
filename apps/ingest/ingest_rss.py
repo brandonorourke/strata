@@ -34,10 +34,7 @@ DEFAULT_RSS_HEADERS = {
 }
 
 SEC_RSS_HEADERS = {
-    "User-Agent": os.getenv(
-        "SEC_USER_AGENT",
-        "StrataBot/0.1 (contact: admin@example.com)",
-    ),
+    "User-Agent": "StrataBot/0.1 (contact: admin@example.com)",
     "Accept": "application/rss+xml,application/xml;q=0.9,*/*;q=0.8",
     "Accept-Encoding": "gzip, deflate",
     "Host": "www.sec.gov",
