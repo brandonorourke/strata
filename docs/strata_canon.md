@@ -80,6 +80,11 @@ raw article → cleaned text → extracted company + event → stored timeline �
 ### Data sources (v0)
 Start with 1 source, then add:
 - SEC press releases (RSS; especially enforcement)
+    - https://www.sec.gov/about/rss-feeds
+        - Press Releases: https://www.sec.gov/news/pressreleases.rss
+        - Litigation Releases: https://www.sec.gov/enforcement-litigation/litigation-releases/rss
+        - Administrative Proceedings: https://www.sec.gov/enforcement-litigation/administrative-proceedings/rss
+        
 - DOJ press releases (RSS / Office of Public Affairs topics)
 - FreightWaves (RSS or targeted feeds) (optional after SEC/DOJ)
 
