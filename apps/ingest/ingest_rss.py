@@ -1,10 +1,13 @@
 # apps/ingest/ingest_rss.py
 
 import asyncio
+import os
+from urllib.parse import urlparse
 from datetime import datetime, timezone
 from typing import Dict, List, Tuple
 
 import feedparser
+import httpx
 from sqlalchemy import select
 
 from strata_core.db import AsyncSessionLocal
@@ -19,6 +22,33 @@ RSS_FEEDS: List[Tuple[NewsSource, str]] = [
     (NewsSource.SEC_LITIGATION_RELEASES, "https://www.sec.gov/enforcement-litigation/litigation-releases/rss"),
     (NewsSource.SEC_ADMIN_PROCEEDINGS, "https://www.sec.gov/enforcement-litigation/administrative-proceedings/rss"),
 ]
+
+DEFAULT_RSS_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/124.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/rss+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Encoding": "gzip, deflate",
+}
+
+SEC_RSS_HEADERS = {
+    "User-Agent": os.getenv(
+        "SEC_USER_AGENT",
+        "StrataBot/0.1 (contact: admin@example.com)",
+    ),
+    "Accept": "application/rss+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Encoding": "gzip, deflate",
+    "Host": "www.sec.gov",
+}
+
+
+def _rss_headers(feed_url: str) -> dict:
+    host = urlparse(feed_url).hostname or ""
+    if host.endswith("sec.gov"):
+        return SEC_RSS_HEADERS
+    return DEFAULT_RSS_HEADERS
 
 
 def _parse_published(entry) -> datetime | None:
@@ -50,10 +80,19 @@ async def ingest_one_feed(session, source: NewsSource, feed_url: str) -> int:
     Fetch a single RSS feed and insert any new articles into news_articles.
     Returns number of new rows inserted.
     """
-    parsed = feedparser.parse(feed_url)
-    if parsed.bozo:
-        # Parsing error; you may want better logging here
+    try:
+        resp = httpx.get(feed_url, headers=_rss_headers(feed_url), timeout=15.0)
+        resp.raise_for_status()
+    except Exception as e:
+        print(f"Error fetching feed {feed_url}: {e!r}")
         return 0
+
+    parsed = feedparser.parse(resp.text)
+    if parsed.bozo and not parsed.entries:
+        print(f"Bozo feed with no entries for {feed_url}: {parsed.bozo_exception!r}")
+        return 0
+    if parsed.bozo and parsed.entries:
+        print(f"Bozo feed but entries present for {feed_url}: {parsed.bozo_exception!r}")
 
     new_count = 0
 
@@ -109,6 +148,7 @@ async def main() -> None:
                 # Commit per-feed to keep transactions bounded
                 await session.commit()
                 print(f"{source.value}: inserted {new_for_source} new articles.")
+                await asyncio.sleep(0.2)
             except Exception as e:
                 # Roll back on any error for this feed, move on
                 await session.rollback()
