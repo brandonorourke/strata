@@ -145,7 +145,7 @@ async def process_batch(limit: int = 20) -> int:
 
 
 async def main():
-    await process_batch(limit=20)
+    await process_batch(limit=50)
 
 
 if __name__ == "__main__":
