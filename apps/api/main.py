@@ -1,6 +1,6 @@
 # apps/api/main.py
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 
 from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse
@@ -247,6 +247,139 @@ async def most_changed(request: Request, days: int = 7, limit: int = 50):
             "request": request,
             "rows": ranked[:limit],
             "days": days,
+        },
+    )
+
+
+def _week_ending_sunday(d: date) -> date:
+    # Python weekday(): Monday=0 ... Sunday=6
+    return d + timedelta(days=(6 - d.weekday()))
+
+
+@app.get("/screen/weekly")
+async def most_changed_weekly(request: Request, months: int = 6, limit: int = 20):
+    if months < 1:
+        months = 1
+    if months > 24:
+        months = 24
+
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(days=months * 30)
+
+    async with AsyncSessionLocal() as session:
+        stmt = (
+            select(ExtractedEntity, ExtractedEvent, NewsArticle)
+            .join(ExtractedEvent, ExtractedEvent.entity_id == ExtractedEntity.id)
+            .join(NewsArticle, NewsArticle.id == ExtractedEvent.article_id)
+            .where(NewsArticle.published_at >= window_start)
+            .where(ExtractedEntity.entity_type.in_(["operating_company", "financial_sponsor", "lender"]))
+        )
+        result = await session.execute(stmt)
+        rows = result.all()
+
+    weekly = {}
+    for entity, event, article in rows:
+        if not entity.legal_name_normalized or not entity.entity_type:
+            continue
+        if article.published_at is None:
+            continue
+
+        week_end = _week_ending_sunday(article.published_at.date())
+        week_bucket = weekly.setdefault(week_end, {})
+
+        cluster_key = f"{entity.legal_name_normalized}::{entity.entity_type}"
+        bucket = week_bucket.setdefault(
+            cluster_key,
+            {
+                "cluster_key": cluster_key,
+                "legal_name": entity.legal_name_normalized,
+                "entity_type": entity.entity_type,
+                "display_name": entity.extracted_name,
+                "events": [],
+            },
+        )
+
+        if bucket["display_name"] is None:
+            bucket["display_name"] = entity.extracted_name
+
+        days_since = (week_end - article.published_at.date()).days
+        if days_since < 0:
+            days_since = 0
+        if days_since > 7:
+            days_since = 7
+
+        recency_weight = 1.0 - (0.75 / 7.0) * days_since
+        if recency_weight < 0.25:
+            recency_weight = 0.25
+
+        event_type = event.event_type or "other"
+        type_weight = _EVENT_TYPE_WEIGHTS.get(event_type, 1)
+
+        confidence = event.confidence if event.confidence is not None else 1.0
+        if confidence < 0.0:
+            confidence = 0.0
+        if confidence > 1.0:
+            confidence = 1.0
+
+        event_score = type_weight * recency_weight * confidence
+
+        bucket["events"].append(
+            {
+                "event": event,
+                "article": article,
+                "event_type": event_type,
+                "event_score": event_score,
+            }
+        )
+
+    weekly_rows = []
+    for week_end, clusters in weekly.items():
+        ranked = []
+        for bucket in clusters.values():
+            events = bucket["events"]
+            per_type = {}
+            for item in events:
+                per_type.setdefault(item["event_type"], []).append(item)
+
+            kept_events = []
+            for items in per_type.values():
+                items.sort(key=lambda x: x["event_score"], reverse=True)
+                kept_events.extend(items[:2])
+
+            kept_events.sort(key=lambda x: x["event_score"], reverse=True)
+
+            entity_score = sum(item["event_score"] for item in kept_events)
+            source_ids = {item["article"].source for item in kept_events if item.get("article")}
+
+            ranked.append(
+                {
+                    "cluster_key": bucket["cluster_key"],
+                    "legal_name": bucket["legal_name"],
+                    "entity_type": bucket["entity_type"],
+                    "display_name": bucket["display_name"],
+                    "score": entity_score,
+                    "events": kept_events[:3],
+                    "claims_count": len(kept_events),
+                    "sources_count": len(source_ids),
+                }
+            )
+
+        ranked.sort(key=lambda x: x["score"], reverse=True)
+        weekly_rows.append(
+            {
+                "week_end": week_end,
+                "rows": ranked[:limit],
+            }
+        )
+
+    weekly_rows.sort(key=lambda x: x["week_end"], reverse=True)
+
+    return templates.TemplateResponse(
+        "screen_weekly.html",
+        {
+            "request": request,
+            "weeks": weekly_rows,
+            "months": months,
         },
     )
 
