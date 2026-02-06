@@ -250,7 +250,7 @@ async def fetch_pending_articles(session, limit: int = 5) -> list[NewsArticle]:
         select(NewsArticle)
         .where(NewsArticle.clean_text.is_not(None))
         .where(NewsArticle.llm_raw.is_(None))
-        .order_by(NewsArticle.id.asc())
+        .order_by(NewsArticle.published_at.desc(), NewsArticle.id.desc())
         .limit(limit)
     )
     result = await session.execute(stmt)
