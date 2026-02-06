@@ -37,8 +37,8 @@ _EVENT_TYPE_WEIGHTS = {
 
 
 @app.get("/")
-async def most_changed_root(request: Request):
-    return await most_changed(request=request)
+async def weekly_root(request: Request):
+    return await most_changed_weekly(request=request)
 
 
 @app.get("/admin")
@@ -133,122 +133,6 @@ async def article_raw_html(article_id: int):
         raise HTTPException(status_code=404, detail="No raw_html stored")
 
     return HTMLResponse(content=article.raw_html)
-
-
-@app.get("/screen")
-async def most_changed(request: Request, days: int = 7, limit: int = 50):
-    now = datetime.now(timezone.utc)
-    window_start = now - timedelta(days=days)
-
-    async with AsyncSessionLocal() as session:
-        stmt = (
-            select(ExtractedEntity, ExtractedEvent, NewsArticle)
-            .join(ExtractedEvent, ExtractedEvent.entity_id == ExtractedEntity.id)
-            .join(NewsArticle, NewsArticle.id == ExtractedEvent.article_id)
-            .where(NewsArticle.published_at >= window_start)
-            .where(ExtractedEntity.entity_type.in_(["operating_company", "financial_sponsor", "lender"]))
-        )
-        result = await session.execute(stmt)
-        rows = result.all()
-
-    clusters = {}
-    for entity, event, article in rows:
-        if not entity.legal_name_normalized or not entity.entity_type:
-            continue
-
-        cluster_key = f"{entity.legal_name_normalized}::{entity.entity_type}"
-        bucket = clusters.setdefault(
-            cluster_key,
-            {
-                "cluster_key": cluster_key,
-                "legal_name": entity.legal_name_normalized,
-                "entity_type": entity.entity_type,
-                "display_name": entity.extracted_name,
-                "events": [],
-                "latest_published_at": None,
-            },
-        )
-
-        published_at = article.published_at
-        if published_at is None:
-            continue
-
-        if bucket["latest_published_at"] is None or published_at > bucket["latest_published_at"]:
-            bucket["latest_published_at"] = published_at
-            bucket["display_name"] = entity.extracted_name or bucket["display_name"]
-
-        days_since = int((now - published_at).total_seconds() // 86400)
-        if days_since < 0:
-            days_since = 0
-
-        recency_weight = 1.0 - (0.75 / 7.0) * days_since
-        if recency_weight < 0.25:
-            recency_weight = 0.25
-        if recency_weight > 1.0:
-            recency_weight = 1.0
-
-        event_type = event.event_type or "other"
-        type_weight = _EVENT_TYPE_WEIGHTS.get(event_type, 1)
-
-        confidence = event.confidence if event.confidence is not None else 1.0
-        if confidence < 0.0:
-            confidence = 0.0
-        if confidence > 1.0:
-            confidence = 1.0
-
-        event_score = type_weight * recency_weight * confidence
-
-        bucket["events"].append(
-            {
-                "event": event,
-                "article": article,
-                "event_type": event_type,
-                "event_score": event_score,
-            }
-        )
-
-    ranked = []
-    for bucket in clusters.values():
-        events = bucket["events"]
-
-        per_type = {}
-        for item in events:
-            per_type.setdefault(item["event_type"], []).append(item)
-
-        kept_events = []
-        for items in per_type.values():
-            items.sort(key=lambda x: x["event_score"], reverse=True)
-            kept_events.extend(items[:2])
-
-        kept_events.sort(key=lambda x: x["event_score"], reverse=True)
-
-        entity_score = sum(item["event_score"] for item in kept_events)
-
-        source_ids = {item["article"].source for item in kept_events if item.get("article")}
-
-        ranked.append(
-            {
-                "cluster_key": bucket["cluster_key"],
-                "legal_name": bucket["legal_name"],
-                "entity_type": bucket["entity_type"],
-                "display_name": bucket["display_name"],
-                "score": entity_score,
-                "events": kept_events[:3],
-                "claims_count": len(kept_events),
-                "sources_count": len(source_ids),
-            }
-        )
-
-    ranked.sort(key=lambda x: x["score"], reverse=True)
-
-    return templates.TemplateResponse(
-        "screen.html",
-        {
-            "request": request,
-            "rows": ranked[:limit],
-            "days": days,
-        },
-    )
 
 
 def _week_ending_sunday(d: date) -> date:
@@ -391,8 +275,16 @@ async def cluster_evidence(
     entity_type: str,
     days: int = 30,
     all_time: int = 0,
+    week_end: str | None = None,
 ):
     now = datetime.now(timezone.utc)
+    scoring_anchor = now
+    scoring_week_end = None
+    if week_end:
+        try:
+            scoring_week_end = datetime.strptime(week_end, "%Y-%m-%d").date()
+        except ValueError:
+            scoring_week_end = None
     window_start = now - timedelta(days=days)
 
     async with AsyncSessionLocal() as session:
@@ -417,10 +309,13 @@ async def cluster_evidence(
         in_score_window = False
         recency_weight = None
         if published_at is not None:
-            days_since = int((now - published_at).total_seconds() // 86400)
-            if days_since < 0:
+            if scoring_week_end:
+                days_since = (scoring_week_end - published_at.date()).days
+            else:
+                days_since = int((scoring_anchor - published_at).total_seconds() // 86400)
+            if days_since is not None and days_since < 0:
                 days_since = 0
-            if days_since <= 7:
+            if days_since is not None and days_since <= 7:
                 in_score_window = True
                 recency_weight = 1.0 - (0.75 / 7.0) * days_since
                 if recency_weight < 0.25:
@@ -466,6 +361,7 @@ async def cluster_evidence(
             "rows": evidence_rows,
             "days": days,
             "all_time": all_time,
+            "week_end": scoring_week_end,
         },
     )
 

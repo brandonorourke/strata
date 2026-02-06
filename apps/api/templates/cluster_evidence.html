@@ -2,6 +2,7 @@
 {% block content %}
   <div class="meta">
     Evidence for: <strong>{{ legal_name }}</strong> ({{ entity_type }})
+    {% if week_end %}· score week ending {{ week_end.strftime("%Y-%m-%d") }}{% endif %}
   </div>
   <div class="meta" style="margin-bottom: 10px;">
     {% if all_time %}

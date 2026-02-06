@@ -19,7 +19,7 @@
         {% for row in week.rows %}
           <tr>
             <td>
-              <a href="/screen/cluster?legal_name={{ row.legal_name|urlencode }}&entity_type={{ row.entity_type|urlencode }}">
+              <a href="/screen/cluster?legal_name={{ row.legal_name|urlencode }}&entity_type={{ row.entity_type|urlencode }}&week_end={{ week.week_end.strftime("%Y-%m-%d") }}">
                 {{ row.display_name }}
               </a>
             </td>
