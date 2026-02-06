@@ -410,13 +410,60 @@ async def cluster_evidence(
         result = await session.execute(stmt)
         rows = list(result.all())
 
+    evidence_rows = []
+    for event, article, entity in rows:
+        published_at = article.published_at
+        days_since = None
+        in_score_window = False
+        recency_weight = None
+        if published_at is not None:
+            days_since = int((now - published_at).total_seconds() // 86400)
+            if days_since < 0:
+                days_since = 0
+            if days_since <= 7:
+                in_score_window = True
+                recency_weight = 1.0 - (0.75 / 7.0) * days_since
+                if recency_weight < 0.25:
+                    recency_weight = 0.25
+                if recency_weight > 1.0:
+                    recency_weight = 1.0
+
+        event_type = event.event_type or "other"
+        type_weight = _EVENT_TYPE_WEIGHTS.get(event_type, 1)
+
+        confidence = event.confidence if event.confidence is not None else 1.0
+        if confidence < 0.0:
+            confidence = 0.0
+        if confidence > 1.0:
+            confidence = 1.0
+
+        if in_score_window and recency_weight is not None:
+            event_score = type_weight * recency_weight * confidence
+        else:
+            event_score = 0.0
+
+        evidence_rows.append(
+            {
+                "event": event,
+                "article": article,
+                "entity": entity,
+                "event_type": event_type,
+                "type_weight": type_weight,
+                "days_since": days_since,
+                "recency_weight": recency_weight,
+                "confidence": confidence,
+                "event_score": event_score,
+                "in_score_window": in_score_window,
+            }
+        )
+
     return templates.TemplateResponse(
         "cluster_evidence.html",
         {
             "request": request,
             "legal_name": legal_name,
             "entity_type": entity_type,
-            "rows": rows,
+            "rows": evidence_rows,
             "days": days,
             "all_time": all_time,
         },
