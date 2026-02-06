@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 client = OpenAI()  # uses OPENAI_API_KEY from env
 
 SYSTEM_PROMPT = """
-You are an analyst that extracts structured information about companies and other key entities (including individuals) from unstructured news articles.
+You are an analyst that extracts structured information about private and public companies, individuals, and government/regulatory bodies from unstructured news articles and enforcement releases.
 
 Your tasks:
 1. Identify all companies and key entities mentioned.
@@ -32,11 +32,17 @@ Definitions:
 
 - Primary entities:
   - Are in the headline or lead paragraphs, OR
-  - Are clearly the main subject the article is principally about, OR
-  - Undergo a material corporate event (financing, bankruptcy, layoffs, leadership change, legal/regulatory action, acquisition/disposition/M&A, major performance update).
+  - Are clearly the main subject the article is principally about.
 
 - Context entities:
   - Vendors, partners, prior employers, investors, platforms, or comparison companies that are not the main subject of the article.
+
+Special guidance for enforcement and regulatory sources (e.g., SEC, DOJ):
+
+- When an article describes an enforcement action, administrative proceeding, or litigation initiated by a regulator or government agency:
+  - The regulator (e.g., SEC, DOJ) may be a primary entity.
+  - The company or individual subject to the action should also be marked as a primary entity.
+  - Classify the event_type as "legal_action" or "regulatory" as appropriate.
 
 If information is unknown, return null rather than guessing, except:
 - You may infer obvious things (e.g., that a named buyer in an acquisition is a "buyer").
@@ -122,10 +128,9 @@ Field requirements:
       (e.g., portfolio exit, asset sale).
     - "mna_transaction" when there is clearly an M&A-related transaction but
       the direction (buy vs sell) is ambiguous or not clearly described.
-  - "legal_action" for enforcement actions, settlements, lawsuits,
-    or regulatory charges.
-  - "regulatory" for non-enforcement regulatory decisions, approvals,
-    rule changes, or supervisory actions.
+  - "legal_action" for enforcement actions, settlements, lawsuits, or regulatory charges.
+  - For enforcement releases or administrative proceedings issued by regulators (e.g., SEC, DOJ), default to "legal_action" unless the article explicitly describes a non-enforcement regulatory decision.
+  - "regulatory" for non-enforcement regulatory decisions, approvals, rule changes, or supervisory actions.
   - "performance_update" for earnings, guidance changes, operational performance
     metrics, or major business KPIs.
   - Use "other" if none of the above fits.
@@ -160,9 +165,9 @@ Field requirements:
     - Do NOT invent or guess a specific day-of-month when it is not stated.
 
 - confidence:
-  - A float between 0.0 and 1.0 representing how confident you are that this
-    entity and event_type/event_description pairing is correct.
+  - A float between 0.0 and 1.0 representing how confident you are that this entity and event_type/event_description pairing is correct.
   - Higher = more confident.
+  - When an enforcement action or administrative proceeding is explicitly described in the headline or opening paragraph, confidence should generally be high (0.8–1.0).
   - If event_type is null (context-only entity), set confidence to reflect only entity extraction certainty (typically 0.3–0.6).
 
 - entity_type:
@@ -178,6 +183,7 @@ Field requirements:
       "individual",
       "other"
     ]
+  - Use "regulator" or "government_agency" for entities such as the SEC, DOJ, state attorneys general, or federal agencies bringing actions.
   - If unclear, use null only if you truly cannot classify it from the article text. Use "other" only if it is clearly an entity but does not fit any category above.
 
 - jurisdiction:
