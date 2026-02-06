@@ -308,14 +308,14 @@ async def process_batch(limit: int = 5) -> int:
                 continue
 
             article.llm_raw = data
-            updated += 1
 
-        try:
-            await session.commit()
-        except SQLAlchemyError as e:
-            logger.error("Commit failed, rolling back: %s", e)
-            await session.rollback()
-            return 0
+            try:
+                await session.commit()
+                updated += 1
+            except SQLAlchemyError as e:
+                logger.error("Commit failed, rolling back: %s", e)
+                await session.rollback()
+                continue
 
         logger.info("Stored llm_raw for %d article(s)", updated)
         return updated
