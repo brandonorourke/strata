@@ -90,6 +90,7 @@ async def fetch_articles_needing_html(session, limit: int = 20) -> list[NewsArti
     stmt = (
         select(NewsArticle)
         .where(NewsArticle.raw_html.is_(None))
+        .where(NewsArticle.clean_text.is_(None))  # Skip PDFs or items already resolved to clean_text
         .where(NewsArticle.url.is_not(None))
         .order_by(NewsArticle.id.asc())
         .limit(limit)
