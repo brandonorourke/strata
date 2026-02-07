@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 6nRjPXp2PKhacVWIJgT3EJsWubeHYHnwmsCd6eYuTZAz9q8kqJwZ1H9fdvBtBA8
+\restrict 1XZVEZpbsbuL9plgYjQJqrmVRiSZxjIQDZp2guBu6rdllD0fbgcj4isu8DZCYBD
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -27,10 +27,11 @@ CREATE TYPE public.news_source_enum AS ENUM (
     'FREIGHTWAVES',
     'PRNEWSWIRE',
     'BUSINESSWIRE',
+    'SEC',
+    'DOJ',
     'SEC_PRESS_RELEASES',
     'SEC_LITIGATION_RELEASES',
-    'SEC_ADMIN_PROCEEDINGS',
-    'DOJ'
+    'SEC_ADMIN_PROCEEDINGS'
 );
 
 
@@ -39,21 +40,53 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
+-- Name: article_domains; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.article_domains (
+    id integer NOT NULL,
+    article_id integer NOT NULL,
+    domain text NOT NULL,
+    created_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: article_domains_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.article_domains_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: article_domains_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.article_domains_id_seq OWNED BY public.article_domains.id;
+
+
+--
 -- Name: canonical_entities; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.canonical_entities (
     id integer NOT NULL,
     canonical_name text NOT NULL,
-    entity_type text,
     legal_name_normalized text NOT NULL,
     loose_name_normalized text,
     jurisdiction text,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    entity_type text,
     hq_country text,
     hq_region text,
-    confirmed_domain text,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
+    confirmed_domain text
 );
 
 
@@ -117,7 +150,6 @@ ALTER SEQUENCE public.entity_links_id_seq OWNED BY public.entity_links.id;
 
 CREATE TABLE public.extracted_entities (
     id integer NOT NULL,
-    article_id integer NOT NULL,
     extracted_name text NOT NULL,
     legal_name_normalized text NOT NULL,
     loose_name_normalized text,
@@ -126,6 +158,7 @@ CREATE TABLE public.extracted_entities (
     last_seen_at timestamp with time zone DEFAULT now() NOT NULL,
     entity_type text,
     jurisdiction text,
+    article_id integer NOT NULL,
     hq_country text,
     hq_region text
 );
@@ -230,6 +263,13 @@ ALTER SEQUENCE public.news_articles_id_seq OWNED BY public.news_articles.id;
 
 
 --
+-- Name: article_domains id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.article_domains ALTER COLUMN id SET DEFAULT nextval('public.article_domains_id_seq'::regclass);
+
+
+--
 -- Name: canonical_entities id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -265,6 +305,14 @@ ALTER TABLE ONLY public.news_articles ALTER COLUMN id SET DEFAULT nextval('publi
 
 
 --
+-- Name: article_domains article_domains_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.article_domains
+    ADD CONSTRAINT article_domains_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: canonical_entities canonical_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -278,14 +326,6 @@ ALTER TABLE ONLY public.canonical_entities
 
 ALTER TABLE ONLY public.entity_links
     ADD CONSTRAINT entity_links_pkey PRIMARY KEY (id);
-
-
---
--- Name: extracted_entities extracted_entities_article_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.extracted_entities
-    ADD CONSTRAINT extracted_entities_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.news_articles(id);
 
 
 --
@@ -321,6 +361,20 @@ ALTER TABLE ONLY public.news_articles
 
 
 --
+-- Name: ix_article_domains_article_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_article_domains_article_id ON public.article_domains USING btree (article_id);
+
+
+--
+-- Name: ix_article_domains_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_article_domains_id ON public.article_domains USING btree (id);
+
+
+--
 -- Name: ix_canonical_entities_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -346,13 +400,6 @@ CREATE INDEX ix_entity_links_id ON public.entity_links USING btree (id);
 --
 
 CREATE INDEX ix_extracted_entities_id ON public.extracted_entities USING btree (id);
-
-
---
--- Name: ux_extracted_entities_article_legal; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX ux_extracted_entities_article_legal ON public.extracted_entities USING btree (article_id, legal_name_normalized);
 
 
 --
@@ -384,56 +431,31 @@ CREATE INDEX ix_news_articles_published_at ON public.news_articles USING btree (
 
 
 --
+-- Name: ux_article_domains_article_domain; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX ux_article_domains_article_domain ON public.article_domains USING btree (article_id, domain);
+
+
+--
 -- Name: ux_entity_links_extracted_entity; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX ux_entity_links_extracted_entity ON public.entity_links USING btree (extracted_entity_id);
 
+
 --
--- Name: article_domains; Type: TABLE; Schema: public; Owner: -
+-- Name: ux_extracted_entities_article_legal; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE TABLE public.article_domains (
-    id integer NOT NULL,
-    article_id integer NOT NULL,
-    domain text NOT NULL,
-    created_at timestamp with time zone DEFAULT now()
-);
+CREATE UNIQUE INDEX ux_extracted_entities_article_legal ON public.extracted_entities USING btree (article_id, legal_name_normalized);
 
 
 --
--- Name: article_domains_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: ux_extracted_events_article_entity; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE SEQUENCE public.article_domains_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: article_domains_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.article_domains_id_seq OWNED BY public.article_domains.id;
-
-
---
--- Name: article_domains id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.article_domains ALTER COLUMN id SET DEFAULT nextval('public.article_domains_id_seq'::regclass);
-
-
---
--- Name: article_domains article_domains_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.article_domains
-    ADD CONSTRAINT article_domains_pkey PRIMARY KEY (id);
+CREATE UNIQUE INDEX ux_extracted_events_article_entity ON public.extracted_events USING btree (article_id, entity_id);
 
 
 --
@@ -442,34 +464,6 @@ ALTER TABLE ONLY public.article_domains
 
 ALTER TABLE ONLY public.article_domains
     ADD CONSTRAINT article_domains_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.news_articles(id);
-
-
---
--- Name: ix_article_domains_article_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX ix_article_domains_article_id ON public.article_domains USING btree (article_id);
-
-
---
--- Name: ix_article_domains_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX ix_article_domains_id ON public.article_domains USING btree (id);
-
-
---
--- Name: ux_article_domains_article_domain; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX ux_article_domains_article_domain ON public.article_domains USING btree (article_id, domain);
-
-
---
--- Name: ux_extracted_events_article_entity; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX ux_extracted_events_article_entity ON public.extracted_events USING btree (article_id, entity_id);
 
 
 --
@@ -486,6 +480,14 @@ ALTER TABLE ONLY public.entity_links
 
 ALTER TABLE ONLY public.entity_links
     ADD CONSTRAINT entity_links_extracted_entity_id_fkey FOREIGN KEY (extracted_entity_id) REFERENCES public.extracted_entities(id);
+
+
+--
+-- Name: extracted_entities extracted_entities_article_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.extracted_entities
+    ADD CONSTRAINT extracted_entities_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.news_articles(id);
 
 
 --
@@ -508,4 +510,5 @@ ALTER TABLE ONLY public.extracted_events
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 6nRjPXp2PKhacVWIJgT3EJsWubeHYHnwmsCd6eYuTZAz9q8kqJwZ1H9fdvBtBA8
+\unrestrict 1XZVEZpbsbuL9plgYjQJqrmVRiSZxjIQDZp2guBu6rdllD0fbgcj4isu8DZCYBD
+
