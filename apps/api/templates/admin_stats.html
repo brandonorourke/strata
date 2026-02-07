@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Pipeline Stats</h2>
+
+  <h3>Article volume</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>Count</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Total articles</td>
+        <td>{{ stats.total }}</td>
+      </tr>
+      <tr>
+        <td>Last 24h</td>
+        <td>{{ stats.last_24h }}</td>
+      </tr>
+      <tr>
+        <td>Last 7d</td>
+        <td>{{ stats.last_7d }}</td>
+      </tr>
+      <tr>
+        <td>Last 30d</td>
+        <td>{{ stats.last_30d }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h3>Processing coverage</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Stage</th>
+        <th>Count</th>
+        <th>Percent</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Raw HTML</td>
+        <td>{{ stats.with_raw_html }} / {{ stats.total }}</td>
+        <td class="meta">{{ stats.pct_raw_html }}%</td>
+      </tr>
+      <tr>
+        <td>Clean text</td>
+        <td>{{ stats.with_clean_text }} / {{ stats.total }}</td>
+        <td class="meta">{{ stats.pct_clean_text }}%</td>
+      </tr>
+      <tr>
+        <td>LLM JSON</td>
+        <td>{{ stats.with_llm_raw }} / {{ stats.total }}</td>
+        <td class="meta">{{ stats.pct_llm_raw }}%</td>
+      </tr>
+      <tr>
+        <td>Entities extracted</td>
+        <td>{{ stats.with_entities }} / {{ stats.total }}</td>
+        <td class="meta">{{ stats.pct_entities }}%</td>
+      </tr>
+      <tr>
+        <td>Domains extracted</td>
+        <td>{{ stats.with_domains }} / {{ stats.total }}</td>
+        <td class="meta">{{ stats.pct_domains }}%</td>
+      </tr>
+    </tbody>
+  </table>
+{% endblock %}

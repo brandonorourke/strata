@@ -49,6 +49,77 @@ async def admin_home(request: Request):
     )
 
 
+@app.get("/admin/stats")
+async def admin_stats(request: Request):
+    now = datetime.now(timezone.utc)
+    day_1 = now - timedelta(days=1)
+    day_7 = now - timedelta(days=7)
+    day_30 = now - timedelta(days=30)
+
+    async with AsyncSessionLocal() as session:
+        total_stmt = select(func.count()).select_from(NewsArticle)
+        total = int((await session.execute(total_stmt)).scalar() or 0)
+
+        last_24h = int((await session.execute(
+            select(func.count()).select_from(NewsArticle).where(NewsArticle.published_at >= day_1)
+        )).scalar() or 0)
+
+        last_7d = int((await session.execute(
+            select(func.count()).select_from(NewsArticle).where(NewsArticle.published_at >= day_7)
+        )).scalar() or 0)
+
+        last_30d = int((await session.execute(
+            select(func.count()).select_from(NewsArticle).where(NewsArticle.published_at >= day_30)
+        )).scalar() or 0)
+
+        with_raw_html = int((await session.execute(
+            select(func.count()).select_from(NewsArticle).where(NewsArticle.raw_html.is_not(None))
+        )).scalar() or 0)
+
+        with_clean_text = int((await session.execute(
+            select(func.count()).select_from(NewsArticle).where(NewsArticle.clean_text.is_not(None))
+        )).scalar() or 0)
+
+        with_llm_raw = int((await session.execute(
+            select(func.count()).select_from(NewsArticle).where(NewsArticle.llm_raw.is_not(None))
+        )).scalar() or 0)
+
+        with_entities = int((await session.execute(
+            select(func.count()).select_from(NewsArticle).where(NewsArticle.entities_extracted_at.is_not(None))
+        )).scalar() or 0)
+
+        with_domains = int((await session.execute(
+            select(func.count()).select_from(NewsArticle).where(NewsArticle.domains_extracted_at.is_not(None))
+        )).scalar() or 0)
+
+    def pct(value: int) -> float:
+        if total == 0:
+            return 0.0
+        return round((value / total) * 100, 1)
+
+    stats = {
+        "total": total,
+        "last_24h": last_24h,
+        "last_7d": last_7d,
+        "last_30d": last_30d,
+        "with_raw_html": with_raw_html,
+        "pct_raw_html": pct(with_raw_html),
+        "with_clean_text": with_clean_text,
+        "pct_clean_text": pct(with_clean_text),
+        "with_llm_raw": with_llm_raw,
+        "pct_llm_raw": pct(with_llm_raw),
+        "with_entities": with_entities,
+        "pct_entities": pct(with_entities),
+        "with_domains": with_domains,
+        "pct_domains": pct(with_domains),
+    }
+
+    return templates.TemplateResponse(
+        "admin_stats.html",
+        {"request": request, "stats": stats},
+    )
+
+
 @app.get("/admin/articles")
 async def list_articles(request: Request, page: int = 1, page_size: int = 50):
     if page < 1:
