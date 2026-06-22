@@ -28,6 +28,7 @@ pg_dump strata --schema-only --no-owner > strata_core/schema.local.sql
 - Ad-hoc SQL migrations (if needed) live under `migrations/` and should be applied manually in order.
 - To run locally: `psql strata -f migrations/0001_drop_processed_by_llm_at.sql`
 - After changing the schema, rerun `pg_dump --schema-only --no-owner > strata_core/schema.local.sql` so the snapshot stays current.
+- When adding ORM columns, append at the end for readability (do not reorder existing fields).
 
 ### Production environment
 

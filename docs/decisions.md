@@ -46,3 +46,7 @@
     - What happened
     - What it implies / why it matters
     - What to watch next
+
+## 2026-02-07 — Schema ordering convention
+- Decision: Treat DB schema + migrations as source of truth; always regenerate `strata_core/schema.local.sql` from the DB.
+- Convention: When adding ORM columns, append at the end for readability (do not reorder existing fields).

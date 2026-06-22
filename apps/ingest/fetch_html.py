@@ -1,10 +1,13 @@
 # apps/ingest/fetch_html.py
 
 import asyncio
+import io
 import logging
 import random
+from urllib.parse import urlparse
 
 import httpx
+from pypdf import PdfReader
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -24,14 +27,31 @@ DEFAULT_HEADERS = {
     "Accept-Language": "en-US,en;q=0.8",
 }
 
+SEC_HEADERS = {
+    "User-Agent": "StrataBot/0.1 (contact: admin@example.com)",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.8",
+}
 
-async def polite_sleep():
+
+def _headers_for_url(url: str) -> dict:
+    host = urlparse(url).hostname or ""
+    if host.endswith("sec.gov"):
+        return SEC_HEADERS
+    return DEFAULT_HEADERS
+
+
+async def polite_sleep(url: str):
+    host = urlparse(url).hostname or ""
+    if host.endswith("sec.gov"):
+        await asyncio.sleep(random.uniform(1.5, 3.5))
+        return
     await asyncio.sleep(random.uniform(1.0, 3.0))
 
 
-async def fetch_html(client: httpx.AsyncClient, url: str) -> str | None:
+async def fetch_content(client: httpx.AsyncClient, url: str) -> httpx.Response | None:
     try:
-        resp = await client.get(url, timeout=10.0, headers=DEFAULT_HEADERS)
+        resp = await client.get(url, timeout=15.0, headers=_headers_for_url(url))
     except httpx.HTTPError as e:
         logger.warning("HTTP error fetching %s: %s", url, e)
         return None
@@ -40,13 +60,37 @@ async def fetch_html(client: httpx.AsyncClient, url: str) -> str | None:
         logger.warning("Non-200 status for %s: %s", url, resp.status_code)
         return None
 
-    return resp.text
+    return resp
+
+
+def extract_pdf_text(content: bytes) -> str | None:
+    try:
+        reader = PdfReader(io.BytesIO(content))
+    except Exception as e:
+        logger.warning("Failed to read PDF: %s", e)
+        return None
+
+    chunks = []
+    for page in reader.pages:
+        try:
+            text = page.extract_text() or ""
+        except Exception:
+            text = ""
+        if text:
+            chunks.append(text)
+
+    if not chunks:
+        return None
+
+    text = "\n\n".join(chunks).strip()
+    return text or None
 
 
 async def fetch_articles_needing_html(session, limit: int = 20) -> list[NewsArticle]:
     stmt = (
         select(NewsArticle)
         .where(NewsArticle.raw_html.is_(None))
+        .where(NewsArticle.clean_text.is_(None))  # Skip PDFs or items already resolved to clean_text
         .where(NewsArticle.url.is_not(None))
         .order_by(NewsArticle.id.asc())
         .limit(limit)
@@ -72,13 +116,22 @@ async def process_batch(limit: int = 20) -> int:
 
         async with httpx.AsyncClient(follow_redirects=True) as client:
             for article in articles:
-                await polite_sleep()
-                logger.info("Fetching HTML for [%s] %s", article.id, article.url)
-                html = await fetch_html(client, article.url)
-                if not html:
+                await polite_sleep(article.url)
+                logger.info("Fetching content for [%s] %s", article.id, article.url)
+                resp = await fetch_content(client, article.url)
+                if not resp:
                     continue
 
-                article.raw_html = html
+                content_type = resp.headers.get("content-type", "").lower()
+                if "application/pdf" in content_type or article.url.lower().endswith(".pdf"):
+                    text = extract_pdf_text(resp.content)
+                    if not text:
+                        continue
+                    article.clean_text = text
+                    updated_count += 1
+                    continue
+
+                article.raw_html = resp.text
                 updated_count += 1
 
         try:
@@ -93,7 +146,7 @@ async def process_batch(limit: int = 20) -> int:
 
 
 async def main():
-    await process_batch(limit=20)
+    await process_batch(limit=50)
 
 
 if __name__ == "__main__":

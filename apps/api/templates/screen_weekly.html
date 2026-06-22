@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="meta">Most Changed by Week (last {{ months }} months)</div>
+
+  {% for week in weeks %}
+    <h3>Week ending {{ week.week_end.strftime("%Y-%m-%d") }}</h3>
+    {% if week.rows %}
+      <table>
+        <thead>
+          <tr>
+            <th>Entity</th>
+            <th>Type</th>
+            <th>Score</th>
+            <th>Claims</th>
+            <th>Top Events</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for row in week.rows %}
+          <tr>
+            <td>
+              <a href="/screen/cluster?legal_name={{ row.legal_name|urlencode }}&entity_type={{ row.entity_type|urlencode }}&week_end={{ week.week_end.strftime("%Y-%m-%d") }}">
+                {{ row.display_name }}
+              </a>
+            </td>
+            <td class="meta">{{ row.entity_type }}</td>
+            <td class="score">{{ "%.2f"|format(row.score) }}</td>
+            <td class="meta">{{ row.claims_count }} claims · {{ row.sources_count }} sources</td>
+            <td>
+              {% if row.events %}
+                <div class="events">
+                  {% for item in row.events %}
+                    <div class="event">
+                      <strong>{{ item.event.event_type or "other" }}</strong>
+                      {% if item.event.event_description %}
+                        <div>{{ item.event.event_description }}</div>
+                      {% else %}
+                        <div class="meta">{{ item.event.extracted_name }}</div>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <span class="meta">No events</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="meta">No events this week.</div>
+    {% endif %}
+  {% endfor %}
+{% endblock %}
