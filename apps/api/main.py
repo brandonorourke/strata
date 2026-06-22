@@ -36,6 +36,11 @@ _EVENT_TYPE_WEIGHTS = {
 }
 
 
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
+
+
 @app.get("/")
 async def weekly_root(request: Request):
     return await most_changed_weekly(request=request)
