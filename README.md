@@ -32,8 +32,8 @@ pg_dump strata --schema-only --no-owner > strata_core/schema.local.sql
 
 ### Production environment
 
-- Use `api/.env.example.prod` as a template for Railway variables. It includes the internal `DATABASE_URL`, `PUBLIC_BASE`, and `PORT=8000` so the health check works.
-- Replace the placeholders (`[PWDGOESHERE]`, `[SIGNING_SECRET GOES HERE]`) with your actual values before adding them to Railway.
+- The app only reads `DATABASE_URL`, `OPENAI_API_KEY`, and `ENV` (see `strata_core/settings.py`) — set those wherever this runs in production.
+- Not yet set up for an actual deploy: there's no Procfile/start command, no `$PORT` binding, and no health-check route, so a Railway (or similar) deploy will need that infra added first.
 
 ### Logging
 
