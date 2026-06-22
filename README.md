@@ -32,13 +32,12 @@ pg_dump strata --schema-only --no-owner > strata_core/schema.local.sql
 
 ### Production environment
 
-- Use `api/.env.example.prod` as a template for Railway variables. It includes the internal `DATABASE_URL`, `INVITE_DOMAIN`, `PUBLIC_BASE`, and `PORT=8000` so the health check works.
+- Use `api/.env.example.prod` as a template for Railway variables. It includes the internal `DATABASE_URL`, `PUBLIC_BASE`, and `PORT=8000` so the health check works.
 - Replace the placeholders (`[PWDGOESHERE]`, `[SIGNING_SECRET GOES HERE]`) with your actual values before adding them to Railway.
 
 ### Logging
 
 - `uvicorn` prints HTTP access logs; running with `--log-level info --access-log` makes latency/status visible during dev.
-- The FastAPI service also emits lightweight application logs (`invite_created`, `invite_response`, and request timing) so failures are easy to trace in both local runs and Railway.
 
 ---
 
