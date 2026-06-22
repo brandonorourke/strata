@@ -42,8 +42,8 @@ async def health():
 
 
 @app.get("/")
-async def weekly_root(request: Request):
-    return await most_changed_weekly(request=request)
+async def landing(request: Request):
+    return templates.TemplateResponse("landing.html", {"request": request})
 
 
 @app.get("/admin")
