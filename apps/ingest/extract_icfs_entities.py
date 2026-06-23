@@ -46,6 +46,7 @@ async def _get_or_create_entity(session, filing: IcfsFiling, canonical_name: str
         source_id=filing.id,
         extracted_name=canonical_name,
         entity_type="operating_company",
+        created_from="icfs",
         legal_name_normalized=legal_name,
         loose_name_normalized=normalize_loose_name(canonical_name),
         first_seen_at=filing.submission_date or filing.action_taken_date,
