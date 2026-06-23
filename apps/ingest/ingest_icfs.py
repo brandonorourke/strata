@@ -110,11 +110,21 @@ def _fetch_page(client: httpx.Client, g_ck: str, table: str, fields: str, order_
 
 
 def _parse_glide_datetime(value: str | None) -> datetime | None:
+    """
+    ServiceNow returns two date shapes depending on the field's glide type:
+    glide_date_time ("2026-06-18 12:00:00") and glide_date ("2026-06-18", no time
+    component — used by e.g. public_notice_release_date). Try both.
+    """
     if not value:
         return None
-    try:
-        dt = datetime.strptime(value, "%Y-%m-%d %H:%M:%S")
-    except ValueError:
+    dt = None
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+        try:
+            dt = datetime.strptime(value, fmt)
+            break
+        except ValueError:
+            continue
+    if dt is None:
         return None
     if dt.year < MIN_PLAUSIBLE_YEAR or dt.year > datetime.now(timezone.utc).year + 1:
         return None
