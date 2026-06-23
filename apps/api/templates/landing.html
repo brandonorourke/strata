@@ -1,4 +1,269 @@
-{% extends "base.html" %}
-{% block content %}
-  <p class="meta">Coming soon.</p>
-{% endblock %}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Strata Terminal</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --accent: #5851ec;
+        --accent-dark: #423bd6;
+        --accent-tint: #eef0ff;
+        --ink: #1a1f36;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --bg: #ffffff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+      }
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        color: var(--accent-dark);
+      }
+      .wrap {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+      nav.top {
+        border-bottom: 1px solid var(--border);
+      }
+      nav.top .wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+      }
+      .wordmark {
+        font-size: 16px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--ink);
+      }
+      .nav-cta {
+        font-size: 13.5px;
+        font-weight: 600;
+      }
+      .hero {
+        padding: 96px 0 72px;
+        border-bottom: 1px solid var(--border);
+      }
+      .hero .wrap {
+        max-width: 760px;
+      }
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--accent-dark);
+        margin-bottom: 16px;
+      }
+      h1 {
+        font-size: 44px;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+        font-weight: 700;
+        margin: 0 0 20px;
+      }
+      .sub {
+        font-size: 18px;
+        line-height: 1.6;
+        color: var(--muted);
+        margin: 0 0 32px;
+        max-width: 600px;
+      }
+      .btn {
+        display: inline-block;
+        background: var(--accent);
+        color: #fff;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 12px 22px;
+        border-radius: 8px;
+      }
+      .btn:hover {
+        background: var(--accent-dark);
+        color: #fff;
+      }
+      section.sources {
+        padding: 72px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      .section-heading {
+        font-size: 13px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin: 0 0 28px;
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 24px;
+        background: #fafbfc;
+      }
+      .card h3 {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0 0 8px;
+      }
+      .card p {
+        font-size: 13.5px;
+        color: var(--muted);
+        margin: 0 0 14px;
+        line-height: 1.55;
+      }
+      .pill {
+        display: inline-block;
+        font-size: 10.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 3px 9px;
+        border-radius: 999px;
+      }
+      .pill.live {
+        background: #ecfdf5;
+        color: #047857;
+      }
+      .pill.soon {
+        background: #f3f4f6;
+        color: var(--muted);
+      }
+      section.why {
+        padding: 72px 0;
+      }
+      .why .wrap {
+        max-width: 700px;
+      }
+      .why h2 {
+        font-size: 26px;
+        letter-spacing: -0.01em;
+        margin: 0 0 18px;
+      }
+      .why p {
+        font-size: 15.5px;
+        color: var(--muted);
+        line-height: 1.65;
+        margin: 0 0 16px;
+      }
+      footer {
+        border-top: 1px solid var(--border);
+        padding: 28px 0 40px;
+      }
+      footer .wrap {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      footer .meta {
+        font-size: 12.5px;
+        color: var(--muted);
+      }
+      @media (max-width: 720px) {
+        .cards {
+          grid-template-columns: 1fr;
+        }
+        h1 {
+          font-size: 32px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="top">
+      <div class="wrap">
+        <div class="wordmark">Strata Terminal</div>
+        <a class="nav-cta" href="mailto:hello@strataterminal.com">Get in touch</a>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <div class="wrap">
+        <div class="eyebrow">Primary-source intelligence</div>
+        <h1>Signal from the records other research tools don't read.</h1>
+        <p class="sub">
+          Strata Terminal monitors government and legal filings — regulatory dockets, UCC liens,
+          court records — and resolves them into a small number of cited events on the companies
+          you're tracking. Built for litigation finance, special situations, and private credit.
+        </p>
+        <a class="btn" href="mailto:hello@strataterminal.com">Get in touch</a>
+      </div>
+    </section>
+
+    <section class="sources">
+      <div class="wrap">
+        <div class="section-heading">What we monitor</div>
+        <div class="cards">
+          <div class="card">
+            <span class="pill live">Live</span>
+            <h3 style="margin-top: 12px;">FCC filings</h3>
+            <p>
+              Regulatory filings, actions, pleadings, and public notices from the FCC's satellite
+              and spectrum licensing system — a system most platforms don't track at all.
+            </p>
+          </div>
+          <div class="card">
+            <span class="pill soon">In development</span>
+            <h3 style="margin-top: 12px;">UCC &amp; liens</h3>
+            <p>
+              Lien filings and perfection status across jurisdictions — a direct signal on
+              distressed credit positions, ahead of public disclosure.
+            </p>
+          </div>
+          <div class="card">
+            <span class="pill soon">In development</span>
+            <h3 style="margin-top: 12px;">Court dockets</h3>
+            <p>
+              Litigation and bankruptcy docket activity tied back to the same companies,
+              assembled alongside everything else we track on them.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="why">
+      <div class="wrap">
+        <h2>Most tools summarize what you already see.</h2>
+        <p>
+          News aggregation and covenant tracking are commodity layers — every platform has them.
+          The harder, more valuable problem is reading the primary records themselves: the registry
+          filing, the docket entry, the regulatory action — and correctly resolving who they're
+          actually about across sources and over time.
+        </p>
+        <p>
+          That's what we build: one entity-resolved view per company, assembled from records that
+          are public but hard to monitor, with a citation back to the source on every event.
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      <div class="wrap">
+        <div class="meta">&copy; Proofgraph, Inc.</div>
+        <div class="meta"><a href="mailto:hello@strataterminal.com">hello@strataterminal.com</a></div>
+      </div>
+    </footer>
+  </body>
+</html>

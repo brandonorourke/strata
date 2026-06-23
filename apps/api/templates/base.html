@@ -32,27 +32,7 @@
       .container {
         max-width: 1180px;
         margin: 0 auto;
-        padding: 0 24px 56px;
-      }
-      header {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 20px 24px;
-        margin: 0 0 28px;
-        max-width: 1180px;
-        margin-left: auto;
-        margin-right: auto;
-        border-bottom: 1px solid var(--border);
-      }
-      h1 {
-        margin: 0;
-        font-size: 18px;
-        font-weight: 700;
-        letter-spacing: -0.01em;
-      }
-      h1 a {
-        color: var(--ink);
+        padding: 40px 24px 56px;
       }
       h2 {
         font-size: 20px;
@@ -208,12 +188,6 @@
   </head>
   <body>
     <div class="container">
-      <header>
-        <div>
-          <h1><a href="/">Strata</a></h1>
-        </div>
-        <div class="meta">v0 viewer</div>
-      </header>
       {% block content %}{% endblock %}
     </div>
   </body>
