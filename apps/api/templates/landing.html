@@ -122,6 +122,18 @@
         padding: 24px;
         background: #fafbfc;
       }
+      .card .tag {
+        display: block;
+        font-size: 10.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+      .card .tag.live {
+        color: var(--accent-dark);
+      }
       .card h3 {
         font-size: 16px;
         font-weight: 600;
@@ -184,11 +196,13 @@
     <section class="hero">
       <div class="wrap">
         <div class="eyebrow">Primary-source intelligence</div>
-        <h1>Signal from the records other research tools don't read.</h1>
+        <h1>Signal from the records other research tools don't reach.</h1>
         <p class="sub">
-          Strata  monitors government and legal filings — regulatory dockets, UCC liens,
-          court records — and resolves them into a small number of cited events on the companies
-          you're tracking. Built for litigation finance, special situations, and private credit.
+          Strata monitors government and legal filings — regulatory dockets, UCC liens,
+          court records — and resolves them into the few cited events that actually matter on
+          the companies you're tracking. Built for investors who need to stay ahead of
+          primary-source developments on their exposures: special situations, private credit,
+          litigation finance, and fundamental equity research.
         </p>
         <a class="btn" href="mailto:hello@strataterminal.com">Get in touch</a>
       </div>
@@ -199,13 +213,16 @@
         <div class="section-heading">What we monitor</div>
         <div class="cards">
           <div class="card">
+            <span class="tag live">Live</span>
             <h3>FCC filings</h3>
             <p>
               Regulatory filings, actions, pleadings, and public notices from the FCC's satellite
-              and spectrum licensing system — a system most platforms don't track at all.
+              and spectrum licensing system — where regulatory signal often surfaces well before
+              it reaches the market, and a system most platforms don't track at all.
             </p>
           </div>
           <div class="card">
+            <span class="tag">Expanding coverage</span>
             <h3>UCC &amp; liens</h3>
             <p>
               Lien filings and perfection status across jurisdictions — a direct signal on
@@ -213,6 +230,7 @@
             </p>
           </div>
           <div class="card">
+            <span class="tag">Expanding coverage</span>
             <h3>Court dockets</h3>
             <p>
               Litigation and bankruptcy docket activity tied back to the same companies,
