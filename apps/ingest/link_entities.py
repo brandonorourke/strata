@@ -48,6 +48,11 @@ async def _find_confirmed_canonical_by_domain(
     entity_type: str,
     article_id: int,
 ):
+    # ArticleDomain is extracted from news_articles.raw_html specifically — there's
+    # nothing to match for entities sourced from a non-news_article table.
+    if article_id is None:
+        return None
+
     stmt = (
         select(CanonicalEntity)
         .join(ArticleDomain, ArticleDomain.domain == CanonicalEntity.confirmed_domain)
@@ -153,7 +158,10 @@ async def process_batch(limit: int = 200) -> int:
                 legal_name = normalize_legal_name(extracted.extracted_name)
 
             canonical = await _find_confirmed_canonical_by_domain(
-                session, legal_name, extracted.entity_type, extracted.article_id
+                session,
+                legal_name,
+                extracted.entity_type,
+                extracted.source_id if extracted.source_type == "news_article" else None,
             )
             if canonical:
                 await _create_link(

@@ -15,10 +15,11 @@ from sqlalchemy import (
     Boolean,
     ForeignKey,
     Enum,
+    and_,
     func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, foreign
 
 from .db import Base
 
@@ -30,6 +31,7 @@ class NewsSource(PyEnum):
     SEC_LITIGATION_RELEASES = "sec_litigation_releases"
     SEC_ADMIN_PROCEEDINGS = "sec_admin_proceedings"
     DOJ = "doj"
+    FCC_ICFS = "fcc_icfs"
 
 
 class NewsArticle(Base):
@@ -48,7 +50,15 @@ class NewsArticle(Base):
     entities_extracted_at = Column(DateTime(timezone=True), nullable=True)
     domains_extracted_at = Column(DateTime(timezone=True), nullable=True)
 
-    extracted_events = relationship("ExtractedEvent", back_populates="article")
+    # No real FK on ExtractedEvent.source_id (it's polymorphic) — read-only, news_article-only view.
+    extracted_events = relationship(
+        "ExtractedEvent",
+        primaryjoin=lambda: and_(
+            ExtractedEvent.source_type == "news_article",
+            foreign(ExtractedEvent.source_id) == NewsArticle.id,
+        ),
+        viewonly=True,
+    )
     article_domains = relationship("ArticleDomain", back_populates="article")
 
 
@@ -56,7 +66,8 @@ class ExtractedEntity(Base):
     __tablename__ = "extracted_entities"
 
     id = Column(Integer, primary_key=True, index=True)
-    article_id = Column(Integer, ForeignKey("news_articles.id"), nullable=False)
+    source_type = Column(Text, nullable=False, server_default="news_article")
+    source_id = Column(Integer, nullable=False)
     extracted_name = Column(Text, nullable=False)
     entity_type = Column(Text, nullable=True)
     jurisdiction = Column(Text, nullable=True)
@@ -70,14 +81,25 @@ class ExtractedEntity(Base):
 
     extracted_events = relationship("ExtractedEvent", back_populates="entity")
     entity_links = relationship("EntityLink", back_populates="extracted_entity")
-    article = relationship("NewsArticle")
+    # No real FK backs source_id (it's polymorphic across news_articles/icfs_filings/etc.),
+    # so this is a read-only convenience relationship scoped to the news_article case only.
+    article = relationship(
+        "NewsArticle",
+        primaryjoin=lambda: and_(
+            ExtractedEntity.source_type == "news_article",
+            foreign(ExtractedEntity.source_id) == NewsArticle.id,
+        ),
+        viewonly=True,
+        uselist=False,
+    )
 
 
 class ExtractedEvent(Base):
     __tablename__ = "extracted_events"
 
     id = Column(Integer, primary_key=True, index=True)
-    article_id = Column(Integer, ForeignKey("news_articles.id"), nullable=False)
+    source_type = Column(Text, nullable=False, server_default="news_article")
+    source_id = Column(Integer, nullable=False)
     entity_id = Column(Integer, ForeignKey("extracted_entities.id"), nullable=False)
     extracted_name = Column(Text, nullable=False)
     is_primary_entity = Column(Boolean, nullable=False, default=False)
@@ -88,7 +110,16 @@ class ExtractedEvent(Base):
     confidence = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    article = relationship("NewsArticle", back_populates="extracted_events")
+    # Same caveat as ExtractedEntity.article: no real FK, read-only, news_article-only.
+    article = relationship(
+        "NewsArticle",
+        primaryjoin=lambda: and_(
+            ExtractedEvent.source_type == "news_article",
+            foreign(ExtractedEvent.source_id) == NewsArticle.id,
+        ),
+        viewonly=True,
+        uselist=False,
+    )
     entity = relationship("ExtractedEntity", back_populates="extracted_events")
 
 
@@ -133,3 +164,48 @@ class ArticleDomain(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     article = relationship("NewsArticle", back_populates="article_domains")
+
+
+class IcfsFiling(Base):
+    """Mirrors ServiceNow's x_fmc_ibfs_base_table (backs both Recent Filings and Recent Actions)."""
+
+    __tablename__ = "icfs_filings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_sys_id = Column(Text, nullable=False, unique=True)
+    file_number = Column(Text, nullable=True)
+    call_sign = Column(Text, nullable=True)
+    applicant_name = Column(Text, nullable=True)
+    submission_date = Column(DateTime(timezone=True), nullable=True)
+    action = Column(Text, nullable=True)
+    action_taken_date = Column(DateTime(timezone=True), nullable=True)
+    target_table = Column(Text, nullable=True)
+    ingested_at = Column(DateTime(timezone=True), server_default=func.now())
+    entities_extracted_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class IcfsPleadingAndComment(Base):
+    """Mirrors ServiceNow's x_fmc_ibfs_pleadings_and_comments table."""
+
+    __tablename__ = "icfs_pleadings_and_comments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_sys_id = Column(Text, nullable=False, unique=True)
+    pleading_type = Column(Text, nullable=True)
+    applicant_names = Column(Text, nullable=True)
+    sys_created_on = Column(DateTime(timezone=True), nullable=True)
+    ingested_at = Column(DateTime(timezone=True), server_default=func.now())
+
+
+class IcfsPublicNotice(Base):
+    """Mirrors ServiceNow's x_fmc_ibfs_public_notices table."""
+
+    __tablename__ = "icfs_public_notices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    source_sys_id = Column(Text, nullable=False, unique=True)
+    number = Column(Text, nullable=True)
+    subsystem = Column(Text, nullable=True)
+    type_of_document = Column(Text, nullable=True)
+    public_notice_release_date = Column(DateTime(timezone=True), nullable=True)
+    ingested_at = Column(DateTime(timezone=True), server_default=func.now())

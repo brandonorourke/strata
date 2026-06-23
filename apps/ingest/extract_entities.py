@@ -41,11 +41,12 @@ def _extract_entities_payload(llm_raw: dict | None) -> list[dict]:
 
 async def _get_or_create_entity(
     session,
-    article_id: int,
+    source_id: int,
     canonical_name: str,
     first_seen_at,
     entity_type: str | None,
     jurisdiction: str | None,
+    source_type: str = "news_article",
 ):
     legal_name = normalize_legal_name(canonical_name)
     if not legal_name:
@@ -53,7 +54,8 @@ async def _get_or_create_entity(
 
     stmt = (
         select(ExtractedEntity)
-        .where(ExtractedEntity.article_id == article_id)
+        .where(ExtractedEntity.source_type == source_type)
+        .where(ExtractedEntity.source_id == source_id)
         .where(ExtractedEntity.legal_name_normalized == legal_name)
         .limit(1)
     )
@@ -69,7 +71,8 @@ async def _get_or_create_entity(
         return entity
 
     entity = ExtractedEntity(
-        article_id=article_id,
+        source_type=source_type,
+        source_id=source_id,
         extracted_name=canonical_name,
         entity_type=entity_type,
         jurisdiction=jurisdiction,
@@ -115,7 +118,8 @@ async def process_article(session, article: NewsArticle) -> int:
 
         exists_stmt = select(ExtractedEvent.id).where(
             and_(
-                ExtractedEvent.article_id == article.id,
+                ExtractedEvent.source_type == "news_article",
+                ExtractedEvent.source_id == article.id,
                 ExtractedEvent.entity_id == entity.id,
             )
         ).limit(1)
@@ -124,7 +128,8 @@ async def process_article(session, article: NewsArticle) -> int:
             continue
 
         event = ExtractedEvent(
-            article_id=article.id,
+            source_type="news_article",
+            source_id=article.id,
             entity_id=entity.id,
             extracted_name=canonical_name,
             is_primary_entity=bool(payload.get("is_primary_entity")),
@@ -152,7 +157,12 @@ async def fetch_articles_with_llm(session, limit: int = 20) -> list[NewsArticle]
         .where(NewsArticle.llm_raw.is_not(None))
         .where(NewsArticle.entities_extracted_at.is_(None))
         .where(
-            ~exists().where(ExtractedEvent.article_id == NewsArticle.id)
+            ~exists().where(
+                and_(
+                    ExtractedEvent.source_type == "news_article",
+                    ExtractedEvent.source_id == NewsArticle.id,
+                )
+            )
         )
         .order_by(NewsArticle.id.asc())
         .limit(limit)

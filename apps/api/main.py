@@ -230,7 +230,10 @@ async def most_changed_weekly(request: Request, months: int = 6, limit: int = 20
         stmt = (
             select(ExtractedEntity, ExtractedEvent, NewsArticle)
             .join(ExtractedEvent, ExtractedEvent.entity_id == ExtractedEntity.id)
-            .join(NewsArticle, NewsArticle.id == ExtractedEvent.article_id)
+            .join(
+                NewsArticle,
+                and_(ExtractedEvent.source_type == "news_article", NewsArticle.id == ExtractedEvent.source_id),
+            )
             .where(NewsArticle.published_at >= window_start)
             .where(ExtractedEntity.entity_type.in_(["operating_company", "financial_sponsor", "lender"]))
         )
@@ -367,7 +370,10 @@ async def cluster_evidence(
         stmt = (
             select(ExtractedEvent, NewsArticle, ExtractedEntity)
             .join(ExtractedEntity, ExtractedEntity.id == ExtractedEvent.entity_id)
-            .join(NewsArticle, NewsArticle.id == ExtractedEvent.article_id)
+            .join(
+                NewsArticle,
+                and_(ExtractedEvent.source_type == "news_article", NewsArticle.id == ExtractedEvent.source_id),
+            )
             .where(ExtractedEntity.legal_name_normalized == legal_name)
             .where(ExtractedEntity.entity_type == entity_type)
             .order_by(NewsArticle.published_at.desc())
@@ -507,7 +513,13 @@ async def canonical_detail(request: Request, canonical_id: int, limit: int = 200
 
         domains_stmt = (
             select(ArticleDomain.domain, func.count(ArticleDomain.domain))
-            .join(ExtractedEntity, ExtractedEntity.article_id == ArticleDomain.article_id)
+            .join(
+                ExtractedEntity,
+                and_(
+                    ExtractedEntity.source_type == "news_article",
+                    ExtractedEntity.source_id == ArticleDomain.article_id,
+                ),
+            )
             .join(EntityLink, EntityLink.extracted_entity_id == ExtractedEntity.id)
             .where(EntityLink.canonical_entity_id == canonical_id)
             .group_by(ArticleDomain.domain)
@@ -519,7 +531,10 @@ async def canonical_detail(request: Request, canonical_id: int, limit: int = 200
         events_stmt = (
             select(ExtractedEvent, NewsArticle)
             .join(EntityLink, EntityLink.extracted_entity_id == ExtractedEvent.entity_id)
-            .join(NewsArticle, NewsArticle.id == ExtractedEvent.article_id)
+            .join(
+                NewsArticle,
+                and_(ExtractedEvent.source_type == "news_article", NewsArticle.id == ExtractedEvent.source_id),
+            )
             .where(EntityLink.canonical_entity_id == canonical_id)
             .order_by(NewsArticle.published_at.desc())
             .limit(limit)
