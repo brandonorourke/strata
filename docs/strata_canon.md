@@ -52,13 +52,14 @@ Workflow is permitted only when it improves:
 But never becomes the main value prop.
 
 ### Wedge → OS progression (guiding arc)
-- v0: Primary-source signal engine (UCC liens, court dockets/complaints, recording-office filings, direct government portals, plus SEC/DOJ enforcement) → entities + events → ranked screens + company timelines
-- v1: Universe/watchlist ownership (user lists; Strata keeps them warm)
+- v0a (confirmed, building now): Direct government portal monitoring, starting with FCC's ICFS — entities + events → ranked screens + company timelines. Confirmed buyer, least competition, most buildable, no visible incumbent.
+- v0b (pending, gated): UCC liens, court dockets/complaints, recording-office filings as a second module — built only once the customer confirms a live signal (Altice) is actually tradeable, not just interesting. Same engine, a second ingestion adapter.
+- v1: Universe/watchlist ownership (user lists; Strata keeps them warm) — note: watchlist resolution is already part of the v0a architecture (resolve extracted entities against a watchlist or create pending entities), so this pulls forward partially rather than waiting for v1.
 - v2: Lien-perfection analysis as a premium lens ("is this lien defective" — ties directly to recovery rates, not just monitoring that a lien exists)
 - v3: Add internal sensors (calendar/inbox/notes) to fuse firm activity + market
 - v4: Strategy tuning and (later) ML only once ontology + outcomes exist
 
-(Updated 2026-06-23: UCC/courts pulled forward from v2 into the v0 wedge itself — see `docs/decisions.md`, 2026-06-16. The first customer conversation validated structured primary-source records, not news, as the actual gap.)
+(Updated 2026-06-16, documented 2026-06-23: news de-prioritized in favor of primary-source records — see `docs/decisions.md`, 2026-06-16. SEC/DOJ enforcement stays active; FreightWaves tabled. Architecture: one engine, two adapters — domain differences (ICFS vs. UCC) live only in ingestion. Moat is entity resolution + cross-source assembly, not the LLM.)
 
 The compounding asset is the same throughout: the map + timeline + linking + evidence.
 
