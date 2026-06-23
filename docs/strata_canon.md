@@ -94,8 +94,12 @@ Tabled:
 - FreightWaves — was the original v0 bootstrap source; not aligned with the primary-source/credit wedge (see `docs/decisions.md`, 2026-06-16).
 
 Primary-source buildout (new focus — validated by the first customer conversation, see `docs/customer_conversations/`):
+
+Confirmed, building now:
 - FCC ICFS (International Communications Filing System) — satellite earth stations, satellite space stations, international Section 214 authorizations, submarine cable landing licenses, Section 310(b) petitions, signaling point codes, foreign carrier affiliation notifications, and related SB/OIA-regulated filings. First target: a real customer manually checks this portal today and calls it "impossible to navigate."
 - FCC RSS (dockets, rulemakings, commissioner statements) — displaces a law-firm subscription a real customer pays for today.
+
+Pending, gated on customer confirmation (second module, not yet started):
 - UCC lien filings (state-level, starting with NY/DE Secretary of State)
 - Mortgage / recording-office documents (county clerk records)
 - Court dockets & complaints (PACER/CourtListener-style sources)
