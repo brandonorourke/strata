@@ -50,3 +50,12 @@
 ## 2026-02-07 — Schema ordering convention
 - Decision: Treat DB schema + migrations as source of truth; always regenerate `strata_core/schema.local.sql` from the DB.
 - Convention: When adding ORM columns, append at the end for readability (do not reorder existing fields).
+
+## 2026-06-23 — Pivot from news to primary-source records as the v0 wedge
+- Decision: De-prioritize general news as the primary signal. Shift v0 ingestion focus to primary-source documents — UCC lien filings, mortgage/recording-office documents, court dockets & complaints, and direct government regulatory portals — starting with the FCC's ICFS (International Communications Filing System), then broader FCC RSS (dockets, rulemakings, commissioner statements).
+- Rationale: First customer conversation (Carronade, public credit PM — see `docs/customer_conversations/`) validated this directly, not hypothetically:
+  - He has a live credit position (Altice) where a cluster of subsidiaries filed coordinated all-asset liens to JPMorgan on the same day, then debtor-change amendments months later — exactly the kind of structured-record signal news coverage wouldn't surface, and one he isn't analyzing himself because it's outside his skill set (legal/lien analysis), not because it's low-value.
+  - He confirmed none of his existing paid tools (Reorg, CreditSights, AlphaSense) do UCC monitoring or lien-perfection analysis. "Knowing if liens were perfected would be huge — it changes rates and recoveries" — this is the sharper, dollar-linked version of the original "UCC/courts" idea, validated by a real trade (Talen Energy: bought unsecured paper because the lien wasn't perfected within the bankruptcy code's 30-day safe harbor).
+  - He manually monitors FCC's ICFS portal for satellite/space-related positions (e.g. Viasat) and calls it "impossible to navigate." He currently pays a law firm for FCC-commissioner/government intelligence — proven willingness to pay for exactly this category of monitoring, not just stated interest.
+- Scope: SEC + DOJ enforcement/litigation ingestion stays active — it's still a relevant entity/event signal and overlaps with the same primary-source thesis. FreightWaves ingestion is tabled; it was the original v0 bootstrap source and isn't tied to the credit/special-sits primary-source wedge.
+- Effect on roadmap: pulls "UCC/courts as a premium lens" forward from v2 (see Strata OS Vision wedge progression) into the v0 wedge itself.

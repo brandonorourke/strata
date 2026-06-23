@@ -2,7 +2,7 @@
 
 Status: working canon / non-binding  
 Owner: Brandon  
-Last updated: 2026-01-27
+Last updated: 2026-06-23
 
 ---
 
@@ -52,11 +52,13 @@ Workflow is permitted only when it improves:
 But never becomes the main value prop.
 
 ### Wedge → OS progression (guiding arc)
-- v0: Public-signal engine → entities + events → ranked screens + company timelines
+- v0: Primary-source signal engine (UCC liens, court dockets/complaints, recording-office filings, direct government portals, plus SEC/DOJ enforcement) → entities + events → ranked screens + company timelines
 - v1: Universe/watchlist ownership (user lists; Strata keeps them warm)
-- v2: Add higher-signal structured sources (UCC/courts) as premium lenses
+- v2: Lien-perfection analysis as a premium lens ("is this lien defective" — ties directly to recovery rates, not just monitoring that a lien exists)
 - v3: Add internal sensors (calendar/inbox/notes) to fuse firm activity + market
 - v4: Strategy tuning and (later) ML only once ontology + outcomes exist
+
+(Updated 2026-06-23: UCC/courts pulled forward from v2 into the v0 wedge itself — see `docs/decisions.md`, 2026-06-23. The first customer conversation validated structured primary-source records, not news, as the actual gap.)
 
 The compounding asset is the same throughout: the map + timeline + linking + evidence.
 
@@ -78,17 +80,26 @@ raw article → cleaned text → extracted company + event → stored timeline �
 - Optional: export the screen to markdown/PDF if helpful, but the product is the screen.
 
 ### Data sources (v0)
-Start with 1 source, then add:
-- SEC press releases (RSS; especially enforcement)
+
+Active:
+- SEC press releases / litigation releases / administrative proceedings (RSS)
     - https://www.sec.gov/about/rss-feeds
         - Press Releases: https://www.sec.gov/news/pressreleases.rss
         - Litigation Releases: https://www.sec.gov/enforcement-litigation/litigation-releases/rss
         - Administrative Proceedings: https://www.sec.gov/enforcement-litigation/administrative-proceedings/rss (PDFs)
-        
 - DOJ press releases (RSS / Office of Public Affairs topics)
-- FreightWaves (RSS or targeted feeds) (optional after SEC/DOJ)
 
-Rationale: high-signal inputs, relatively clean ingestion, lower legal risk posture.
+Tabled:
+- FreightWaves — was the original v0 bootstrap source; not aligned with the primary-source/credit wedge (see `docs/decisions.md`, 2026-06-23).
+
+Primary-source buildout (new focus — validated by the first customer conversation, see `docs/customer_conversations/`):
+- FCC ICFS (International Communications Filing System) — satellite earth stations, satellite space stations, international Section 214 authorizations, submarine cable landing licenses, Section 310(b) petitions, signaling point codes, foreign carrier affiliation notifications, and related SB/OIA-regulated filings. First target: a real customer manually checks this portal today and calls it "impossible to navigate."
+- FCC RSS (dockets, rulemakings, commissioner statements) — displaces a law-firm subscription a real customer pays for today.
+- UCC lien filings (state-level, starting with NY/DE Secretary of State)
+- Mortgage / recording-office documents (county clerk records)
+- Court dockets & complaints (PACER/CourtListener-style sources)
+
+Rationale: news framed as the primary signal was the wrong wedge. Credit/special-sits buyers care about lien perfection, coordinated subsidiary asset movement, and government-portal monitoring that's currently manual and painful — news is secondary context, not the product. See `docs/decisions.md` (2026-06-23) for the full rationale.
 
 ### Core data model (4 tables)
 Note: v0.1 adds a conservative canonicalization layer: `canonical_entities` + `entity_links`.
