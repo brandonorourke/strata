@@ -1,9 +1,13 @@
 # apps/ingest/extract_icfs_entities.py
 #
 # Processing layer for ICFS — promotes structured icfs_filings rows into the
-# canonical extracted_entities/extracted_events model. No LLM call needed here:
-# applicant_name is already structured truth from the source. Mirrors
+# canonical extracted_entities/extracted_events model, and collapses them within
+# ICFS by exact normalized name into icfs_canonical_entities (Tier 1 of entity
+# resolution — see docs/decisions.md 2026-06-23). No LLM call needed for any of
+# this: applicant_name is already structured truth from the source. Mirrors
 # extract_entities.py's shape but reads icfs_filings instead of news_articles.llm_raw.
+# Deliberately NOT linked to the global canonical_entities table yet — that
+# cross-source hop is human-gated and deferred.
 # (Pleadings & Comments / Public Notices have no applicant name on the index itself —
 # they need a real document-parsing step before they can feed this, not yet built.)
 
@@ -15,7 +19,7 @@ from sqlalchemy import select, and_
 from sqlalchemy.exc import SQLAlchemyError
 
 from strata_core.db import AsyncSessionLocal
-from strata_core.models import IcfsFiling, ExtractedEntity, ExtractedEvent
+from strata_core.models import IcfsFiling, ExtractedEntity, ExtractedEvent, IcfsCanonicalEntity
 from strata_core.normalize import normalize_legal_name, normalize_loose_name
 
 logger = logging.getLogger(__name__)
@@ -24,10 +28,37 @@ logging.basicConfig(level=logging.INFO)
 SOURCE_TYPE = "icfs_filing"
 
 
+async def _get_or_create_icfs_canonical(session, canonical_name: str, legal_name: str, event_time):
+    stmt = select(IcfsCanonicalEntity).where(IcfsCanonicalEntity.legal_name_normalized == legal_name).limit(1)
+    result = await session.execute(stmt)
+    icfs_canonical = result.scalar_one_or_none()
+    if icfs_canonical:
+        if event_time:
+            if icfs_canonical.first_seen_at is None or event_time < icfs_canonical.first_seen_at:
+                icfs_canonical.first_seen_at = event_time
+            if icfs_canonical.last_seen_at is None or event_time > icfs_canonical.last_seen_at:
+                icfs_canonical.last_seen_at = event_time
+        return icfs_canonical
+
+    icfs_canonical = IcfsCanonicalEntity(
+        canonical_name=canonical_name,
+        legal_name_normalized=legal_name,
+        loose_name_normalized=normalize_loose_name(canonical_name),
+        first_seen_at=event_time,
+        last_seen_at=event_time,
+    )
+    session.add(icfs_canonical)
+    await session.flush()  # assigns icfs_canonical.id for the FK set below
+    return icfs_canonical
+
+
 async def _get_or_create_entity(session, filing: IcfsFiling, canonical_name: str):
     legal_name = normalize_legal_name(canonical_name)
     if not legal_name:
         return None
+
+    event_time = filing.submission_date or filing.action_taken_date
+    icfs_canonical = await _get_or_create_icfs_canonical(session, canonical_name, legal_name, event_time)
 
     stmt = (
         select(ExtractedEntity)
@@ -39,6 +70,8 @@ async def _get_or_create_entity(session, filing: IcfsFiling, canonical_name: str
     result = await session.execute(stmt)
     entity = result.scalar_one_or_none()
     if entity:
+        if entity.icfs_canonical_entity_id is None:
+            entity.icfs_canonical_entity_id = icfs_canonical.id
         return entity
 
     entity = ExtractedEntity(
@@ -49,8 +82,9 @@ async def _get_or_create_entity(session, filing: IcfsFiling, canonical_name: str
         created_from="icfs",
         legal_name_normalized=legal_name,
         loose_name_normalized=normalize_loose_name(canonical_name),
-        first_seen_at=filing.submission_date or filing.action_taken_date,
-        last_seen_at=filing.submission_date or filing.action_taken_date,
+        first_seen_at=event_time,
+        last_seen_at=event_time,
+        icfs_canonical_entity_id=icfs_canonical.id,
     )
     session.add(entity)
     return entity

@@ -78,9 +78,11 @@ class ExtractedEntity(Base):
     created_from = Column(Text, nullable=False, server_default="news")
     first_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     last_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    icfs_canonical_entity_id = Column(Integer, ForeignKey("icfs_canonical_entities.id"), nullable=True)
 
     extracted_events = relationship("ExtractedEvent", back_populates="entity")
     entity_links = relationship("EntityLink", back_populates="extracted_entity")
+    icfs_canonical_entity = relationship("IcfsCanonicalEntity", back_populates="extracted_entities")
     # No real FK backs source_id (it's polymorphic across news_articles/icfs_filings/etc.),
     # so this is a read-only convenience relationship scoped to the news_article case only.
     article = relationship(
@@ -222,3 +224,23 @@ class IcfsPublicNotice(Base):
     ingested_at = Column(DateTime(timezone=True), server_default=func.now())
     url = Column(Text, nullable=True)
     da_number = Column(Text, nullable=True)
+
+
+class IcfsCanonicalEntity(Base):
+    """
+    Tier 1 of entity resolution: one row per distinct ICFS applicant, collapsed by
+    exact normalized name across all their filings. Deliberately not linked to
+    CanonicalEntity yet — that cross-source hop is human-gated and deferred.
+    """
+
+    __tablename__ = "icfs_canonical_entities"
+
+    id = Column(Integer, primary_key=True, index=True)
+    canonical_name = Column(Text, nullable=False)
+    legal_name_normalized = Column(Text, nullable=False, unique=True)
+    loose_name_normalized = Column(Text, nullable=True)
+    first_seen_at = Column(DateTime(timezone=True), nullable=True)
+    last_seen_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    extracted_entities = relationship("ExtractedEntity", back_populates="icfs_canonical_entity")

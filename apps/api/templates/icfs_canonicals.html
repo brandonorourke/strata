@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>ICFS — Canonical Entities</h2>
+  <div class="meta" style="margin-bottom: 12px;">
+    <a href="/admin/icfs">&larr; ICFS</a> · {{ total }} distinct companies, collapsed by exact name
+    within ICFS filings only. Not yet linked to the global canonical entity table.
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Company</th>
+        <th>First Seen</th>
+        <th>Last Seen</th>
+        <th>Filings</th>
+        <th>Links</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for canonical, mention_count in canonicals %}
+      <tr>
+        <td>{{ canonical.canonical_name }}</td>
+        <td>{{ canonical.first_seen_at.strftime("%Y-%m-%d") if canonical.first_seen_at else "—" }}</td>
+        <td>{{ canonical.last_seen_at.strftime("%Y-%m-%d") if canonical.last_seen_at else "—" }}</td>
+        <td>{{ mention_count }}</td>
+        <td class="actions">
+          <a href="/admin/icfs/filings?q={{ canonical.canonical_name | urlencode }}">view filings</a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if total_pages and total_pages > 1 %}
+    <div class="meta" style="margin-top: 12px;">
+      {% if page > 1 %}
+        <a href="/admin/icfs/canonicals?page={{ page - 1 }}&page_size={{ page_size }}">Prev</a>
+      {% endif %}
+      <span>Page {{ page }} of {{ total_pages }}</span>
+      {% if page < total_pages %}
+        <a href="/admin/icfs/canonicals?page={{ page + 1 }}&page_size={{ page_size }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}
