@@ -105,7 +105,7 @@ Pending, gated on customer confirmation (second module, not yet started):
 - Mortgage / recording-office documents (county clerk records)
 - Court dockets & complaints (PACER/CourtListener-style sources)
 
-Rationale: news framed as the primary signal was the wrong wedge. Credit/special-sits buyers care about lien perfection, coordinated subsidiary asset movement, and government-portal monitoring that's currently manual and painful — news is secondary context, not the product. See `docs/decisions.md` (2026-06-23) for the full rationale.
+Rationale: news framed as the primary signal was the wrong wedge. Credit/special-sits buyers care about lien perfection, coordinated subsidiary asset movement, and government-portal monitoring that's currently manual and painful — news is secondary context, not the product. See `docs/decisions.md` (2026-06-16) for the full rationale.
 
 ### Core data model (4 tables)
 Note: v0.1 adds a conservative canonicalization layer: `canonical_entities` + `entity_links`.
