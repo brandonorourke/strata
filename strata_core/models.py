@@ -208,6 +208,17 @@ class IcfsPleadingAndComment(Base):
     sys_created_on = Column(DateTime(timezone=True), nullable=True)
     ingested_at = Column(DateTime(timezone=True), server_default=func.now())
     file_number = Column(Text, nullable=True)
+    entities_extracted_at = Column(DateTime(timezone=True), nullable=True)
+
+    # No real FK on ExtractedEvent.source_id (it's polymorphic) — read-only, icfs_pleading-only view.
+    extracted_events = relationship(
+        "ExtractedEvent",
+        primaryjoin=lambda: and_(
+            ExtractedEvent.source_type == "icfs_pleading",
+            foreign(ExtractedEvent.source_id) == IcfsPleadingAndComment.id,
+        ),
+        viewonly=True,
+    )
 
 
 class IcfsPublicNotice(Base):

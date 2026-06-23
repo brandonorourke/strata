@@ -5,9 +5,11 @@
     <a href="/admin/icfs">&larr; ICFS</a> · {{ total }} total
   </div>
   <div class="meta" style="margin-bottom: 12px;">
-    Note: applicant_names is blank on every row in this category at the source — there's no
-    structured filer name to filter by here yet. Identifying who's involved requires reading
-    the underlying document, not built yet.
+    Note: applicant_names is blank on every row at the source. Where a row has a file_number that
+    matches an already-ingested filing, we resolve the company via that structural join (zero
+    ambiguity, no document text needed) — shown below. Most rows won't resolve yet, either
+    because file_number itself is blank (~65-80% of rows) or because the referenced filing
+    hasn't been ingested.
   </div>
 
   <table>
@@ -16,7 +18,7 @@
         <th>Created</th>
         <th>Pleading Type</th>
         <th>File Number</th>
-        <th>Applicant(s)</th>
+        <th>Resolved Company</th>
         <th>Links</th>
       </tr>
     </thead>
@@ -26,7 +28,21 @@
         <td>{{ pleading.sys_created_on.strftime("%Y-%m-%d %H:%M") if pleading.sys_created_on else "—" }}</td>
         <td>{{ pleading.pleading_type or "—" }}</td>
         <td>{{ pleading.file_number or "—" }}</td>
-        <td>{{ pleading.applicant_names or "—" }}</td>
+        <td>
+          {% if pleading.extracted_events %}
+            {% for event in pleading.extracted_events %}
+              <div class="event">
+                <strong>{{ event.extracted_name }}</strong>
+              </div>
+            {% endfor %}
+          {% else %}
+            {% if pleading.entities_extracted_at %}
+              <span class="meta">Unresolved</span>
+            {% else %}
+              <span class="meta">Not processed yet</span>
+            {% endif %}
+          {% endif %}
+        </td>
         <td class="actions">
           <a href="{{ citation_url(pleading) }}" target="_blank" rel="noopener">source filing</a>
         </td>

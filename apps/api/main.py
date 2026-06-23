@@ -342,6 +342,7 @@ async def list_icfs_pleadings(request: Request, page: int = 1, page_size: int = 
 
         stmt = (
             select(IcfsPleadingAndComment)
+            .options(selectinload(IcfsPleadingAndComment.extracted_events))
             .order_by(IcfsPleadingAndComment.sys_created_on.desc().nullslast(), IcfsPleadingAndComment.id.desc())
             .offset(offset)
             .limit(page_size)
