@@ -55,13 +55,13 @@ ICFS_TABLES = [
     },
     {
         "table": "x_fmc_ibfs_pleadings_and_comments",
-        "fields": "pleading_type,applicant_names,sys_created_on",
+        "fields": "pleading_type,applicant_names,sys_created_on,file_number",
         "order_by": "sys_created_on",
         "model": IcfsPleadingAndComment,
     },
     {
         "table": "x_fmc_ibfs_public_notices",
-        "fields": "number,subsystem,type_of_document,public_notice_release_date",
+        "fields": "number,subsystem,type_of_document,public_notice_release_date,url,da_number",
         "order_by": "public_notice_release_date",
         "model": IcfsPublicNotice,
     },
@@ -135,10 +135,17 @@ def _parse_glide_datetime(value: str | None) -> datetime | None:
 
 
 def _field(row: dict, name: str) -> str | None:
+    """
+    Most ServiceNow fields come back as {"display_value": ..., "value": ..., ...},
+    but a few (e.g. public_notices' url) are computed/script fields returned as a bare
+    string instead — handle both shapes.
+    """
     cell = row.get(name)
-    if not isinstance(cell, dict):
-        return None
-    return cell.get("display_value") or None
+    if isinstance(cell, dict):
+        return cell.get("display_value") or None
+    if isinstance(cell, str):
+        return cell or None
+    return None
 
 
 def _row_to_model_kwargs(table: str, row: dict) -> dict:
@@ -151,6 +158,7 @@ def _row_to_model_kwargs(table: str, row: dict) -> dict:
             "pleading_type": _field(row, "pleading_type"),
             "applicant_names": _field(row, "applicant_names"),
             "sys_created_on": _parse_glide_datetime(_field(row, "sys_created_on")),
+            "file_number": _field(row, "file_number"),
         }
 
     if table == "x_fmc_ibfs_public_notices":
@@ -160,6 +168,8 @@ def _row_to_model_kwargs(table: str, row: dict) -> dict:
             "subsystem": _field(row, "subsystem"),
             "type_of_document": _field(row, "type_of_document"),
             "public_notice_release_date": _parse_glide_datetime(_field(row, "public_notice_release_date")),
+            "url": _field(row, "url"),
+            "da_number": _field(row, "da_number"),
         }
 
     # x_fmc_ibfs_base_table — Filings + Actions

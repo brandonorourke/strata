@@ -4,10 +4,6 @@
   <div class="meta" style="margin-bottom: 12px;">
     <a href="/admin/icfs">&larr; ICFS</a> · {{ total }} total
   </div>
-  <div class="meta" style="margin-bottom: 12px;">
-    Note: citation URL pattern for this category isn't confirmed yet — no source link below.
-  </div>
-
   <table>
     <thead>
       <tr>
@@ -15,6 +11,7 @@
         <th>Number</th>
         <th>Subsystem</th>
         <th>Type</th>
+        <th>Links</th>
       </tr>
     </thead>
     <tbody>
@@ -24,6 +21,11 @@
         <td>{{ notice.number or "—" }}</td>
         <td>{{ notice.subsystem or "—" }}</td>
         <td>{{ notice.type_of_document or "—" }}</td>
+        <td class="actions">
+          {% if notice.url %}
+            <a href="{{ notice.url }}" target="_blank" rel="noopener">source filing</a>
+          {% endif %}
+        </td>
       </tr>
     {% endfor %}
     </tbody>

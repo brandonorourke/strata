@@ -205,6 +205,7 @@ class IcfsPleadingAndComment(Base):
     applicant_names = Column(Text, nullable=True)
     sys_created_on = Column(DateTime(timezone=True), nullable=True)
     ingested_at = Column(DateTime(timezone=True), server_default=func.now())
+    file_number = Column(Text, nullable=True)
 
 
 class IcfsPublicNotice(Base):
@@ -219,3 +220,5 @@ class IcfsPublicNotice(Base):
     type_of_document = Column(Text, nullable=True)
     public_notice_release_date = Column(DateTime(timezone=True), nullable=True)
     ingested_at = Column(DateTime(timezone=True), server_default=func.now())
+    url = Column(Text, nullable=True)
+    da_number = Column(Text, nullable=True)

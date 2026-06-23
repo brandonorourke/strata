@@ -15,6 +15,7 @@
       <tr>
         <th>Created</th>
         <th>Pleading Type</th>
+        <th>File Number</th>
         <th>Applicant(s)</th>
         <th>Links</th>
       </tr>
@@ -24,6 +25,7 @@
       <tr>
         <td>{{ pleading.sys_created_on.strftime("%Y-%m-%d %H:%M") if pleading.sys_created_on else "—" }}</td>
         <td>{{ pleading.pleading_type or "—" }}</td>
+        <td>{{ pleading.file_number or "—" }}</td>
         <td>{{ pleading.applicant_names or "—" }}</td>
         <td class="actions">
           <a href="{{ citation_url(pleading) }}" target="_blank" rel="noopener">source filing</a>
