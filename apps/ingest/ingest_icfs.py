@@ -29,7 +29,10 @@ HOME_PAGE_URL = f"{BASE_URL}/ibfs?id=ibfs_home"
 WIDGET_URL = f"{BASE_URL}/api/now/sp/widget/{WIDGET_SYS_ID}?id=ibfs_home"
 
 USER_AGENT = "Mozilla/5.0 (compatible; StrataBot/0.1; contact: admin@example.com)"
-REQUEST_DELAY_SECONDS = 0.4
+# ICFS's robots.txt disallows all bot access site-wide (User-agent: * / Disallow: /).
+# The data itself is unauthenticated public government records, so we're proceeding,
+# but deliberately erring far on the side of caution on pacing given that signal.
+REQUEST_DELAY_SECONDS = 3.0
 
 # Sentinel/garbage dates appear in real ICFS data (e.g. 8888-08-08, 4444-04-04) — treat
 # anything outside a plausible range as unknown rather than parsing it literally.
