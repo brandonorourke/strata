@@ -16,6 +16,9 @@ from strata_core.models import (
     EntityLink,
     ArticleDomain,
     ExtractedEntity,
+    IcfsFiling,
+    IcfsPleadingAndComment,
+    IcfsPublicNotice,
 )
 
 app = FastAPI(title="Strata UI")
@@ -209,6 +212,153 @@ async def article_raw_html(article_id: int):
         raise HTTPException(status_code=404, detail="No raw_html stored")
 
     return HTMLResponse(content=article.raw_html)
+
+
+_ICFS_BASE_URL = "https://fccprod.servicenowservices.com"
+
+
+def _icfs_filing_citation_url(filing: IcfsFiling) -> str | None:
+    if not filing.file_number:
+        return None
+    return f"{_ICFS_BASE_URL}/icfs?id=ibfs_application_summary&number={filing.file_number}"
+
+
+def _icfs_pleading_citation_url(pleading: IcfsPleadingAndComment) -> str:
+    return f"{_ICFS_BASE_URL}/icfs?id=ibfs_pc_summary&sys_id={pleading.source_sys_id}"
+
+
+@app.get("/admin/icfs")
+async def icfs_home(request: Request):
+    return templates.TemplateResponse("icfs_home.html", {"request": request})
+
+
+@app.get("/admin/icfs/filings")
+async def list_icfs_filings(request: Request, page: int = 1, page_size: int = 50, q: str = ""):
+    if page < 1:
+        page = 1
+    if page_size < 1:
+        page_size = 50
+    if page_size > 200:
+        page_size = 200
+
+    offset = (page - 1) * page_size
+
+    async with AsyncSessionLocal() as session:
+        filters = []
+        if q:
+            filters.append(IcfsFiling.applicant_name.ilike(f"%{q}%"))
+
+        count_stmt = select(func.count()).select_from(IcfsFiling).where(*filters)
+        count_result = await session.execute(count_stmt)
+        total = int(count_result.scalar() or 0)
+
+        stmt = (
+            select(IcfsFiling)
+            .options(selectinload(IcfsFiling.extracted_events))
+            .where(*filters)
+            .order_by(IcfsFiling.submission_date.desc().nullslast(), IcfsFiling.id.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        result = await session.execute(stmt)
+        filings = list(result.scalars().all())
+
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
+    return templates.TemplateResponse(
+        "icfs_filings.html",
+        {
+            "request": request,
+            "filings": filings,
+            "citation_url": _icfs_filing_citation_url,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+            "q": q,
+        },
+    )
+
+
+@app.get("/admin/icfs/pleadings")
+async def list_icfs_pleadings(request: Request, page: int = 1, page_size: int = 50):
+    if page < 1:
+        page = 1
+    if page_size < 1:
+        page_size = 50
+    if page_size > 200:
+        page_size = 200
+
+    offset = (page - 1) * page_size
+
+    async with AsyncSessionLocal() as session:
+        count_stmt = select(func.count()).select_from(IcfsPleadingAndComment)
+        count_result = await session.execute(count_stmt)
+        total = int(count_result.scalar() or 0)
+
+        stmt = (
+            select(IcfsPleadingAndComment)
+            .order_by(IcfsPleadingAndComment.sys_created_on.desc().nullslast(), IcfsPleadingAndComment.id.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        result = await session.execute(stmt)
+        pleadings = list(result.scalars().all())
+
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
+    return templates.TemplateResponse(
+        "icfs_pleadings.html",
+        {
+            "request": request,
+            "pleadings": pleadings,
+            "citation_url": _icfs_pleading_citation_url,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+        },
+    )
+
+
+@app.get("/admin/icfs/notices")
+async def list_icfs_notices(request: Request, page: int = 1, page_size: int = 50):
+    if page < 1:
+        page = 1
+    if page_size < 1:
+        page_size = 50
+    if page_size > 200:
+        page_size = 200
+
+    offset = (page - 1) * page_size
+
+    async with AsyncSessionLocal() as session:
+        count_stmt = select(func.count()).select_from(IcfsPublicNotice)
+        count_result = await session.execute(count_stmt)
+        total = int(count_result.scalar() or 0)
+
+        stmt = (
+            select(IcfsPublicNotice)
+            .order_by(IcfsPublicNotice.public_notice_release_date.desc().nullslast(), IcfsPublicNotice.id.desc())
+            .offset(offset)
+            .limit(page_size)
+        )
+        result = await session.execute(stmt)
+        notices = list(result.scalars().all())
+
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
+    return templates.TemplateResponse(
+        "icfs_notices.html",
+        {
+            "request": request,
+            "notices": notices,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+        },
+    )
 
 
 def _week_ending_sunday(d: date) -> date:

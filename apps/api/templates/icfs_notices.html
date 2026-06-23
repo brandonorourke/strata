@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>ICFS — Public Notices</h2>
+  <div class="meta" style="margin-bottom: 12px;">
+    <a href="/admin/icfs">&larr; ICFS</a> · {{ total }} total
+  </div>
+  <div class="meta" style="margin-bottom: 12px;">
+    Note: citation URL pattern for this category isn't confirmed yet — no source link below.
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Released</th>
+        <th>Number</th>
+        <th>Subsystem</th>
+        <th>Type</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for notice in notices %}
+      <tr>
+        <td>{{ notice.public_notice_release_date.strftime("%Y-%m-%d") if notice.public_notice_release_date else "—" }}</td>
+        <td>{{ notice.number or "—" }}</td>
+        <td>{{ notice.subsystem or "—" }}</td>
+        <td>{{ notice.type_of_document or "—" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if total_pages and total_pages > 1 %}
+    <div class="meta" style="margin-top: 12px;">
+      {% if page > 1 %}
+        <a href="/admin/icfs/notices?page={{ page - 1 }}&page_size={{ page_size }}">Prev</a>
+      {% endif %}
+      <span>Page {{ page }} of {{ total_pages }}</span>
+      {% if page < total_pages %}
+        <a href="/admin/icfs/notices?page={{ page + 1 }}&page_size={{ page_size }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

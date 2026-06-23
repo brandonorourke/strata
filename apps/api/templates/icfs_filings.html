@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>ICFS — Filings &amp; Actions</h2>
+  <div class="meta" style="margin-bottom: 12px;">
+    <a href="/admin/icfs">&larr; ICFS</a> · {{ total }} total
+  </div>
+
+  <form method="get" action="/admin/icfs/filings" style="margin-bottom: 12px;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Filter by applicant name…" style="padding: 6px 8px; width: 280px;">
+    <button type="submit">Filter</button>
+    {% if q %}<a href="/admin/icfs/filings" style="margin-left: 8px;">Clear</a>{% endif %}
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Submitted</th>
+        <th>Applicant</th>
+        <th>File Number</th>
+        <th>Action</th>
+        <th>Entities / Events</th>
+        <th>Links</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for filing in filings %}
+      <tr>
+        <td>
+          <div>{{ filing.submission_date.strftime("%Y-%m-%d %H:%M") if filing.submission_date else "—" }}</div>
+          <div class="meta">{{ filing.call_sign or "" }}</div>
+        </td>
+        <td>{{ filing.applicant_name or "—" }}</td>
+        <td>{{ filing.file_number or "—" }}</td>
+        <td>
+          <div>{{ filing.action or "—" }}</div>
+          <div class="meta">{{ filing.action_taken_date.strftime("%Y-%m-%d") if filing.action_taken_date else "" }}</div>
+        </td>
+        <td>
+          {% if filing.extracted_events %}
+            <div class="events">
+              {% for event in filing.extracted_events %}
+                <div class="event">
+                  <strong>{{ event.extracted_name }}</strong>
+                  <div class="meta">{{ event.event_type or "event" }}</div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            {% if filing.entities_extracted_at %}
+              <div class="meta">Processed: no extracted events</div>
+            {% else %}
+              <div class="meta">Not processed yet</div>
+            {% endif %}
+          {% endif %}
+        </td>
+        <td class="actions">
+          {% set url = citation_url(filing) %}
+          {% if url %}
+            <a href="{{ url }}" target="_blank" rel="noopener">source filing</a>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if total_pages and total_pages > 1 %}
+    <div class="meta" style="margin-top: 12px;">
+      {% if page > 1 %}
+        <a href="/admin/icfs/filings?page={{ page - 1 }}&page_size={{ page_size }}&q={{ q }}">Prev</a>
+      {% endif %}
+      <span>Page {{ page }} of {{ total_pages }}</span>
+      {% if page < total_pages %}
+        <a href="/admin/icfs/filings?page={{ page + 1 }}&page_size={{ page_size }}&q={{ q }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

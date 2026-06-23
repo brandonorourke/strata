@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>ICFS — Pleadings &amp; Comments</h2>
+  <div class="meta" style="margin-bottom: 12px;">
+    <a href="/admin/icfs">&larr; ICFS</a> · {{ total }} total
+  </div>
+  <div class="meta" style="margin-bottom: 12px;">
+    Note: applicant_names is blank on every row in this category at the source — there's no
+    structured filer name to filter by here yet. Identifying who's involved requires reading
+    the underlying document, not built yet.
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Created</th>
+        <th>Pleading Type</th>
+        <th>Applicant(s)</th>
+        <th>Links</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for pleading in pleadings %}
+      <tr>
+        <td>{{ pleading.sys_created_on.strftime("%Y-%m-%d %H:%M") if pleading.sys_created_on else "—" }}</td>
+        <td>{{ pleading.pleading_type or "—" }}</td>
+        <td>{{ pleading.applicant_names or "—" }}</td>
+        <td class="actions">
+          <a href="{{ citation_url(pleading) }}" target="_blank" rel="noopener">source filing</a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if total_pages and total_pages > 1 %}
+    <div class="meta" style="margin-top: 12px;">
+      {% if page > 1 %}
+        <a href="/admin/icfs/pleadings?page={{ page - 1 }}&page_size={{ page_size }}">Prev</a>
+      {% endif %}
+      <span>Page {{ page }} of {{ total_pages }}</span>
+      {% if page < total_pages %}
+        <a href="/admin/icfs/pleadings?page={{ page + 1 }}&page_size={{ page_size }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

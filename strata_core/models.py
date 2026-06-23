@@ -183,6 +183,16 @@ class IcfsFiling(Base):
     ingested_at = Column(DateTime(timezone=True), server_default=func.now())
     entities_extracted_at = Column(DateTime(timezone=True), nullable=True)
 
+    # No real FK on ExtractedEvent.source_id (it's polymorphic) — read-only, icfs_filing-only view.
+    extracted_events = relationship(
+        "ExtractedEvent",
+        primaryjoin=lambda: and_(
+            ExtractedEvent.source_type == "icfs_filing",
+            foreign(ExtractedEvent.source_id) == IcfsFiling.id,
+        ),
+        viewonly=True,
+    )
+
 
 class IcfsPleadingAndComment(Base):
     """Mirrors ServiceNow's x_fmc_ibfs_pleadings_and_comments table."""
