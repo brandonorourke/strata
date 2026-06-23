@@ -58,7 +58,7 @@ But never becomes the main value prop.
 - v3: Add internal sensors (calendar/inbox/notes) to fuse firm activity + market
 - v4: Strategy tuning and (later) ML only once ontology + outcomes exist
 
-(Updated 2026-06-23: UCC/courts pulled forward from v2 into the v0 wedge itself — see `docs/decisions.md`, 2026-06-23. The first customer conversation validated structured primary-source records, not news, as the actual gap.)
+(Updated 2026-06-23: UCC/courts pulled forward from v2 into the v0 wedge itself — see `docs/decisions.md`, 2026-06-16. The first customer conversation validated structured primary-source records, not news, as the actual gap.)
 
 The compounding asset is the same throughout: the map + timeline + linking + evidence.
 
@@ -90,7 +90,7 @@ Active:
 - DOJ press releases (RSS / Office of Public Affairs topics)
 
 Tabled:
-- FreightWaves — was the original v0 bootstrap source; not aligned with the primary-source/credit wedge (see `docs/decisions.md`, 2026-06-23).
+- FreightWaves — was the original v0 bootstrap source; not aligned with the primary-source/credit wedge (see `docs/decisions.md`, 2026-06-16).
 
 Primary-source buildout (new focus — validated by the first customer conversation, see `docs/customer_conversations/`):
 - FCC ICFS (International Communications Filing System) — satellite earth stations, satellite space stations, international Section 214 authorizations, submarine cable landing licenses, Section 310(b) petitions, signaling point codes, foreign carrier affiliation notifications, and related SB/OIA-regulated filings. First target: a real customer manually checks this portal today and calls it "impossible to navigate."

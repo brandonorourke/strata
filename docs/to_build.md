@@ -2,11 +2,12 @@
 
 ## Next
 
-- Primary-source pivot (see `docs/decisions.md`, 2026-06-23): shift ingestion focus from news toward primary-source records — credit/special-sits buyers need lien-perfection and entity/subsidiary-movement signals, not another news feed.
-  - First new source: FCC ICFS (International Communications Filing System) — satellite earth stations, space stations, Section 214 authorizations, submarine cable landing licenses, etc. Validated directly by a customer call: he manually checks this portal today and calls it "impossible to navigate."
-  - Then: broader FCC RSS (dockets, rulemakings, commissioner statements) — displaces a law-firm subscription a real customer pays for today.
-  - Then: UCC lien filings (state-level, starting with NY/DE), mortgage/recording-office documents (county clerk records), court dockets & complaints (PACER/CourtListener-style sources).
-  - Eventually: lien-perfection analysis as its own lens ("is this lien defective" — ties directly to recovery rates, not just monitoring that a lien exists).
+- **Primary-source pivot, ICFS first** (see `docs/decisions.md`, 2026-06-16): shift ingestion focus from news toward primary-source records. ICFS is the confirmed first build — a real customer wants it for his Viasat equity position, it's the most buildable, and no incumbent does FCC-for-investors monitoring.
+  - Build order: empty deployed skeleton first (cross the deployment barrier while trivial) → ingest one name → produce a digest → point at the customer's actual watchlist.
+  - Source: FCC ICFS (International Communications Filing System) — satellite earth stations, space stations, Section 214 authorizations, submarine cable landing licenses, etc. Customer manually checks this portal today and calls it "impossible to navigate."
+  - Then: broader FCC RSS (dockets, rulemakings, commissioner statements) — displaces a law-firm subscription the same customer pays for today.
+  - Architecture: one engine, two adapters (ingest → extract entities → resolve against a watchlist or create pending entities → LLM summary with citations → score/cluster/alert) — domain differences live only in the ingestion adapter, so this should generalize to UCC later without a rebuild.
+- **UCC/credit — pending second module, not yet started.** Gated on the customer confirming the Altice signal (coordinated subsidiary liens) is actually tradeable, not just interesting. Build only on a strong trade-relevant yes. If/when it's a go: UCC lien filings (state-level, starting with NY/DE), mortgage/recording-office documents (county clerk records), court dockets & complaints (PACER/CourtListener-style sources), then lien-perfection analysis as its own lens.
 - Add an explicit ambiguity note on cluster detail pages (collisions are possible for same normalized name).
 - Show lightweight disambiguation hints on cluster detail pages (article domains + HQ country/region mentions when present).
 - Build the separate linking process to promote mention clusters into canonical entities when strong identifiers exist.
