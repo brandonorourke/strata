@@ -2,7 +2,8 @@
 
 Status: working canon / non-binding  
 Owner: Brandon  
-Last updated: 2026-06-23
+Last updated: 2026-06-23  
+Naming (settled, not to be relitigated): product is "Strata Terminal," corporate entity is "Proofgraph, Inc."
 
 ---
 
