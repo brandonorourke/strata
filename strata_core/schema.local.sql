@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ZqVCcvOxBpOTMDnU1XCbLwfzuwWZjYV24sbpqbBAGYp6kzrsuvhwRZx5nxrTjt5
+\restrict nQbpvTc0US6LUGyvbMqLJcgqcpQNk10q1tsUmjdMXHgp7zqb7iTGAxyjssNSZnd
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -162,7 +162,8 @@ CREATE TABLE public.extracted_entities (
     source_id integer NOT NULL,
     hq_country text,
     hq_region text,
-    source_type text DEFAULT 'news_article'::text NOT NULL
+    source_type text DEFAULT 'news_article'::text NOT NULL,
+    icfs_canonical_entity_id integer
 );
 
 
@@ -227,6 +228,41 @@ ALTER SEQUENCE public.extracted_events_id_seq OWNED BY public.extracted_events.i
 
 
 --
+-- Name: icfs_canonical_entities; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.icfs_canonical_entities (
+    id integer NOT NULL,
+    canonical_name text NOT NULL,
+    legal_name_normalized text NOT NULL,
+    loose_name_normalized text,
+    first_seen_at timestamp with time zone,
+    last_seen_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: icfs_canonical_entities_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.icfs_canonical_entities_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: icfs_canonical_entities_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.icfs_canonical_entities_id_seq OWNED BY public.icfs_canonical_entities.id;
+
+
+--
 -- Name: icfs_filings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -275,7 +311,9 @@ CREATE TABLE public.icfs_pleadings_and_comments (
     pleading_type text,
     applicant_names text,
     sys_created_on timestamp with time zone,
-    ingested_at timestamp with time zone DEFAULT now() NOT NULL
+    ingested_at timestamp with time zone DEFAULT now() NOT NULL,
+    file_number text,
+    entities_extracted_at timestamp with time zone
 );
 
 
@@ -310,7 +348,13 @@ CREATE TABLE public.icfs_public_notices (
     subsystem text,
     type_of_document text,
     public_notice_release_date timestamp with time zone,
-    ingested_at timestamp with time zone DEFAULT now() NOT NULL
+    ingested_at timestamp with time zone DEFAULT now() NOT NULL,
+    url text,
+    da_number text,
+    document_url text,
+    document_text text,
+    document_fetched_at timestamp with time zone,
+    entities_extracted_at timestamp with time zone
 );
 
 
@@ -409,6 +453,13 @@ ALTER TABLE ONLY public.extracted_events ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: icfs_canonical_entities id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.icfs_canonical_entities ALTER COLUMN id SET DEFAULT nextval('public.icfs_canonical_entities_id_seq'::regclass);
+
+
+--
 -- Name: icfs_filings id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -474,6 +525,22 @@ ALTER TABLE ONLY public.extracted_entities
 
 ALTER TABLE ONLY public.extracted_events
     ADD CONSTRAINT extracted_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: icfs_canonical_entities icfs_canonical_entities_legal_name_normalized_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.icfs_canonical_entities
+    ADD CONSTRAINT icfs_canonical_entities_legal_name_normalized_key UNIQUE (legal_name_normalized);
+
+
+--
+-- Name: icfs_canonical_entities icfs_canonical_entities_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.icfs_canonical_entities
+    ADD CONSTRAINT icfs_canonical_entities_pkey PRIMARY KEY (id);
 
 
 --
@@ -576,6 +643,13 @@ CREATE INDEX ix_entity_links_id ON public.entity_links USING btree (id);
 
 
 --
+-- Name: ix_extracted_entities_icfs_canonical; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_extracted_entities_icfs_canonical ON public.extracted_entities USING btree (icfs_canonical_entity_id);
+
+
+--
 -- Name: ix_extracted_entities_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -615,6 +689,13 @@ CREATE INDEX ix_icfs_filings_file_number ON public.icfs_filings USING btree (fil
 --
 
 CREATE INDEX ix_icfs_filings_submission_date ON public.icfs_filings USING btree (submission_date);
+
+
+--
+-- Name: ix_icfs_pleadings_file_number; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_icfs_pleadings_file_number ON public.icfs_pleadings_and_comments USING btree (file_number);
 
 
 --
@@ -698,6 +779,14 @@ ALTER TABLE ONLY public.entity_links
 
 
 --
+-- Name: extracted_entities extracted_entities_icfs_canonical_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.extracted_entities
+    ADD CONSTRAINT extracted_entities_icfs_canonical_entity_id_fkey FOREIGN KEY (icfs_canonical_entity_id) REFERENCES public.icfs_canonical_entities(id);
+
+
+--
 -- Name: extracted_events extracted_events_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -709,5 +798,5 @@ ALTER TABLE ONLY public.extracted_events
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ZqVCcvOxBpOTMDnU1XCbLwfzuwWZjYV24sbpqbBAGYp6kzrsuvhwRZx5nxrTjt5
+\unrestrict nQbpvTc0US6LUGyvbMqLJcgqcpQNk10q1tsUmjdMXHgp7zqb7iTGAxyjssNSZnd
 

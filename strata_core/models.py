@@ -235,6 +235,20 @@ class IcfsPublicNotice(Base):
     ingested_at = Column(DateTime(timezone=True), server_default=func.now())
     url = Column(Text, nullable=True)
     da_number = Column(Text, nullable=True)
+    document_url = Column(Text, nullable=True)
+    document_text = Column(Text, nullable=True)
+    document_fetched_at = Column(DateTime(timezone=True), nullable=True)
+    entities_extracted_at = Column(DateTime(timezone=True), nullable=True)
+
+    # No real FK on ExtractedEvent.source_id (it's polymorphic) — read-only, icfs_notice-only view.
+    extracted_events = relationship(
+        "ExtractedEvent",
+        primaryjoin=lambda: and_(
+            ExtractedEvent.source_type == "icfs_notice",
+            foreign(ExtractedEvent.source_id) == IcfsPublicNotice.id,
+        ),
+        viewonly=True,
+    )
 
 
 class IcfsCanonicalEntity(Base):
