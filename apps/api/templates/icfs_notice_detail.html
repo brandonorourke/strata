@@ -13,18 +13,30 @@
     {% if notice.url %}
       &middot; <a href="{{ notice.url }}" target="_blank" rel="noopener">source filing</a>
     {% endif %}
-    {% if notice.document_url %}
-      &middot; <a href="{{ notice.document_url }}" target="_blank" rel="noopener">full document</a>
-    {% endif %}
   </div>
 
   {% if entities %}
-    <h3 style="margin-bottom: 12px;">Companies ({{ entities|length }})</h3>
+    <h3 style="margin-bottom: 12px;">Companies Mentioned — Summaries ({{ entities|length }})</h3>
     {% for row in entities %}
       <div style="border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-bottom: 12px;">
-        <div style="font-weight: 600; margin-bottom: 6px;">{{ row.entity.extracted_name }}</div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+          <div style="font-weight: 600;">{{ row.entity.extracted_name }}</div>
+          {% if row.event.signal_tier == "signal" %}
+            <span style="font-size: 11px; font-weight: 600; color: #b45309; background: #fef3c7; border-radius: 4px; padding: 2px 7px; white-space: nowrap; margin-left: 8px;">
+              {{ row.event.signal_reason or "signal" }}
+            </span>
+          {% endif %}
+        </div>
         {% if row.event.llm_summary %}
-          <div style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.5;">{{ row.event.llm_summary }}</div>
+          <div style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.5; margin-bottom: {% if row.event.source_excerpt %}6px{% else %}0{% endif %};">
+            {{ row.event.llm_summary }}
+          </div>
+          {% if row.event.source_excerpt %}
+            <details style="margin-top: 6px;">
+              <summary style="font-size: 0.8em; color: var(--muted); cursor: pointer;">show source excerpt</summary>
+              <pre style="font-size: 0.75em; line-height: 1.5; white-space: pre-wrap; color: var(--muted); margin-top: 8px; background: var(--surface); padding: 10px; border-radius: 4px;">{{ row.event.source_excerpt }}</pre>
+            </details>
+          {% endif %}
         {% else %}
           <div class="meta">{{ row.event.event_description or "No summary available." }}</div>
         {% endif %}
@@ -32,5 +44,10 @@
     {% endfor %}
   {% else %}
     <div class="meta">No entities extracted for this notice{% if not notice.document_fetched_at %} — document not yet fetched{% endif %}.</div>
+  {% endif %}
+
+  {% if notice.document_text %}
+    <h3 style="margin-top: 32px; margin-bottom: 12px;">Full Document</h3>
+    <pre style="font-size: 0.78em; line-height: 1.6; white-space: pre-wrap; color: var(--muted); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 16px; overflow-x: auto;">{{ notice.document_text }}</pre>
   {% endif %}
 {% endblock %}
