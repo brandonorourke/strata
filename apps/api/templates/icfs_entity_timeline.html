@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="meta" style="margin-bottom: 12px;">
+    <a href="/admin/icfs/canonicals">&larr; Entities</a>
+  </div>
+  <h2>{{ canonical.canonical_name }}</h2>
+  <div class="meta" style="margin-bottom: 20px;">
+    FCC activity timeline &middot; {{ timeline|length }} events
+    {% if canonical.first_seen_at and canonical.last_seen_at %}
+      &middot; {{ canonical.first_seen_at.strftime("%Y-%m-%d") }} – {{ canonical.last_seen_at.strftime("%Y-%m-%d") }}
+    {% endif %}
+  </div>
+
+  {% if not timeline %}
+    <div class="meta">No events found for this entity.</div>
+  {% else %}
+    {% for row in timeline %}
+      {% set ev = row.event %}
+      {% set notice = row.notice %}
+      <div style="display: flex; gap: 16px; margin-bottom: 12px;">
+        <div style="min-width: 90px; color: var(--muted); font-size: 0.85em; padding-top: 3px; text-align: right;">
+          {{ ev.event_date.strftime("%Y-%m-%d") if ev.event_date else "—" }}
+        </div>
+        <div style="flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+            <div style="font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);">
+              {% if ev.source_type == "icfs_notice" %}
+                Public Notice
+                {% if notice %}&middot; <a href="/admin/icfs/notices/{{ notice.id }}">{{ notice.number }}</a>{% endif %}
+              {% elif ev.source_type == "icfs_filing" %}
+                Filing
+              {% elif ev.source_type == "icfs_pleading" %}
+                Pleading
+              {% else %}
+                {{ ev.source_type }}
+              {% endif %}
+            </div>
+            {% if ev.signal_tier == "signal" %}
+              <span style="font-size: 11px; font-weight: 600; color: #b45309; background: #fef3c7; border-radius: 4px; padding: 2px 7px; white-space: nowrap; margin-left: 8px;">
+                {{ ev.signal_reason or "signal" }}
+              </span>
+            {% endif %}
+          </div>
+
+          {% if ev.llm_summary %}
+            <div style="font-size: 0.9em; line-height: 1.55; color: var(--text-secondary); margin-bottom: {% if ev.source_excerpt %}8px{% else %}0{% endif %};">
+              {{ ev.llm_summary }}
+            </div>
+            {% if ev.source_excerpt %}
+              <details style="margin-top: 6px;">
+                <summary style="font-size: 0.8em; color: var(--muted); cursor: pointer;">show source</summary>
+                <pre style="font-size: 0.75em; line-height: 1.5; white-space: pre-wrap; color: var(--muted); margin-top: 8px; background: var(--surface); padding: 10px; border-radius: 4px;">{{ ev.source_excerpt }}</pre>
+              </details>
+            {% endif %}
+          {% else %}
+            <div style="font-size: 0.9em; color: var(--text-secondary);">{{ ev.event_description or "—" }}</div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endblock %}

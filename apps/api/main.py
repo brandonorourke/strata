@@ -429,6 +429,99 @@ async def icfs_notice_detail(request: Request, notice_id: int):
     )
 
 
+@app.get("/admin/icfs/signals")
+async def icfs_signals(request: Request, page: int = 1, page_size: int = 50):
+    if page < 1:
+        page = 1
+    offset = (page - 1) * page_size
+
+    async with AsyncSessionLocal() as session:
+        count_stmt = (
+            select(func.count())
+            .select_from(ExtractedEvent)
+            .where(ExtractedEvent.source_type == "icfs_notice")
+            .where(ExtractedEvent.signal_tier == "signal")
+        )
+        total = int((await session.execute(count_stmt)).scalar() or 0)
+
+        stmt = (
+            select(ExtractedEvent, ExtractedEntity, IcfsPublicNotice)
+            .join(ExtractedEntity, ExtractedEvent.entity_id == ExtractedEntity.id)
+            .join(
+                IcfsPublicNotice,
+                and_(
+                    ExtractedEvent.source_type == "icfs_notice",
+                    ExtractedEvent.source_id == IcfsPublicNotice.id,
+                ),
+            )
+            .where(ExtractedEvent.source_type == "icfs_notice")
+            .where(ExtractedEvent.signal_tier == "signal")
+            .order_by(IcfsPublicNotice.public_notice_release_date.desc().nullslast())
+            .offset(offset)
+            .limit(page_size)
+        )
+        rows = list((await session.execute(stmt)).all())
+        events = [{"event": ev, "entity": e, "notice": n} for ev, e, n in rows]
+
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
+    return templates.TemplateResponse(
+        "icfs_signals.html",
+        {
+            "request": request,
+            "events": events,
+            "page": page,
+            "page_size": page_size,
+            "total": total,
+            "total_pages": total_pages,
+        },
+    )
+
+
+@app.get("/admin/icfs/entity/{canonical_id}")
+async def icfs_entity_timeline(request: Request, canonical_id: int):
+    async with AsyncSessionLocal() as session:
+        canonical = await session.get(IcfsCanonicalEntity, canonical_id)
+        if canonical is None:
+            raise HTTPException(status_code=404, detail="Entity not found")
+
+        # All extracted_entities for this canonical, across all source types
+        entity_stmt = (
+            select(ExtractedEntity)
+            .where(ExtractedEntity.icfs_canonical_entity_id == canonical_id)
+        )
+        extracted = list((await session.execute(entity_stmt)).scalars().all())
+        entity_ids = [e.id for e in extracted]
+
+        if not entity_ids:
+            return templates.TemplateResponse(
+                "icfs_entity_timeline.html",
+                {"request": request, "canonical": canonical, "timeline": []},
+            )
+
+        # All events for those entities, with notice join for icfs_notice rows
+        event_stmt = (
+            select(ExtractedEvent, ExtractedEntity, IcfsPublicNotice)
+            .join(ExtractedEntity, ExtractedEvent.entity_id == ExtractedEntity.id)
+            .outerjoin(
+                IcfsPublicNotice,
+                and_(
+                    ExtractedEvent.source_type == "icfs_notice",
+                    ExtractedEvent.source_id == IcfsPublicNotice.id,
+                ),
+            )
+            .where(ExtractedEvent.entity_id.in_(entity_ids))
+            .order_by(ExtractedEvent.event_date.desc().nullslast(), ExtractedEvent.id.desc())
+        )
+        rows = list((await session.execute(event_stmt)).all())
+        timeline = [{"event": ev, "entity": e, "notice": n} for ev, e, n in rows]
+
+    return templates.TemplateResponse(
+        "icfs_entity_timeline.html",
+        {"request": request, "canonical": canonical, "timeline": timeline},
+    )
+
+
 def _week_ending_sunday(d: date) -> date:
     # Python weekday(): Monday=0 ... Sunday=6
     return d + timedelta(days=(6 - d.weekday()))

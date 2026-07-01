@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict nQbpvTc0US6LUGyvbMqLJcgqcpQNk10q1tsUmjdMXHgp7zqb7iTGAxyjssNSZnd
+\restrict n8KsvLnqyhdIiDxZ6KdURT3OfUe7o8Ig74KDBU0RQTzfhyRJHW11t5t3MFsB0kd
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -203,7 +203,11 @@ CREATE TABLE public.extracted_events (
     event_description text,
     confidence double precision,
     created_at timestamp with time zone DEFAULT now(),
-    source_type text DEFAULT 'news_article'::text NOT NULL
+    source_type text DEFAULT 'news_article'::text NOT NULL,
+    llm_summary text,
+    source_excerpt text,
+    signal_tier text,
+    signal_reason text
 );
 
 
@@ -299,6 +303,18 @@ CREATE SEQUENCE public.icfs_filings_id_seq
 --
 
 ALTER SEQUENCE public.icfs_filings_id_seq OWNED BY public.icfs_filings.id;
+
+
+--
+-- Name: icfs_ingest_state; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.icfs_ingest_state (
+    source_table text NOT NULL,
+    backfill_page integer DEFAULT 1 NOT NULL,
+    backfill_complete boolean DEFAULT false NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
 
 
 --
@@ -560,6 +576,14 @@ ALTER TABLE ONLY public.icfs_filings
 
 
 --
+-- Name: icfs_ingest_state icfs_ingest_state_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.icfs_ingest_state
+    ADD CONSTRAINT icfs_ingest_state_pkey PRIMARY KEY (source_table);
+
+
+--
 -- Name: icfs_pleadings_and_comments icfs_pleadings_and_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -798,5 +822,5 @@ ALTER TABLE ONLY public.extracted_events
 -- PostgreSQL database dump complete
 --
 
-\unrestrict nQbpvTc0US6LUGyvbMqLJcgqcpQNk10q1tsUmjdMXHgp7zqb7iTGAxyjssNSZnd
+\unrestrict n8KsvLnqyhdIiDxZ6KdURT3OfUe7o8Ig74KDBU0RQTzfhyRJHW11t5t3MFsB0kd
 

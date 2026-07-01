@@ -24,7 +24,8 @@
         <td>{{ canonical.last_seen_at.strftime("%Y-%m-%d") if canonical.last_seen_at else "—" }}</td>
         <td>{{ mention_count }}</td>
         <td class="actions">
-          <a href="/admin/icfs/filings?q={{ canonical.canonical_name | urlencode }}">view filings</a>
+          <a href="/admin/icfs/entity/{{ canonical.id }}">timeline</a>
+          · <a href="/admin/icfs/filings?q={{ canonical.canonical_name | urlencode }}">filings</a>
         </td>
       </tr>
     {% endfor %}

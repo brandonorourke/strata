@@ -87,6 +87,14 @@
   - ITC/international notices → extract ownership structure (% + nationality), CFIUS referral flag ("referred to the Executive Branch agencies"), LOA conditions flag ("Petition to Adopt Conditions"), transaction narrative
   - SAT/SES satellite notices → extract action type + entity + surrender/assignment/consummation events; skip routine STA/TT&C/LEOP entries
 
+## 2026-07-01 — LLM signal classification for notice events: structured output over keyword matching
+
+- **Decision: use LLM structured output to classify signal vs. routine, not keyword matching.** Each extracted entity-notice event gets a `signal_tier` ("signal"/"routine") and `signal_reason` (5-10 word phrase) alongside the `llm_summary`, returned as a single structured JSON call on the same prose excerpt. No separate classification pass.
+- **Why keyword matching was rejected:** "STA granted" appears in both routine grants (Intelsat's 50th transponder renewal) and genuinely important cases (first authorization for a new constellation). "Transfer of control" can be a PE fund shell restructuring or a foreign acquisition. "Dismissed" can be a small telco that forgot to respond or Astra Space shutting down operations. The classifier needs context — exactly what the LLM already has when summarizing.
+- **Prose slice as the LLM input:** rather than sending the full notice document (3,000–20,000 chars, 30+ companies), the script slices the paragraph block for the specific filing (`file_number` as anchor, regex to next file number as end). Each LLM call is ~300–500 tokens. This keeps cost near zero at ICFS volumes and makes the watchlist gate explicit: companies not in the DB never get an LLM call.
+- **`source_excerpt` stored for verification:** the exact prose block sent to the LLM is persisted on `extracted_events.source_excerpt` and surfaced via a "show source ▾" toggle in the UI. Readers can verify any summary against the FCC's original language without leaving the page. Addresses hallucination risk for a product where accuracy is trust-critical.
+- **Empirical signal rate:** from the first 5 months of data (149 events), 13 (~9%) classified as signal. Signal events found: SN Space Systems LLC/Limited CFIUS referral (national security), Ligado Networks DIP modification, Astra Space dismissal with prejudice, Yonder Media transfer of control, and coordinated same-day discontinuances by 4 carriers (Jaguar, MetroNet, Vexus, Climax). 87 routine STA/resale grants filtered out.
+
 ## 2026-07-01 — FCC ECFS/EDOCS sanctioned APIs as programmatic path (unverified coverage)
 
 - The FCC offers two sanctioned, free-key APIs that bypass Akamai by design — the intended programmatic front door, not a scraping workaround:
