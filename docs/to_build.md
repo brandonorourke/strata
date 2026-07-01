@@ -2,6 +2,7 @@
 
 ## Next (priority order)
 
+- **Deploy to prod with DB mirrored from dev.** Wait for `fetch_icfs_filing_details.py` to finish, then: provision Railway Postgres, `pg_dump strata --no-owner | psql $RAILWAY_DATABASE_URL`, set `DATABASE_URL` + `OPENAI_API_KEY` env vars, `git push origin main`.
 - **Scheduled incremental ingest on prod.** Once deployed, prod goes stale without a daily run of `ingest_icfs.py` in incremental mode. Set up as a Railway cron job or scheduled task.
 - **Pleadings document text + LLM summary.** Pleadings show on entity timeline with type + file_number only; no content fetched or summarized yet. Need a `fetch_icfs_pleading_documents.py` + LLM pass analogous to the notice pipeline.
 - **STA Grant PDF extraction.** `grant_doc_url` is now populated per Viasat filing (after `fetch_icfs_filing_details.py` runs). Fetch + extract text from those PDFs to summarize grant terms/conditions on the timeline.
