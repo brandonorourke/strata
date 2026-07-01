@@ -499,9 +499,9 @@ async def icfs_entity_timeline(request: Request, canonical_id: int):
                 {"request": request, "canonical": canonical, "timeline": []},
             )
 
-        # All events for those entities, with notice + filing joins for label/action data
+        # All events for those entities, with notice + filing + pleading joins
         event_stmt = (
-            select(ExtractedEvent, ExtractedEntity, IcfsPublicNotice, IcfsFiling)
+            select(ExtractedEvent, ExtractedEntity, IcfsPublicNotice, IcfsFiling, IcfsPleadingAndComment)
             .join(ExtractedEntity, ExtractedEvent.entity_id == ExtractedEntity.id)
             .outerjoin(
                 IcfsPublicNotice,
@@ -517,13 +517,20 @@ async def icfs_entity_timeline(request: Request, canonical_id: int):
                     ExtractedEvent.source_id == IcfsFiling.id,
                 ),
             )
+            .outerjoin(
+                IcfsPleadingAndComment,
+                and_(
+                    ExtractedEvent.source_type == "icfs_pleading",
+                    ExtractedEvent.source_id == IcfsPleadingAndComment.id,
+                ),
+            )
             .where(ExtractedEvent.entity_id.in_(entity_ids))
             .order_by(ExtractedEvent.event_date.desc().nullslast(), ExtractedEvent.id.desc())
         )
         rows = list((await session.execute(event_stmt)).all())
 
         timeline = []
-        for ev, e, notice, filing in rows:
+        for ev, e, notice, filing, pleading in rows:
             if ev.source_type == "icfs_filing":
                 card_type = "action" if (filing and filing.action) else "filing"
                 action_label = filing.action if filing else None
@@ -533,13 +540,21 @@ async def icfs_entity_timeline(request: Request, canonical_id: int):
             else:
                 card_type = "pleading"
                 action_label = None
+            doc_url = None
+            if filing:
+                doc_url = _icfs_filing_citation_url(filing)
+            elif pleading:
+                doc_url = _icfs_pleading_citation_url(pleading)
+
             timeline.append({
                 "event": ev,
                 "entity": e,
                 "notice": notice,
                 "filing": filing,
+                "pleading": pleading,
                 "card_type": card_type,
                 "action_label": action_label,
+                "doc_url": doc_url,
             })
 
         counts = {

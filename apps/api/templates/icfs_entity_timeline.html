@@ -79,8 +79,16 @@
                 <pre style="font-size: 0.75em; line-height: 1.5; white-space: pre-wrap; color: var(--muted); margin-top: 8px; background: var(--surface); padding: 10px; border-radius: 4px;">{{ ev.source_excerpt }}</pre>
               </details>
             {% endif %}
-          {% else %}
-            <div style="font-size: 0.9em; color: var(--text-secondary);">{{ ev.event_description or "—" }}</div>
+          {% elif card_type in ("action", "filing") and row.filing %}
+            <div style="font-size: 0.8em; color: var(--muted); font-family: monospace;">
+              {{ row.filing.file_number }}
+              {% if row.doc_url %}&nbsp;<a href="{{ row.doc_url }}" target="_blank" style="font-family: sans-serif; font-size: 0.9em;">↗ ICFS</a>{% endif %}
+            </div>
+          {% elif card_type == "pleading" %}
+            <div style="font-size: 0.8em; color: var(--muted);">
+              {{ row.pleading.pleading_type or "Pleading" }}{% if row.filing %} · {{ row.filing.file_number }}{% endif %}
+              {% if row.doc_url %}&nbsp;<a href="{{ row.doc_url }}" target="_blank">↗ ICFS</a>{% endif %}
+            </div>
           {% endif %}
         </div>
       </div>
