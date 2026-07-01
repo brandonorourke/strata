@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
 USER_AGENT = "Mozilla/5.0 (compatible; StrataBot/0.1; contact: admin@example.com)"
-REQUEST_DELAY_SECONDS = 10.0
+REQUEST_DELAY_SECONDS = 1.0
 SOFT_404_MARKER = "you are trying to retrieve is invalid"
 
 
