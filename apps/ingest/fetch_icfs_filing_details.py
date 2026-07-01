@@ -133,7 +133,7 @@ async def main() -> None:
         # Detach scalar values we need before closing session
         pending = [(f.id, f.file_number) for f in filings]
 
-    logger.info("Fetching details for %d Viasat filings with no detail yet", len(pending))
+    logger.info("Fetching details for %d filings with no detail yet", len(pending))
     if not pending:
         return
 
