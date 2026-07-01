@@ -5,8 +5,8 @@
 # extracts brief_description, grant/expiration dates, action_pn_url, and grant_doc_url
 # (the direct download URL for the STA Grant PDF), then writes back to icfs_filings.
 #
-# Hardcoded to Viasat filings (applicant_name ILIKE '%Viasat%') with detail_fetched_at IS NULL.
-# Run after ingest_icfs.py. Respects same 3s delay as the main ingest script.
+# Runs for all filings with detail_fetched_at IS NULL and file_number IS NOT NULL.
+# Run after ingest_icfs.py. Resumable — committed per row, safe to stop and restart.
 
 import asyncio
 import logging
@@ -125,7 +125,6 @@ async def main() -> None:
     async with AsyncSessionLocal() as session:
         result = await session.execute(
             select(IcfsFiling)
-            .where(IcfsFiling.applicant_name.ilike("%Viasat%"))
             .where(IcfsFiling.detail_fetched_at.is_(None))
             .where(IcfsFiling.file_number.isnot(None))
             .order_by(IcfsFiling.submission_date.desc())
