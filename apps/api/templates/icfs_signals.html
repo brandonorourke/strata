@@ -29,7 +29,19 @@
         </span>
       </div>
       {% if ev.llm_summary %}
-        <div style="font-size: 0.9em; line-height: 1.55; color: var(--text-secondary);">{{ ev.llm_summary }}</div>
+        <div style="font-size: 0.9em; line-height: 1.55; color: var(--text-secondary); margin-bottom: {% if ev.source_excerpt or notice.document_text %}6px{% else %}0{% endif %};">{{ ev.llm_summary }}</div>
+      {% endif %}
+      {% if ev.source_excerpt %}
+        <details style="margin-top: 4px;">
+          <summary style="font-size: 0.8em; color: var(--muted); cursor: pointer;">show source excerpt</summary>
+          <pre style="font-size: 0.75em; line-height: 1.5; white-space: pre-wrap; color: var(--muted); margin-top: 8px; background: var(--surface); padding: 10px; border-radius: 4px;">{{ ev.source_excerpt }}</pre>
+        </details>
+      {% endif %}
+      {% if notice.document_text %}
+        <details style="margin-top: 4px;">
+          <summary style="font-size: 0.8em; color: var(--muted); cursor: pointer;">show full source</summary>
+          <pre style="font-size: 0.75em; line-height: 1.5; white-space: pre-wrap; color: var(--muted); margin-top: 8px; background: var(--surface); padding: 10px; border-radius: 4px;">{{ notice.document_text }}</pre>
+        </details>
       {% endif %}
     </div>
   {% else %}

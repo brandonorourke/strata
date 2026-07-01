@@ -75,8 +75,14 @@
             </div>
             {% if ev.source_excerpt %}
               <details style="margin-top: 6px;">
-                <summary style="font-size: 0.8em; color: var(--muted); cursor: pointer;">show source</summary>
+                <summary style="font-size: 0.8em; color: var(--muted); cursor: pointer;">show source excerpt</summary>
                 <pre style="font-size: 0.75em; line-height: 1.5; white-space: pre-wrap; color: var(--muted); margin-top: 8px; background: var(--surface); padding: 10px; border-radius: 4px;">{{ ev.source_excerpt }}</pre>
+              </details>
+            {% endif %}
+            {% if notice and notice.document_text %}
+              <details style="margin-top: 4px;">
+                <summary style="font-size: 0.8em; color: var(--muted); cursor: pointer;">show full source</summary>
+                <pre style="font-size: 0.75em; line-height: 1.5; white-space: pre-wrap; color: var(--muted); margin-top: 8px; background: var(--surface); padding: 10px; border-radius: 4px;">{{ notice.document_text }}</pre>
               </details>
             {% endif %}
           {% elif card_type in ("action", "filing") and row.filing %}
