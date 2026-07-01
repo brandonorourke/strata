@@ -230,7 +230,7 @@ def _icfs_pleading_citation_url(pleading: IcfsPleadingAndComment) -> str:
 
 @app.get("/admin/icfs")
 async def icfs_home(request: Request):
-    return templates.TemplateResponse("icfs_home.html", {"request": request})
+    return templates.TemplateResponse("icfs_home.html", {"request": request, "title": "Strata - ICFS Home"})
 
 
 @app.get("/admin/icfs/canonicals")
@@ -272,6 +272,7 @@ async def list_icfs_canonicals(request: Request, page: int = 1, page_size: int =
             "page_size": page_size,
             "total": total,
             "total_pages": total_pages,
+            "title": "Strata - FCC Entities",
         },
     )
 
@@ -425,7 +426,7 @@ async def icfs_notice_detail(request: Request, notice_id: int):
 
     return templates.TemplateResponse(
         "icfs_notice_detail.html",
-        {"request": request, "notice": notice, "entities": entities},
+        {"request": request, "notice": notice, "entities": entities, "title": f"Strata - Notice {notice.number}"},
     )
 
 
@@ -474,6 +475,7 @@ async def icfs_signals(request: Request, page: int = 1, page_size: int = 50):
             "page_size": page_size,
             "total": total,
             "total_pages": total_pages,
+            "title": "Strata - High Signal ICFS Events",
         },
     )
 
@@ -572,6 +574,7 @@ async def icfs_entity_timeline(request: Request, canonical_id: int):
             "canonical": canonical,
             "timeline": timeline,
             "counts": counts,
+            "title": f"Strata - Entity Detail - {canonical.canonical_name}",
         },
     )
 
