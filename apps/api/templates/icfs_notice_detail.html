@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="meta" style="margin-bottom: 12px;">
+    <a href="/admin/icfs/notices">&larr; Public Notices</a>
+  </div>
+
+  <h2>{{ notice.number or "Notice" }}{% if notice.da_number %} &middot; DA {{ notice.da_number }}{% endif %}</h2>
+
+  <div class="meta" style="margin-bottom: 20px;">
+    {{ notice.public_notice_release_date.strftime("%B %d, %Y") if notice.public_notice_release_date else "—" }}
+    &middot; {{ notice.subsystem or "—" }}
+    &middot; {{ notice.type_of_document or "—" }}
+    {% if notice.url %}
+      &middot; <a href="{{ notice.url }}" target="_blank" rel="noopener">source filing</a>
+    {% endif %}
+    {% if notice.document_url %}
+      &middot; <a href="{{ notice.document_url }}" target="_blank" rel="noopener">full document</a>
+    {% endif %}
+  </div>
+
+  {% if entities %}
+    <h3 style="margin-bottom: 12px;">Companies ({{ entities|length }})</h3>
+    {% for row in entities %}
+      <div style="border: 1px solid var(--border); border-radius: 6px; padding: 16px; margin-bottom: 12px;">
+        <div style="font-weight: 600; margin-bottom: 6px;">{{ row.entity.extracted_name }}</div>
+        {% if row.event.llm_summary %}
+          <div style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.5;">{{ row.event.llm_summary }}</div>
+        {% else %}
+          <div class="meta">{{ row.event.event_description or "No summary available." }}</div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="meta">No entities extracted for this notice{% if not notice.document_fetched_at %} — document not yet fetched{% endif %}.</div>
+  {% endif %}
+{% endblock %}

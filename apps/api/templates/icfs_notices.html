@@ -18,7 +18,7 @@
     {% for notice in notices %}
       <tr>
         <td>{{ notice.public_notice_release_date.strftime("%Y-%m-%d") if notice.public_notice_release_date else "—" }}</td>
-        <td>{{ notice.number or "—" }}</td>
+        <td><a href="/admin/icfs/notices/{{ notice.id }}">{{ notice.number or "—" }}</a></td>
         <td>{{ notice.subsystem or "—" }}</td>
         <td>{{ notice.type_of_document or "—" }}</td>
         <td class="actions">

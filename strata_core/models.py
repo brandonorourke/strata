@@ -111,6 +111,7 @@ class ExtractedEvent(Base):
     event_description = Column(Text, nullable=True)
     confidence = Column(Float, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    llm_summary = Column(Text, nullable=True)
 
     # Same caveat as ExtractedEntity.article: no real FK, read-only, news_article-only.
     article = relationship(

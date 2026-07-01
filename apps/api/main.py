@@ -406,6 +406,29 @@ async def list_icfs_notices(request: Request, page: int = 1, page_size: int = 50
     )
 
 
+@app.get("/admin/icfs/notices/{notice_id}")
+async def icfs_notice_detail(request: Request, notice_id: int):
+    async with AsyncSessionLocal() as session:
+        notice = await session.get(IcfsPublicNotice, notice_id)
+        if notice is None:
+            raise HTTPException(status_code=404, detail="Notice not found")
+
+        stmt = (
+            select(ExtractedEvent, ExtractedEntity)
+            .join(ExtractedEntity, ExtractedEvent.entity_id == ExtractedEntity.id)
+            .where(ExtractedEvent.source_type == "icfs_notice")
+            .where(ExtractedEvent.source_id == notice_id)
+            .order_by(ExtractedEntity.extracted_name)
+        )
+        rows = list((await session.execute(stmt)).all())
+        entities = [{"entity": e, "event": ev} for ev, e in rows]
+
+    return templates.TemplateResponse(
+        "icfs_notice_detail.html",
+        {"request": request, "notice": notice, "entities": entities},
+    )
+
+
 def _week_ending_sunday(d: date) -> date:
     # Python weekday(): Monday=0 ... Sunday=6
     return d + timedelta(days=(6 - d.weekday()))
