@@ -128,7 +128,7 @@ async def process_batch(limit: int = 100) -> int:
             .where(ExtractedEvent.source_type == "icfs_notice")
             .where(ExtractedEvent.llm_summary.is_(None))
             .where(IcfsPublicNotice.document_text.is_not(None))
-            .where(IcfsPublicNotice.type_of_document == "Actions Taken")
+            .where(IcfsPublicNotice.type_of_document.ilike("Actions Taken%"))
             .order_by(ExtractedEvent.id.asc())
             .limit(limit)
         )
