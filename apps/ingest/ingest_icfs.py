@@ -42,11 +42,6 @@ REQUEST_DELAY_SECONDS = 3.0
 # anything outside a plausible range as unknown rather than parsing it literally.
 MIN_PLAUSIBLE_YEAR = 1990
 
-# Backfill end-detection: stop after this many consecutive pages with zero new rows.
-# Only active for a fresh backfill (start_page == 1); disabled when resuming mid-backfill
-# since pages before the resume point are intentionally already ingested.
-EMPTY_PAGE_STOP_THRESHOLD = 3
-
 # x_fmc_ibfs_base_table backs both "Recent Filings" and "Recent Actions" on the
 # official site — request the union of fields once instead of walking it twice.
 ICFS_TABLES = [
@@ -207,7 +202,6 @@ async def _save_backfill_state(session, table: str, page: int, complete: bool) -
 async def ingest_table(session, table: str, fields: str, order_by: str, model, max_pages: int | None, mode: str) -> int:
     client, g_ck = _bootstrap_session()
     new_count = 0
-    empty_pages = 0
 
     if mode == "backfill":
         state = await session.get(IcfsIngestState, table)
@@ -269,15 +263,6 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
             if stop_incremental:
                 logger.info("%s: reached stop_before threshold, done.", table)
                 break
-
-            # End-detection for a fresh backfill only — disabled when resuming (start_page > 1)
-            # because pages before the resume point are intentionally already ingested.
-            if mode == "backfill" and start_page == 1:
-                empty_pages = empty_pages + 1 if page_new == 0 else 0
-                if empty_pages >= EMPTY_PAGE_STOP_THRESHOLD:
-                    logger.info("%s: %d consecutive empty pages, backfill complete.", table, empty_pages)
-                    await _save_backfill_state(session, table, page, complete=True)
-                    break
 
             num_pages = data.get("num_pages", page)
             if page >= num_pages:
