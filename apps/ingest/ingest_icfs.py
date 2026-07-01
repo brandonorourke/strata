@@ -4,18 +4,22 @@
 # (icfs_filings, icfs_pleadings_and_comments, icfs_public_notices). Does not
 # touch extracted_entities/extracted_events; see extract_icfs_entities.py for
 # the processing step that promotes structured rows into the canonical model.
+#
+# Two modes (ICFS_MODE env var):
+#   backfill    — resumes from stored page in icfs_ingest_state, walks to end of history
+#   incremental — starts from newest, stops when records are older than MAX(date) - 1 day
 
 import asyncio
 import logging
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from strata_core.db import AsyncSessionLocal
-from strata_core.models import IcfsFiling, IcfsPleadingAndComment, IcfsPublicNotice
+from strata_core.models import IcfsFiling, IcfsIngestState, IcfsPleadingAndComment, IcfsPublicNotice
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -38,10 +42,9 @@ REQUEST_DELAY_SECONDS = 3.0
 # anything outside a plausible range as unknown rather than parsing it literally.
 MIN_PLAUSIBLE_YEAR = 1990
 
-# Stop paginating a table after this many consecutive pages with zero new rows.
-# Lets a full backfill (everything new) run to the real end, while a daily poll
-# against an already-ingested table stops within a page or two instead of
-# re-walking thousands of pages of duplicates every run.
+# Backfill end-detection: stop after this many consecutive pages with zero new rows.
+# Only active for a fresh backfill (start_page == 1); disabled when resuming mid-backfill
+# since pages before the resume point are intentionally already ingested.
 EMPTY_PAGE_STOP_THRESHOLD = 3
 
 # x_fmc_ibfs_base_table backs both "Recent Filings" and "Recent Actions" on the
@@ -185,11 +188,45 @@ def _row_to_model_kwargs(table: str, row: dict) -> dict:
     }
 
 
-async def ingest_table(session, table: str, fields: str, order_by: str, model, max_pages: int | None) -> int:
+async def _save_backfill_state(session, table: str, page: int, complete: bool) -> None:
+    state = await session.get(IcfsIngestState, table)
+    if state is None:
+        session.add(IcfsIngestState(
+            source_table=table,
+            backfill_page=page,
+            backfill_complete=complete,
+            updated_at=datetime.now(timezone.utc),
+        ))
+    else:
+        state.backfill_page = page
+        state.backfill_complete = complete
+        state.updated_at = datetime.now(timezone.utc)
+    await session.commit()
+
+
+async def ingest_table(session, table: str, fields: str, order_by: str, model, max_pages: int | None, mode: str) -> int:
     client, g_ck = _bootstrap_session()
     new_count = 0
-    page = 1
     empty_pages = 0
+
+    if mode == "backfill":
+        state = await session.get(IcfsIngestState, table)
+        start_page = state.backfill_page if state else 1
+        stop_before = None
+        if start_page > 1:
+            logger.info("%s: resuming backfill from page %d.", table, start_page)
+    else:
+        start_page = 1
+        result = await session.execute(select(func.max(getattr(model, order_by))))
+        max_date = result.scalar_one_or_none()
+        if max_date is None:
+            logger.warning("%s: no existing records — incremental will run to end of table.", table)
+            stop_before = None
+        else:
+            stop_before = max_date - timedelta(days=1)
+            logger.info("%s: incremental stop_before=%s.", table, stop_before.date())
+
+    page = start_page
 
     try:
         while True:
@@ -199,9 +236,16 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
                 break
 
             page_new = 0
-            for row in rows:
-                sys_id = row["sys_id"]
+            stop_incremental = False
 
+            for row in rows:
+                if mode == "incremental" and stop_before is not None:
+                    row_date = _parse_glide_datetime(_field(row, order_by))
+                    if row_date is not None and row_date < stop_before:
+                        stop_incremental = True
+                        break
+
+                sys_id = row["sys_id"]
                 existing = await session.execute(
                     select(model.id).where(model.source_sys_id == sys_id).limit(1)
                 )
@@ -213,18 +257,33 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
                 new_count += 1
 
             await session.commit()
+
+            if mode == "backfill":
+                await _save_backfill_state(session, table, page, complete=False)
+
             logger.info(
                 "%s page %d/%s: %d new of %d rows",
                 table, page, data.get("num_pages"), page_new, len(rows),
             )
 
-            empty_pages = empty_pages + 1 if page_new == 0 else 0
-            if empty_pages >= EMPTY_PAGE_STOP_THRESHOLD:
-                logger.info("%s: %d consecutive pages with no new rows, stopping.", table, empty_pages)
+            if stop_incremental:
+                logger.info("%s: reached stop_before threshold, done.", table)
                 break
+
+            # End-detection for a fresh backfill only — disabled when resuming (start_page > 1)
+            # because pages before the resume point are intentionally already ingested.
+            if mode == "backfill" and start_page == 1:
+                empty_pages = empty_pages + 1 if page_new == 0 else 0
+                if empty_pages >= EMPTY_PAGE_STOP_THRESHOLD:
+                    logger.info("%s: %d consecutive empty pages, backfill complete.", table, empty_pages)
+                    await _save_backfill_state(session, table, page, complete=True)
+                    break
 
             num_pages = data.get("num_pages", page)
             if page >= num_pages:
+                if mode == "backfill":
+                    await _save_backfill_state(session, table, page, complete=True)
+                    logger.info("%s: backfill complete.", table)
                 break
             if max_pages is not None and page >= max_pages:
                 logger.info("%s: hit ICFS_MAX_PAGES=%d cap, stopping early.", table, max_pages)
@@ -240,24 +299,29 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
 
 async def main() -> None:
     """
-    Backfills and incrementally polls all four ICFS categories (Filings + Actions
-    share one table, so three ingest_table() calls cover all four).
+    ICFS_MODE=backfill (default): resumes from stored page in icfs_ingest_state per table,
+    walks to end of history. Safe to stop and restart — picks up where it left off.
 
-    Set ICFS_MAX_PAGES to cap pages per table (useful for a quick test run without
-    committing to a multi-thousand-page backfill). Leave unset for a full backfill.
-    Re-running this script is always safe — already-ingested rows are skipped by
-    their ServiceNow sys_id, and the early-stop on repeated empty pages means a
-    daily poll only walks a page or two once the backfill is done.
+    ICFS_MODE=incremental: starts from newest, stops when records are older than
+    MAX(date) - 1 day. Designed for daily runs after the backfill is complete.
+
+    ICFS_MAX_PAGES caps pages per table (useful for test runs).
     """
     max_pages_env = os.getenv("ICFS_MAX_PAGES")
     max_pages = int(max_pages_env) if max_pages_env else None
+
+    mode = os.getenv("ICFS_MODE", "backfill")
+    if mode not in ("backfill", "incremental"):
+        raise ValueError(f"ICFS_MODE must be 'backfill' or 'incremental', got {mode!r}")
+
+    logger.info("ICFS ingest mode: %s", mode)
 
     async with AsyncSessionLocal() as session:
         total_new = 0
         for spec in ICFS_TABLES:
             try:
                 new_for_table = await ingest_table(
-                    session, spec["table"], spec["fields"], spec["order_by"], spec["model"], max_pages
+                    session, spec["table"], spec["fields"], spec["order_by"], spec["model"], max_pages, mode,
                 )
                 total_new += new_for_table
                 logger.info("%s: inserted %d new rows.", spec["table"], new_for_table)

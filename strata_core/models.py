@@ -269,3 +269,14 @@ class IcfsCanonicalEntity(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     extracted_entities = relationship("ExtractedEntity", back_populates="icfs_canonical_entity")
+
+
+class IcfsIngestState(Base):
+    """One row per ICFS source table, tracking resumable backfill progress."""
+
+    __tablename__ = "icfs_ingest_state"
+
+    source_table = Column(Text, primary_key=True)
+    backfill_page = Column(Integer, nullable=False, default=1)
+    backfill_complete = Column(Boolean, nullable=False, default=False)
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
