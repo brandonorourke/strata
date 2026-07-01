@@ -30,7 +30,7 @@ BASE_URL = "https://fccprod.servicenowservices.com"
 HOME_PAGE_URL = f"{BASE_URL}/ibfs?id=ibfs_home"
 PAGE_API_URL = f"{BASE_URL}/api/now/sp/page"
 USER_AGENT = "Mozilla/5.0 (compatible; StrataBot/0.1; contact: admin@example.com)"
-REQUEST_DELAY_SECONDS = 3.0
+REQUEST_DELAY_SECONDS = 1.0
 
 
 def _bootstrap_session() -> tuple[httpx.Client, str]:
