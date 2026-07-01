@@ -254,7 +254,7 @@ async def list_icfs_canonicals(request: Request, page: int = 1, page_size: int =
             select(IcfsCanonicalEntity, mention_count)
             .outerjoin(ExtractedEntity, ExtractedEntity.icfs_canonical_entity_id == IcfsCanonicalEntity.id)
             .group_by(IcfsCanonicalEntity.id)
-            .order_by(IcfsCanonicalEntity.last_seen_at.desc().nullslast())
+            .order_by(mention_count.desc())
             .offset(offset)
             .limit(page_size)
         )
