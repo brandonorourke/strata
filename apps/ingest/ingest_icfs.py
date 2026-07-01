@@ -199,16 +199,18 @@ async def _save_backfill_state(session, table: str, page: int, complete: bool) -
     await session.commit()
 
 
-async def ingest_table(session, table: str, fields: str, order_by: str, model, max_pages: int | None, mode: str) -> int:
+async def ingest_table(session, table: str, fields: str, order_by: str, model, max_pages: int | None, mode: str, stop_date: datetime | None = None) -> int:
     client, g_ck = _bootstrap_session()
     new_count = 0
 
     if mode == "backfill":
         state = await session.get(IcfsIngestState, table)
         start_page = state.backfill_page if state else 1
-        stop_before = None
+        stop_before = stop_date
         if start_page > 1:
             logger.info("%s: resuming backfill from page %d.", table, start_page)
+        if stop_before:
+            logger.info("%s: backfill will stop before %s.", table, stop_before.date())
     else:
         start_page = 1
         result = await session.execute(select(func.max(getattr(model, order_by))))
@@ -230,13 +232,13 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
                 break
 
             page_new = 0
-            stop_incremental = False
+            stop_table = False
 
             for row in rows:
-                if mode == "incremental" and stop_before is not None:
+                if stop_before is not None:
                     row_date = _parse_glide_datetime(_field(row, order_by))
                     if row_date is not None and row_date < stop_before:
-                        stop_incremental = True
+                        stop_table = True
                         break
 
                 sys_id = row["sys_id"]
@@ -260,8 +262,10 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
                 table, page, data.get("num_pages"), page_new, len(rows),
             )
 
-            if stop_incremental:
-                logger.info("%s: reached stop_before threshold, done.", table)
+            if stop_table:
+                logger.info("%s: reached stop_before=%s, done.", table, stop_before.date())
+                if mode == "backfill":
+                    await _save_backfill_state(session, table, page, complete=True)
                 break
 
             num_pages = data.get("num_pages", page)
@@ -291,6 +295,8 @@ async def main() -> None:
     MAX(date) - 1 day. Designed for daily runs after the backfill is complete.
 
     ICFS_MAX_PAGES caps pages per table (useful for test runs).
+    ICFS_STOP_BEFORE_DATE (YYYY-MM-DD) stops each table when records older than that date are reached,
+    then moves on to the next table. Useful for capping a backfill at a meaningful cutoff date.
     """
     max_pages_env = os.getenv("ICFS_MAX_PAGES")
     max_pages = int(max_pages_env) if max_pages_env else None
@@ -299,14 +305,19 @@ async def main() -> None:
     if mode not in ("backfill", "incremental"):
         raise ValueError(f"ICFS_MODE must be 'backfill' or 'incremental', got {mode!r}")
 
-    logger.info("ICFS ingest mode: %s", mode)
+    stop_date = None
+    stop_date_env = os.getenv("ICFS_STOP_BEFORE_DATE")
+    if stop_date_env:
+        stop_date = datetime.strptime(stop_date_env, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+
+    logger.info("ICFS ingest mode: %s%s", mode, f", stop_before={stop_date.date()}" if stop_date else "")
 
     async with AsyncSessionLocal() as session:
         total_new = 0
         for spec in ICFS_TABLES:
             try:
                 new_for_table = await ingest_table(
-                    session, spec["table"], spec["fields"], spec["order_by"], spec["model"], max_pages, mode,
+                    session, spec["table"], spec["fields"], spec["order_by"], spec["model"], max_pages, mode, stop_date,
                 )
                 total_new += new_for_table
                 logger.info("%s: inserted %d new rows.", spec["table"], new_for_table)
