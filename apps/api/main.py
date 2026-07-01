@@ -499,9 +499,9 @@ async def icfs_entity_timeline(request: Request, canonical_id: int):
                 {"request": request, "canonical": canonical, "timeline": []},
             )
 
-        # All events for those entities, with notice join for icfs_notice rows
+        # All events for those entities, with notice + filing joins for label/action data
         event_stmt = (
-            select(ExtractedEvent, ExtractedEntity, IcfsPublicNotice)
+            select(ExtractedEvent, ExtractedEntity, IcfsPublicNotice, IcfsFiling)
             .join(ExtractedEntity, ExtractedEvent.entity_id == ExtractedEntity.id)
             .outerjoin(
                 IcfsPublicNotice,
@@ -510,15 +510,54 @@ async def icfs_entity_timeline(request: Request, canonical_id: int):
                     ExtractedEvent.source_id == IcfsPublicNotice.id,
                 ),
             )
+            .outerjoin(
+                IcfsFiling,
+                and_(
+                    ExtractedEvent.source_type == "icfs_filing",
+                    ExtractedEvent.source_id == IcfsFiling.id,
+                ),
+            )
             .where(ExtractedEvent.entity_id.in_(entity_ids))
             .order_by(ExtractedEvent.event_date.desc().nullslast(), ExtractedEvent.id.desc())
         )
         rows = list((await session.execute(event_stmt)).all())
-        timeline = [{"event": ev, "entity": e, "notice": n} for ev, e, n in rows]
+
+        timeline = []
+        for ev, e, notice, filing in rows:
+            if ev.source_type == "icfs_filing":
+                card_type = "action" if (filing and filing.action) else "filing"
+                action_label = filing.action if filing else None
+            elif ev.source_type == "icfs_notice":
+                card_type = "notice"
+                action_label = None
+            else:
+                card_type = "pleading"
+                action_label = None
+            timeline.append({
+                "event": ev,
+                "entity": e,
+                "notice": notice,
+                "filing": filing,
+                "card_type": card_type,
+                "action_label": action_label,
+            })
+
+        counts = {
+            "notice": sum(1 for r in timeline if r["card_type"] == "notice"),
+            "action": sum(1 for r in timeline if r["card_type"] == "action"),
+            "filing": sum(1 for r in timeline if r["card_type"] == "filing"),
+            "pleading": sum(1 for r in timeline if r["card_type"] == "pleading"),
+            "signal": sum(1 for r in timeline if r["event"].signal_tier == "signal"),
+        }
 
     return templates.TemplateResponse(
         "icfs_entity_timeline.html",
-        {"request": request, "canonical": canonical, "timeline": timeline},
+        {
+            "request": request,
+            "canonical": canonical,
+            "timeline": timeline,
+            "counts": counts,
+        },
     )
 
 

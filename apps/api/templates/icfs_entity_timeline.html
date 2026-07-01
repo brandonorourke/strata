@@ -4,35 +4,62 @@
     <a href="/admin/icfs/canonicals">&larr; Entities</a>
   </div>
   <h2>{{ canonical.canonical_name }}</h2>
-  <div class="meta" style="margin-bottom: 20px;">
-    FCC activity timeline &middot; {{ timeline|length }} events
+  <div class="meta" style="margin-bottom: 16px;">
+    FCC activity timeline
     {% if canonical.first_seen_at and canonical.last_seen_at %}
       &middot; {{ canonical.first_seen_at.strftime("%Y-%m-%d") }} – {{ canonical.last_seen_at.strftime("%Y-%m-%d") }}
     {% endif %}
   </div>
 
+  <!-- Filter chips -->
+  <div id="filter-bar" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; align-items: center;">
+    <button class="chip active" data-filter="notice" onclick="toggleChip(this)">
+      Notices <span class="chip-count">{{ counts.notice }}</span>
+    </button>
+    <button class="chip" data-filter="action" onclick="toggleChip(this)">
+      Actions <span class="chip-count">{{ counts.action }}</span>
+    </button>
+    <button class="chip" data-filter="filing" onclick="toggleChip(this)">
+      Pending Filings <span class="chip-count">{{ counts.filing }}</span>
+    </button>
+    <button class="chip" data-filter="pleading" onclick="toggleChip(this)">
+      Pleadings <span class="chip-count">{{ counts.pleading }}</span>
+    </button>
+    <div style="width: 1px; height: 20px; background: var(--border); margin: 0 4px;"></div>
+    <button class="chip chip-signal" data-filter="signal" onclick="toggleSignal(this)">
+      Signal only <span class="chip-count">{{ counts.signal }}</span>
+    </button>
+  </div>
+
+  <div id="visible-count" class="meta" style="margin-bottom: 12px;"></div>
+
   {% if not timeline %}
     <div class="meta">No events found for this entity.</div>
   {% else %}
+    <div id="timeline-list">
     {% for row in timeline %}
       {% set ev = row.event %}
       {% set notice = row.notice %}
-      <div style="display: flex; gap: 16px; margin-bottom: 12px;">
+      {% set card_type = row.card_type %}
+      {% set action_label = row.action_label %}
+      <div class="timeline-card"
+           data-type="{{ card_type }}"
+           data-signal="{{ 'true' if ev.signal_tier == 'signal' else 'false' }}"
+           style="display: flex; gap: 16px; margin-bottom: 12px;">
         <div style="min-width: 90px; color: var(--muted); font-size: 0.85em; padding-top: 3px; text-align: right;">
           {{ ev.event_date.strftime("%Y-%m-%d") if ev.event_date else "—" }}
         </div>
         <div style="flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 14px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
             <div style="font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);">
-              {% if ev.source_type == "icfs_notice" %}
-                Public Notice
-                {% if notice %}&middot; <a href="/admin/icfs/notices/{{ notice.id }}">{{ notice.number }}</a>{% endif %}
-              {% elif ev.source_type == "icfs_filing" %}
-                Filing
-              {% elif ev.source_type == "icfs_pleading" %}
-                Pleading
+              {% if card_type == "notice" %}
+                Public Notice{% if notice %} &middot; <a href="/admin/icfs/notices/{{ notice.id }}">{{ notice.number }}</a>{% endif %}
+              {% elif card_type == "action" %}
+                Action{% if action_label %} &mdash; {{ action_label }}{% endif %}
+              {% elif card_type == "filing" %}
+                Filing (pending)
               {% else %}
-                {{ ev.source_type }}
+                Pleading
               {% endif %}
             </div>
             {% if ev.signal_tier == "signal" %}
@@ -58,5 +85,75 @@
         </div>
       </div>
     {% endfor %}
+    </div>
   {% endif %}
+
+<style>
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #9ca3af;
+  background: var(--surface);
+  color: #374151;
+  font-size: 0.8em;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.chip.active {
+  background: #111827;
+  color: #f9fafb;
+  border-color: #111827;
+}
+.chip-signal.active {
+  background: #fef3c7;
+  color: #b45309;
+  border-color: #fde68a;
+}
+.chip-count {
+  font-size: 0.9em;
+  opacity: 0.7;
+}
+</style>
+
+<script>
+const activeTypes = new Set(['notice']);
+let signalOnly = false;
+
+function applyFilters() {
+  const cards = document.querySelectorAll('.timeline-card');
+  let visible = 0;
+  cards.forEach(card => {
+    const typeMatch = activeTypes.has(card.dataset.type);
+    const signalMatch = !signalOnly || card.dataset.signal === 'true';
+    const show = typeMatch && signalMatch;
+    card.style.display = show ? 'flex' : 'none';
+    if (show) visible++;
+  });
+  document.getElementById('visible-count').textContent = visible + ' event' + (visible === 1 ? '' : 's');
+}
+
+function toggleChip(btn) {
+  const filter = btn.dataset.filter;
+  if (activeTypes.has(filter)) {
+    activeTypes.delete(filter);
+    btn.classList.remove('active');
+  } else {
+    activeTypes.add(filter);
+    btn.classList.add('active');
+  }
+  applyFilters();
+}
+
+function toggleSignal(btn) {
+  signalOnly = !signalOnly;
+  btn.classList.toggle('active', signalOnly);
+  applyFilters();
+}
+
+applyFilters();
+</script>
 {% endblock %}
