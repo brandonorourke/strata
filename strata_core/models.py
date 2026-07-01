@@ -188,6 +188,13 @@ class IcfsFiling(Base):
     target_table = Column(Text, nullable=True)
     ingested_at = Column(DateTime(timezone=True), server_default=func.now())
     entities_extracted_at = Column(DateTime(timezone=True), nullable=True)
+    brief_description = Column(Text, nullable=True)
+    action_pn_url = Column(Text, nullable=True)
+    grant_date = Column(Date, nullable=True)
+    expiration_date = Column(Date, nullable=True)
+    begin_date = Column(Date, nullable=True)
+    grant_doc_url = Column(Text, nullable=True)
+    detail_fetched_at = Column(DateTime(timezone=True), nullable=True)
 
     # No real FK on ExtractedEvent.source_id (it's polymorphic) — read-only, icfs_filing-only view.
     extracted_events = relationship(

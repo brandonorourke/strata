@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict n8KsvLnqyhdIiDxZ6KdURT3OfUe7o8Ig74KDBU0RQTzfhyRJHW11t5t3MFsB0kd
+\restrict SlWvSyrj3voySBwdaxy1NKueNJmkC8IECuvTyNs7rkw7eruqYcb4DgNjIsPQt8v
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -281,7 +281,14 @@ CREATE TABLE public.icfs_filings (
     action_taken_date timestamp with time zone,
     target_table text,
     ingested_at timestamp with time zone DEFAULT now() NOT NULL,
-    entities_extracted_at timestamp with time zone
+    entities_extracted_at timestamp with time zone,
+    brief_description text,
+    action_pn_url text,
+    grant_date date,
+    expiration_date date,
+    begin_date date,
+    grant_doc_url text,
+    detail_fetched_at timestamp with time zone
 );
 
 
@@ -822,5 +829,5 @@ ALTER TABLE ONLY public.extracted_events
 -- PostgreSQL database dump complete
 --
 
-\unrestrict n8KsvLnqyhdIiDxZ6KdURT3OfUe7o8Ig74KDBU0RQTzfhyRJHW11t5t3MFsB0kd
+\unrestrict SlWvSyrj3voySBwdaxy1NKueNJmkC8IECuvTyNs7rkw7eruqYcb4DgNjIsPQt8v
 
