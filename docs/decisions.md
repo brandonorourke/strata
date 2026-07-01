@@ -73,3 +73,25 @@
 - Not free: tier 1 isn't one generic algorithm — every new structured source needs its own name-normalization logic (debtor names, party names, applicant names each have different conventions), bounded work per source rather than open-ended risk.
 - Open, not decided: whether the per-source canonical layer is a new table per source or a `source_type`-scoped view over `canonical_entities` with a separate link table.
 - Deferred, not yet a bottleneck: a candidate-suggestion mechanism for the human-confirmation UI (so a person isn't browsing blind) will be needed once the canonical-entity count outgrows what's reviewable by eye — fine to defer until that's the actual constraint.
+
+## 2026-07-01 — FCC notice taxonomy: DA = delegated authority; signal filter is action type, not DA number
+
+- **DA = delegated authority** (bureau/staff-level action), not "Declaratory Action." FCC's own EDOCS definitions confirm: documents issued by a bureau/office under authority delegated by the Commission get a DA number; documents requiring a full Commissioner vote get an FCC number. Both notice families use the phrase "pursuant to delegated authority" in the body — the DA number is an administrative publishing distinction (which report series the batch was assigned to), not an indicator of whether an outcome occurred.
+- **DA/non-DA is NOT a reliable signal/noise filter for satellite (SAT/SES) notices.** Both DA and non-DA "Actions Taken" satellite notices contain real dispositions (grants, surrenders, modifications, assignments). Confirmed by direct document comparison: a non-DA notice (SES-02821) contained Viacom surrendering seven earth-station authorizations at once — a material corporate event — while a DA notice (SAT-01961) contained routine STA grants. Using `da_number IS NOT NULL` as a signal filter for satellite notices would wrongly discard the surrender and wrongly keep operational noise.
+- **The actual signal filter for satellite notices is action type:**
+  - Signal: surrender of authorization, assignment/pro-forma modification (ownership change), consummated transaction, modification reflecting assignment, granted-with-conditions (what are the conditions?)
+  - Noise: routine STA/TT&C/LEOP operational grants (short-term technical authority for a specific satellite operation)
+- **Surrender events carry bonus signal:** FCC bond requirements ($1M+, escalating) become due and payable on default or surrender — a fleet surrender (like Viacom's) can have financial/bond implications beyond the license event itself.
+- **DA/non-DA distinction DOES hold for ITC/international notices:** DA-numbered ITC notices carry ownership chains, CFIUS/national security narrative, LOA conditions — the high-value content. Non-DA ITC notices are accepted-for-filing receipts with no outcome content. The contrast that doesn't generalize: ITC non-DA = queue receipt; satellite non-DA = real disposition.
+- **Two notice families need separate extraction logic:**
+  - ITC/international notices → extract ownership structure (% + nationality), CFIUS referral flag ("referred to the Executive Branch agencies"), LOA conditions flag ("Petition to Adopt Conditions"), transaction narrative
+  - SAT/SES satellite notices → extract action type + entity + surrender/assignment/consummation events; skip routine STA/TT&C/LEOP entries
+
+## 2026-07-01 — FCC ECFS/EDOCS sanctioned APIs as programmatic path (unverified coverage)
+
+- The FCC offers two sanctioned, free-key APIs that bypass Akamai by design — the intended programmatic front door, not a scraping workaround:
+  - **ECFS API**: filings, comments, pleadings, and public notices by docket/proceeding. Register at `fcc.gov/ecfs/help/public_api`; uses a free `api.data.gov` key. FCC actively encourages API use over scraping for bulk access.
+  - **EDOCS API**: public releases, publications, Federal Register, FCC Record — the document index. Candidate path for non-DA notice documents (the ones blocked by Akamai on `www.fcc.gov`).
+- **Auth:** free `api.data.gov` key, one-time registration. Same key system used across US government APIs.
+- **Open question (unverified):** whether ICFS/IBFS satellite filings (SES/SAT) are covered by ECFS/EDOCS, or live in a separate ICFS system with a different access path. Third-party scrapers use `fcc.report` (a mirror site) for satellite licensing data — suggesting the satellite data may not be fully exposed through ECFS/EDOCS. Must verify before relying on this path for the satellite pipeline.
+- **Strategic implication:** if EDOCS covers the document index for report-number-only notices, this closes the Akamai coverage gap for non-DA satellite notices without headless Chrome or TLS fingerprint manipulation. Test ECFS/EDOCS coverage against known notice numbers (SES-02821, SAT-01961) before investing further in the Akamai workaround path.
