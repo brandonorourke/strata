@@ -59,7 +59,7 @@
               {% elif card_type == "filing" %}
                 Filing (pending)
               {% else %}
-                Pleading
+                Pleading{% if row.pleading.pleading_type %} &mdash; {{ row.pleading.pleading_type | title }}{% endif %}{% if row.pleading %} &middot; <a href="/admin/icfs/pleadings/{{ row.pleading.id }}">{{ row.pleading.file_number or row.pleading.source_sys_id[:8] }}</a>{% endif %}
               {% endif %}
             </div>
             {% if ev.signal_tier == "signal" %}
@@ -112,8 +112,7 @@
             {% endif %}
           {% elif card_type == "pleading" %}
             <div style="font-size: 0.8em; color: var(--muted);">
-              <a href="/admin/icfs/pleadings/{{ row.pleading.id }}" style="color: var(--muted);">{{ row.pleading.pleading_type or "Pleading" }}</a>
-              {% if row.pleading.filer_name %}<span style="color: var(--ink); margin-left: 6px;">{{ row.pleading.filer_name }}</span>{% endif %}
+              {% if row.pleading.filer_name %}<span style="color: var(--ink);">Filer: {{ row.pleading.filer_name }}</span>{% endif %}
               {% if row.filing %} · {{ row.filing.file_number }}{% endif %}
               {% if row.doc_url %}&nbsp;<a href="{{ row.doc_url }}" target="_blank">↗ ICFS</a>{% endif %}
             </div>
