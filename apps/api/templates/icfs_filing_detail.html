@@ -1,9 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-  <div class="meta" style="margin-bottom: 12px;">
-    <a href="/admin/icfs/filings">&larr; Filings</a>
-  </div>
-
   <h2>{{ filing.file_number or "Filing" }}</h2>
   <div class="meta" style="margin-bottom: 20px;">{{ filing.applicant_name or "—" }}</div>
 

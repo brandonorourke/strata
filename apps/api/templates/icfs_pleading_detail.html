@@ -1,9 +1,5 @@
 {% extends "base.html" %}
 {% block content %}
-  <div class="meta" style="margin-bottom: 12px;">
-    <a href="/admin/icfs/pleadings">&larr; Pleadings</a>
-  </div>
-
   <h2>{{ pleading.pleading_type or "Pleading" }}{% if pleading.file_number %} &mdash; {{ pleading.file_number }}{% endif %}</h2>
   <div class="meta" style="margin-bottom: 20px;">
     {{ pleading.filer_name or pleading.applicant_names or "—" }}

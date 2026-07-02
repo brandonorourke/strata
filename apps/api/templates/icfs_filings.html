@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
   <h2>ICFS — Filings &amp; Actions</h2>
-  <div class="meta" style="margin-bottom: 12px;">
-    <a href="/admin/icfs">&larr; ICFS</a> · {{ total }} total
-  </div>
+  <div class="meta" style="margin-bottom: 12px;">{{ total }} total</div>
 
   <form method="get" action="/admin/icfs/filings" style="margin-bottom: 12px;">
     <input type="text" name="q" value="{{ q }}" placeholder="Filter by applicant name…" style="padding: 6px 8px; width: 280px;">

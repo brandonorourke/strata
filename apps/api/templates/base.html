@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ title or "Strata UI" }}</title>
+    <title>{{ title or "Strata" }}</title>
     <style>
       :root {
         color-scheme: light;
@@ -16,12 +16,11 @@
         --bg: #f6f7fb;
         --surface: #ffffff;
         --radius: 10px;
+        --nav-width: 188px;
+        --header-height: 48px;
       }
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
       body {
-        margin: 0;
         font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         background: var(--bg);
         color: var(--ink);
@@ -29,11 +28,79 @@
         line-height: 1.5;
         -webkit-font-smoothing: antialiased;
       }
-      .container {
-        max-width: 1180px;
-        margin: 0 auto;
-        padding: 40px 24px 56px;
+
+      /* ── Header ── */
+      #header {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        height: var(--header-height);
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        padding: 0 20px;
+        z-index: 100;
       }
+      #header .wordmark {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        color: var(--ink);
+        text-decoration: none;
+      }
+
+      /* ── Sidebar ── */
+      #sidebar {
+        position: fixed;
+        top: var(--header-height);
+        left: 0;
+        bottom: 0;
+        width: var(--nav-width);
+        background: var(--surface);
+        border-right: 1px solid var(--border);
+        padding: 20px 0;
+        overflow-y: auto;
+      }
+      .nav-section {
+        padding: 0 12px 4px 16px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      .nav-item {
+        display: block;
+        padding: 7px 12px 7px 16px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #374151;
+        text-decoration: none;
+        border-radius: 6px;
+        margin: 1px 8px;
+        transition: background 0.1s, color 0.1s;
+      }
+      .nav-item:hover {
+        background: var(--bg);
+        color: var(--ink);
+        text-decoration: none;
+      }
+      .nav-item.active {
+        background: var(--accent-tint);
+        color: var(--accent-dark);
+        font-weight: 600;
+      }
+
+      /* ── Main content ── */
+      #main {
+        margin-left: var(--nav-width);
+        margin-top: var(--header-height);
+        padding: 36px 32px 56px;
+        min-height: calc(100vh - var(--header-height));
+      }
+
+      /* ── Typography ── */
       h2 {
         font-size: 20px;
         font-weight: 600;
@@ -41,10 +108,10 @@
         margin: 0 0 16px;
       }
       h3 {
-        font-size: 14px;
-        font-weight: 600;
+        font-size: 11px;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.06em;
         color: var(--muted);
         margin: 28px 0 10px;
       }
@@ -56,6 +123,8 @@
         color: var(--accent-dark);
         text-decoration: underline;
       }
+
+      /* ── Tables ── */
       table {
         width: 100%;
         border-collapse: separate;
@@ -80,12 +149,10 @@
         color: var(--muted);
         background: #fafbfc;
       }
-      tbody tr:last-child td {
-        border-bottom: none;
-      }
-      tbody tr:hover {
-        background: #fafbff;
-      }
+      tbody tr:last-child td { border-bottom: none; }
+      tbody tr:hover { background: #fafbff; }
+
+      /* ── Utilities ── */
       .meta {
         font-size: 12.5px;
         color: var(--muted);
@@ -111,15 +178,8 @@
         background: #f3f4f6;
         color: var(--muted);
       }
-      .status.confirmed {
-        background: #ecfdf5;
-        color: #047857;
-      }
-      .events {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
+      .status.confirmed { background: #ecfdf5; color: #047857; }
+      .events { display: flex; flex-wrap: wrap; gap: 8px; }
       .event {
         border: 1px solid var(--border);
         background: #fafbfc;
@@ -134,15 +194,8 @@
         margin-bottom: 2px;
         color: var(--ink);
       }
-      .score {
-        font-weight: 700;
-        color: var(--accent-dark);
-      }
-      .actions a {
-        margin-right: 14px;
-        font-size: 12.5px;
-        font-weight: 500;
-      }
+      .score { font-weight: 700; color: var(--accent-dark); }
+      .actions a { margin-right: 14px; font-size: 12.5px; font-weight: 500; }
       .article-text {
         white-space: pre-wrap;
         background: #fafbfc;
@@ -153,9 +206,7 @@
         font-family: "SF Mono", Menlo, Consolas, monospace;
         font-size: 12.5px;
       }
-      form {
-        margin-bottom: 4px;
-      }
+      form { margin-bottom: 4px; }
       input[type="text"] {
         font-family: inherit;
         font-size: 13px;
@@ -181,14 +232,28 @@
         color: #fff;
         cursor: pointer;
       }
-      button:hover, input[type="submit"]:hover {
-        background: var(--accent-dark);
-      }
+      button:hover, input[type="submit"]:hover { background: var(--accent-dark); }
     </style>
   </head>
   <body>
-    <div class="container">
-      {% block content %}{% endblock %}
+
+    <div id="header">
+      <a href="/admin/icfs" class="wordmark">Strata</a>
     </div>
+
+    <nav id="sidebar">
+      {% set path = request.url.path %}
+      <div class="nav-section">ICFS</div>
+      <a href="/admin/icfs/signals"    class="nav-item {% if path.startswith('/admin/icfs/signals') %}active{% endif %}">High Signal Events</a>
+      <a href="/admin/icfs/canonicals" class="nav-item {% if path.startswith('/admin/icfs/canonicals') or path.startswith('/admin/icfs/entity') %}active{% endif %}">Entities</a>
+      <a href="/admin/icfs/filings"    class="nav-item {% if path.startswith('/admin/icfs/filings') %}active{% endif %}">Filings &amp; Actions</a>
+      <a href="/admin/icfs/pleadings"  class="nav-item {% if path.startswith('/admin/icfs/pleadings') %}active{% endif %}">Pleadings</a>
+      <a href="/admin/icfs/notices"    class="nav-item {% if path.startswith('/admin/icfs/notices') %}active{% endif %}">Notices</a>
+    </nav>
+
+    <main id="main">
+      {% block content %}{% endblock %}
+    </main>
+
   </body>
 </html>

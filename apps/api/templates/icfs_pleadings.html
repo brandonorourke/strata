@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
   <h2>ICFS — Pleadings &amp; Comments</h2>
-  <div class="meta" style="margin-bottom: 12px;">
-    <a href="/admin/icfs">&larr; ICFS</a> · {{ total }} total
-  </div>
+  <div class="meta" style="margin-bottom: 12px;">{{ total }} total</div>
   <div class="meta" style="margin-bottom: 12px;">
     Note: applicant_names is blank on every row at the source. Where a row has a file_number that
     matches an already-ingested filing, we resolve the company via that structural join (zero
