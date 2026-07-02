@@ -6,6 +6,7 @@
 # Runs for all pleadings with detail_fetched_at IS NULL.
 # Resumable — committed per row, safe to stop and restart.
 
+import argparse
 import asyncio
 import logging
 import re
@@ -16,7 +17,7 @@ import httpx
 from sqlalchemy import select
 
 from strata_core.db import AsyncSessionLocal
-from strata_core.models import IcfsPleadingAndComment
+from strata_core.models import IcfsFiling, IcfsPleadingAndComment
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -109,13 +110,21 @@ def _extract_detail(result: dict) -> dict:
     return detail
 
 
-async def main() -> None:
+async def main(viasat_only: bool = False) -> None:
     async with AsyncSessionLocal() as session:
-        result = await session.execute(
+        stmt = (
             select(IcfsPleadingAndComment)
             .where(IcfsPleadingAndComment.detail_fetched_at.is_(None))
             .order_by(IcfsPleadingAndComment.sys_created_on.desc())
         )
+        if viasat_only:
+            viasat_file_numbers = select(IcfsFiling.file_number).where(
+                IcfsFiling.applicant_name.ilike("%viasat%"),
+                IcfsFiling.file_number.isnot(None),
+            )
+            stmt = stmt.where(IcfsPleadingAndComment.file_number.in_(viasat_file_numbers))
+
+        result = await session.execute(stmt)
         pleadings = result.scalars().all()
         pending = [(p.id, p.source_sys_id) for p in pleadings]
 
@@ -169,4 +178,7 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--viasat", action="store_true", help="Only fetch Viasat-related pleadings")
+    args = parser.parse_args()
+    asyncio.run(main(viasat_only=args.viasat))
