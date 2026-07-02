@@ -69,7 +69,7 @@ def _extract_detail(result: dict) -> dict:
     Download URL at attachment.actions.links[0].url
     """
     summary = None
-    attachments = []
+    raw_attachments = []
 
     for container in result.get("containers", []):
         for row in container.get("rows", []):
@@ -86,7 +86,7 @@ def _extract_detail(result: dict) -> dict:
                         attachments_tab = tab_widgets[0]
                         for sw in attachments_tab.get("widgets", []):
                             sw_data = sw.get("data") or {}
-                            attachments.extend(sw_data.get("all_data", []))
+                            raw_attachments.extend(sw_data.get("all_data", []))
 
     detail: dict = {}
 
@@ -94,7 +94,7 @@ def _extract_detail(result: dict) -> dict:
         detail["filer_name"] = _display(summary.get("filer_name"))
 
     attachment_list = []
-    for att in attachments:
+    for att in raw_attachments:
         links = att.get("actions", {}).get("links", [])
         url = links[0].get("url") if links else None
         if not url or not url.startswith("http"):
@@ -106,6 +106,8 @@ def _extract_detail(result: dict) -> dict:
 
     if attachment_list:
         detail["attachments"] = attachment_list
+
+    detail["raw_detail"] = {"summary": summary, "attachments": raw_attachments}
 
     return detail
 
@@ -154,6 +156,7 @@ async def main(viasat_only: bool = False) -> None:
                         continue
                     pleading.filer_name = detail.get("filer_name")
                     pleading.attachments = detail.get("attachments")
+                    pleading.raw_detail = detail.get("raw_detail")
                     pleading.detail_fetched_at = datetime.now(timezone.utc)
                     await session.commit()
 

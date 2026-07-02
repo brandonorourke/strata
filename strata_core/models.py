@@ -196,6 +196,7 @@ class IcfsFiling(Base):
     grant_doc_url = Column(Text, nullable=True)
     detail_fetched_at = Column(DateTime(timezone=True), nullable=True)
     attachments = Column(JSON, nullable=True)
+    raw_detail = Column(JSONB, nullable=True)
 
     # No real FK on ExtractedEvent.source_id (it's polymorphic) — read-only, icfs_filing-only view.
     extracted_events = relationship(
@@ -224,6 +225,7 @@ class IcfsPleadingAndComment(Base):
     filer_name = Column(Text, nullable=True)
     attachments = Column(JSON, nullable=True)
     detail_fetched_at = Column(DateTime(timezone=True), nullable=True)
+    raw_detail = Column(JSONB, nullable=True)
 
     # No real FK on ExtractedEvent.source_id (it's polymorphic) — read-only, icfs_pleading-only view.
     extracted_events = relationship(

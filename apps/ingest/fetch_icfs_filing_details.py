@@ -85,7 +85,7 @@ def _extract_detail(result: dict) -> dict:
       Each attachment's download URL is at attachment.actions.links[0].url
     """
     summary = None
-    attachments = []
+    raw_attachments = []
 
     for container in result.get("containers", []):
         for row in container.get("rows", []):
@@ -103,7 +103,7 @@ def _extract_detail(result: dict) -> dict:
                         attachments_tab = tab_widgets[0]  # first tab = Attachments
                         for sw in attachments_tab.get("widgets", []):
                             sw_data = sw.get("data") or {}
-                            attachments.extend(sw_data.get("all_data", []))
+                            raw_attachments.extend(sw_data.get("all_data", []))
 
     detail: dict = {}
 
@@ -120,7 +120,7 @@ def _extract_detail(result: dict) -> dict:
     # Build full attachment list and identify the grant PDF.
     # Download URL is at actions.links[0].url (not constructed from sys_id).
     attachment_list = []
-    for att in attachments:
+    for att in raw_attachments:
         links = att.get("actions", {}).get("links", [])
         url = links[0].get("url") if links else None
         if not url or not url.startswith("http"):
@@ -134,6 +134,8 @@ def _extract_detail(result: dict) -> dict:
 
     if attachment_list:
         detail["attachments"] = attachment_list
+
+    detail["raw_detail"] = {"summary": summary, "attachments": raw_attachments}
 
     return detail
 
@@ -181,6 +183,7 @@ async def main() -> None:
                     filing.begin_date = detail.get("begin_date")
                     filing.grant_doc_url = detail.get("grant_doc_url")
                     filing.attachments = detail.get("attachments")
+                    filing.raw_detail = detail.get("raw_detail")
                     filing.detail_fetched_at = datetime.now(timezone.utc)
                     await session.commit()
 
