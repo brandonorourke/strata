@@ -385,6 +385,27 @@ async def list_icfs_pleadings(request: Request, page: int = 1, page_size: int = 
     )
 
 
+@app.get("/admin/icfs/pleadings/{pleading_id}")
+async def icfs_pleading_detail(request: Request, pleading_id: int):
+    async with AsyncSessionLocal() as session:
+        pleading = await session.get(
+            IcfsPleadingAndComment, pleading_id,
+            options=[selectinload(IcfsPleadingAndComment.extracted_events)],
+        )
+        if pleading is None:
+            raise HTTPException(status_code=404, detail="Pleading not found")
+
+    return templates.TemplateResponse(
+        "icfs_pleading_detail.html",
+        {
+            "request": request,
+            "pleading": pleading,
+            "citation_url": _icfs_pleading_citation_url,
+            "title": f"Strata - {pleading.pleading_type or 'Pleading'} {pleading.file_number or ''}".strip(),
+        },
+    )
+
+
 @app.get("/admin/icfs/notices")
 async def list_icfs_notices(request: Request, page: int = 1, page_size: int = 50):
     if page < 1:

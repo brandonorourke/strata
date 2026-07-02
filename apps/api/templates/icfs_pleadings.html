@@ -44,7 +44,8 @@
           {% endif %}
         </td>
         <td class="actions">
-          <a href="{{ citation_url(pleading) }}" target="_blank" rel="noopener">source filing</a>
+          <a href="/admin/icfs/pleadings/{{ pleading.id }}">detail</a>
+          <a href="{{ citation_url(pleading) }}" target="_blank" rel="noopener">ICFS</a>
         </td>
       </tr>
     {% endfor %}

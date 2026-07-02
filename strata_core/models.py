@@ -221,6 +221,9 @@ class IcfsPleadingAndComment(Base):
     ingested_at = Column(DateTime(timezone=True), server_default=func.now())
     file_number = Column(Text, nullable=True)
     entities_extracted_at = Column(DateTime(timezone=True), nullable=True)
+    filer_name = Column(Text, nullable=True)
+    attachments = Column(JSON, nullable=True)
+    detail_fetched_at = Column(DateTime(timezone=True), nullable=True)
 
     # No real FK on ExtractedEvent.source_id (it's polymorphic) — read-only, icfs_pleading-only view.
     extracted_events = relationship(

@@ -112,9 +112,26 @@
             {% endif %}
           {% elif card_type == "pleading" %}
             <div style="font-size: 0.8em; color: var(--muted);">
-              {{ row.pleading.pleading_type or "Pleading" }}{% if row.filing %} · {{ row.filing.file_number }}{% endif %}
+              <a href="/admin/icfs/pleadings/{{ row.pleading.id }}" style="color: var(--muted);">{{ row.pleading.pleading_type or "Pleading" }}</a>
+              {% if row.pleading.filer_name %}<span style="color: var(--ink); margin-left: 6px;">{{ row.pleading.filer_name }}</span>{% endif %}
+              {% if row.filing %} · {{ row.filing.file_number }}{% endif %}
               {% if row.doc_url %}&nbsp;<a href="{{ row.doc_url }}" target="_blank">↗ ICFS</a>{% endif %}
             </div>
+            {% if row.pleading.attachments %}
+              <details style="margin-top: 8px;">
+                <summary style="font-size: 0.8em; color: var(--muted); cursor: pointer;">attachments ({{ row.pleading.attachments | length }})</summary>
+                <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                  {% for att in row.pleading.attachments %}
+                    <div style="font-size: 0.8em; display: flex; gap: 8px; align-items: baseline;">
+                      <a href="{{ att.url }}" target="_blank" rel="noopener" style="flex-shrink: 0;">↗</a>
+                      <span style="color: var(--ink);">{{ att.name or "Document" }}</span>
+                      {% if att.description %}<span class="meta">· {{ att.description }}</span>{% endif %}
+                      {% if att.date %}<span class="meta" style="white-space: nowrap;">{{ att.date }}</span>{% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              </details>
+            {% endif %}
           {% endif %}
         </div>
       </div>

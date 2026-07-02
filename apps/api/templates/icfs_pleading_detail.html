@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="meta" style="margin-bottom: 12px;">
+    <a href="/admin/icfs/pleadings">&larr; Pleadings</a>
+  </div>
+
+  <h2>{{ pleading.pleading_type or "Pleading" }}{% if pleading.file_number %} &mdash; {{ pleading.file_number }}{% endif %}</h2>
+  <div class="meta" style="margin-bottom: 20px;">
+    {{ pleading.filer_name or pleading.applicant_names or "—" }}
+  </div>
+
+  <!-- Key fields -->
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px;">
+    <div>
+      <div class="meta" style="margin-bottom: 2px;">Filed</div>
+      <div>{{ pleading.sys_created_on.strftime("%Y-%m-%d") if pleading.sys_created_on else "—" }}</div>
+    </div>
+    <div>
+      <div class="meta" style="margin-bottom: 2px;">Type</div>
+      <div>{{ pleading.pleading_type or "—" }}</div>
+    </div>
+    <div>
+      <div class="meta" style="margin-bottom: 2px;">File Number</div>
+      <div>
+        {% if pleading.file_number %}
+          <a href="/admin/icfs/filings?q={{ pleading.file_number }}">{{ pleading.file_number }}</a>
+        {% else %}
+          —
+        {% endif %}
+      </div>
+    </div>
+    <div>
+      <div class="meta" style="margin-bottom: 2px;">Filer</div>
+      <div>{{ pleading.filer_name or "—" }}</div>
+    </div>
+  </div>
+
+  <!-- Links -->
+  <div style="margin-bottom: 28px;">
+    <a href="{{ citation_url(pleading) }}" target="_blank" rel="noopener">↗ ICFS Portal</a>
+  </div>
+
+  <!-- Attachments -->
+  {% if pleading.attachments %}
+    <h3>Attachments</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Document</th>
+          <th>Description</th>
+          <th>Date</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for att in pleading.attachments %}
+          <tr>
+            <td>{{ att.name or "—" }}</td>
+            <td class="meta">{{ att.description or "" }}</td>
+            <td class="meta" style="white-space: nowrap;">{{ att.date or "" }}</td>
+            <td class="actions"><a href="{{ att.url }}" target="_blank" rel="noopener">↗</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="meta" style="margin-bottom: 24px;">No attachments{% if not pleading.detail_fetched_at %} — details not yet fetched{% endif %}.</div>
+  {% endif %}
+
+  <!-- Extracted events -->
+  {% if pleading.extracted_events %}
+    <h3>Extracted Events</h3>
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      {% for ev in pleading.extracted_events %}
+        <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px; background: var(--surface);">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+            <strong style="font-size: 0.9em;">{{ ev.extracted_name }}</strong>
+            {% if ev.event_date %}
+              <span class="meta" style="font-size: 0.8em;">{{ ev.event_date.strftime("%Y-%m-%d") }}</span>
+            {% endif %}
+          </div>
+          {% if ev.event_type %}
+            <div class="meta" style="font-size: 0.8em; margin-bottom: 6px;">{{ ev.event_type }}</div>
+          {% endif %}
+          {% if ev.llm_summary %}
+            <div style="font-size: 0.9em; line-height: 1.55; color: var(--text-secondary);">{{ ev.llm_summary }}</div>
+          {% endif %}
+          {% if ev.signal_tier == "signal" %}
+            <div style="margin-top: 6px;">
+              <span style="font-size: 11px; font-weight: 600; color: #b45309; background: #fef3c7; border-radius: 4px; padding: 2px 7px;">
+                {{ ev.signal_reason or "signal" }}
+              </span>
+            </div>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}
