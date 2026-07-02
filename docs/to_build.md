@@ -7,9 +7,11 @@
    - Sync filings: `psql $RAILWAY_URL -c "TRUNCATE icfs_filings;"` + `pg_dump strata --no-owner --no-acl --data-only -t icfs_filings | psql $RAILWAY_URL`
    - Sync pleadings: `psql $RAILWAY_URL -c "TRUNCATE icfs_pleadings_and_comments;"` + `pg_dump strata --no-owner --no-acl --data-only -t icfs_pleadings_and_comments | psql $RAILWAY_URL`
 
-2. **Set up Railway crons** for incremental ingest. Scripts to run daily in order:
-   - `ingest_icfs.py` (incremental new filings/pleadings/notices)
-   - `fetch_icfs_filing_details.py` (picks up any new filings with `detail_fetched_at IS NULL`)
+2. ~~**Fix `ingest_icfs.py` incremental to add second pass by `action_taken_date`**~~ — **DONE.** `ingest_icfs.py` now runs `x_fmc_ibfs_base_table` twice in incremental mode: pass 1 by `submission_date` (new filings), pass 2 by `action_taken_date` (actions on old filings). See `docs/ingest.md` for full documentation.
+
+3. **Set up Railway crons** for incremental ingest. Scripts to run daily in order:
+   - `ingest_icfs.py ICFS_MODE=incremental` (two passes: new filings + recent actions)
+   - `fetch_icfs_filing_details.py` (picks up new/updated filings with `detail_fetched_at IS NULL`)
    - `fetch_icfs_pleading_details.py` (same)
    - `fetch_icfs_notice_documents.py` (new DA notices)
    - `extract_icfs_entities.py`, `extract_icfs_notice_entities.py`, `extract_icfs_notice_summaries.py`

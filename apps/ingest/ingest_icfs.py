@@ -5,9 +5,8 @@
 # touch extracted_entities/extracted_events; see extract_icfs_entities.py for
 # the processing step that promotes structured rows into the canonical model.
 #
-# Two modes (ICFS_MODE env var):
-#   backfill    — resumes from stored page in icfs_ingest_state, walks to end of history
-#   incremental — starts from newest, stops when records are older than MAX(date) - 1 day
+# Three modes (ICFS_MODE env var): backfill (default), incremental (two passes for filings).
+# See main() docstring for details.
 
 import asyncio
 import logging
@@ -19,7 +18,7 @@ import httpx
 from sqlalchemy import func, select
 
 from strata_core.db import AsyncSessionLocal
-from strata_core.models import IcfsFiling, IcfsIngestState, IcfsPleadingAndComment, IcfsPublicNotice
+from strata_core.models import IcfsFiling, IcfsFilingActionHistory, IcfsIngestState, IcfsPleadingAndComment, IcfsPublicNotice
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -243,9 +242,27 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
 
                 sys_id = row["sys_id"]
                 existing = await session.execute(
-                    select(model.id).where(model.source_sys_id == sys_id).limit(1)
+                    select(model).where(model.source_sys_id == sys_id).limit(1)
                 )
-                if existing.scalar_one_or_none() is not None:
+                existing_obj = existing.scalar_one_or_none()
+
+                if existing_obj is not None:
+                    # For filings: if a previously actionless row now has an action, update it.
+                    if table == "x_fmc_ibfs_base_table":
+                        incoming_action = _field(row, "action")
+                        incoming_action_date = _parse_glide_datetime(_field(row, "action_taken_date"))
+                        if incoming_action != existing_obj.action or incoming_action_date != existing_obj.action_taken_date:
+                            session.add(IcfsFilingActionHistory(
+                                filing_id=existing_obj.id,
+                                action=incoming_action,
+                                action_taken_date=incoming_action_date,
+                                detected_at=datetime.now(timezone.utc),
+                            ))
+                            existing_obj.action = incoming_action
+                            existing_obj.action_taken_date = incoming_action_date
+                            existing_obj.detail_fetched_at = None
+                            page_new += 1
+                            new_count += 1
                     continue
 
                 session.add(model(**_row_to_model_kwargs(table, row)))
@@ -288,15 +305,22 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
 
 async def main() -> None:
     """
-    ICFS_MODE=backfill (default): resumes from stored page in icfs_ingest_state per table,
-    walks to end of history. Safe to stop and restart — picks up where it left off.
+    Three ingest modes (ICFS_MODE env var):
 
-    ICFS_MODE=incremental: starts from newest, stops when records are older than
-    MAX(date) - 1 day. Designed for daily runs after the backfill is complete.
+    backfill (default):
+      Resumes from stored page in icfs_ingest_state per table, walks to end of history.
+      Ordered by submission_date. Safe to stop and restart.
+
+    incremental:
+      Pass 1 — x_fmc_ibfs_base_table ordered by submission_date: picks up new filings.
+      Pass 2 — x_fmc_ibfs_base_table ordered by action_taken_date: picks up actions taken
+        on old filings (e.g. a 2021 pending filing granted today). Without this pass, only
+        filings submitted in the last day would have their action field updated.
+      Pleadings and notices: ordered by their respective date fields, same stop logic.
 
     ICFS_MAX_PAGES caps pages per table (useful for test runs).
-    ICFS_STOP_BEFORE_DATE (YYYY-MM-DD) stops each table when records older than that date are reached,
-    then moves on to the next table. Useful for capping a backfill at a meaningful cutoff date.
+    ICFS_STOP_BEFORE_DATE (YYYY-MM-DD) stops each table when records older than that date
+      are reached. Useful for capping a backfill at a meaningful cutoff date.
     """
     max_pages_env = os.getenv("ICFS_MAX_PAGES")
     max_pages = int(max_pages_env) if max_pages_env else None
@@ -325,7 +349,23 @@ async def main() -> None:
                 await session.rollback()
                 logger.error("Error ingesting %s: %r", spec["table"], e)
 
-        logger.info("Done. Total new ICFS rows inserted: %d", total_new)
+        # Incremental pass 2: re-walk filings by action_taken_date to catch actions
+        # on old filings (e.g. a 2021 filing that gets granted today). Without this,
+        # only filings submitted recently would have their action field updated.
+        if mode == "incremental":
+            filing_spec = next(s for s in ICFS_TABLES if s["table"] == "x_fmc_ibfs_base_table")
+            try:
+                new_for_pass2 = await ingest_table(
+                    session, filing_spec["table"], filing_spec["fields"], "action_taken_date",
+                    filing_spec["model"], max_pages, mode, stop_date,
+                )
+                total_new += new_for_pass2
+                logger.info("x_fmc_ibfs_base_table (action_taken_date pass): %d updated rows.", new_for_pass2)
+            except Exception as e:
+                await session.rollback()
+                logger.error("Error on filing action_taken_date pass: %r", e)
+
+        logger.info("Done. Total new ICFS rows inserted/updated: %d", total_new)
 
 
 if __name__ == "__main__":

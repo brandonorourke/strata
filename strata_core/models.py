@@ -288,6 +288,18 @@ class IcfsCanonicalEntity(Base):
     extracted_entities = relationship("ExtractedEntity", back_populates="icfs_canonical_entity")
 
 
+class IcfsFilingActionHistory(Base):
+    """Append-only log of action changes detected during incremental ingest."""
+
+    __tablename__ = "icfs_filing_action_history"
+
+    id = Column(Integer, primary_key=True, index=True)
+    filing_id = Column(Integer, ForeignKey("icfs_filings.id"), nullable=False)
+    action = Column(Text, nullable=True)
+    action_taken_date = Column(DateTime(timezone=True), nullable=True)
+    detected_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class IcfsIngestState(Base):
     """One row per ICFS source table, tracking resumable backfill progress."""
 
