@@ -30,10 +30,18 @@
           <div class="meta">{{ filing.call_sign or "" }}</div>
         </td>
         <td>{{ filing.applicant_name or "—" }}</td>
-        <td>{{ filing.file_number or "—" }}</td>
+        <td>
+          <div>{{ filing.file_number or "—" }}</div>
+          {% if filing.brief_description %}
+            <div class="meta" style="margin-top: 2px;">{{ filing.brief_description }}</div>
+          {% endif %}
+        </td>
         <td>
           <div>{{ filing.action or "—" }}</div>
           <div class="meta">{{ filing.action_taken_date.strftime("%Y-%m-%d") if filing.action_taken_date else "" }}</div>
+          {% if filing.expiration_date %}
+            <div class="meta">exp {{ filing.expiration_date.strftime("%Y-%m-%d") }}</div>
+          {% endif %}
         </td>
         <td>
           {% if filing.extracted_events %}
@@ -55,9 +63,9 @@
         </td>
         <td class="actions">
           {% set url = citation_url(filing) %}
-          {% if url %}
-            <a href="{{ url }}" target="_blank" rel="noopener">source filing</a>
-          {% endif %}
+          {% if url %}<a href="{{ url }}" target="_blank" rel="noopener">ICFS</a>{% endif %}
+          {% if filing.grant_doc_url %}<a href="{{ filing.grant_doc_url }}" target="_blank" rel="noopener">grant PDF</a>{% endif %}
+          {% if filing.action_pn_url %}<a href="{{ filing.action_pn_url }}" target="_blank" rel="noopener">PN</a>{% endif %}
         </td>
       </tr>
     {% endfor %}
