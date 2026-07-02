@@ -1,9 +1,13 @@
 # To Build
 
+## Tomorrow (2026-07-02)
+
+1. **Sync `icfs_filings` to prod** — local `fetch_icfs_filing_details.py` finishes tonight (~25 min left as of EOD). Then: `psql $RAILWAY_URL -c "TRUNCATE icfs_filings;"` + `pg_dump strata --no-owner --no-acl --data-only -t icfs_filings | psql $RAILWAY_URL`. Safe — no enforced FK from `extracted_entities` to `icfs_filings`.
+2. **Set up incremental ingest on prod** — Railway cron job (check plan for scheduled task support) running `ingest_icfs.py` with `ICFS_MODE=incremental` daily. Also run `extract_icfs_entities.py`, `extract_icfs_notice_entities.py`, `extract_icfs_notice_summaries.py` after each ingest to keep summaries current.
+3. **Pleadings document text + LLM summary** — new script analogous to notice pipeline.
+
 ## Next (priority order)
 
-- **Deploy to prod with DB mirrored from dev.** Wait for `fetch_icfs_filing_details.py` to finish, then: provision Railway Postgres, `pg_dump strata --no-owner | psql $RAILWAY_DATABASE_URL`, set `DATABASE_URL` + `OPENAI_API_KEY` env vars, `git push origin main`.
-- **Scheduled incremental ingest on prod.** Once deployed, prod goes stale without a daily run of `ingest_icfs.py` in incremental mode. Set up as a Railway cron job or scheduled task.
 - **Pleadings document text + LLM summary.** Pleadings show on entity timeline with type + file_number only; no content fetched or summarized yet. Need a `fetch_icfs_pleading_documents.py` + LLM pass analogous to the notice pipeline.
 - **STA Grant PDF extraction.** `grant_doc_url` is now populated per Viasat filing (after `fetch_icfs_filing_details.py` runs). Fetch + extract text from those PDFs to summarize grant terms/conditions on the timeline.
 - **Remove Viasat hardcoding from `fetch_icfs_filing_details.py`.** Currently filters `applicant_name ILIKE '%Viasat%'`; should run for all filings with `action IS NOT NULL` and `detail_fetched_at IS NULL`.
