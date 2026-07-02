@@ -1,10 +1,20 @@
 # To Build
 
-## Tomorrow (2026-07-02)
+## Next (immediate, in order)
 
-1. **Sync `icfs_filings` to prod** — local `fetch_icfs_filing_details.py` finishes tonight (~25 min left as of EOD). Then: `psql $RAILWAY_URL -c "TRUNCATE icfs_filings;"` + `pg_dump strata --no-owner --no-acl --data-only -t icfs_filings | psql $RAILWAY_URL`. Safe — no enforced FK from `extracted_entities` to `icfs_filings`.
-2. **Set up incremental ingest on prod** — Railway cron job (check plan for scheduled task support) running `ingest_icfs.py` with `ICFS_MODE=incremental` daily. Also run `extract_icfs_entities.py`, `extract_icfs_notice_entities.py`, `extract_icfs_notice_summaries.py` after each ingest to keep summaries current.
-3. **Pleadings document text + LLM summary** — new script analogous to notice pipeline.
+1. **Sync to prod after local pulls finish** (filings ~1hr, pleadings ~4.6hr remaining as of 2026-07-02 afternoon)
+   - Apply migrations on prod: `psql $RAILWAY_URL -f migrations/0027_icfs_pleading_details.sql` and `psql $RAILWAY_URL -f migrations/0028_raw_detail.sql`
+   - Sync filings: `psql $RAILWAY_URL -c "TRUNCATE icfs_filings;"` + `pg_dump strata --no-owner --no-acl --data-only -t icfs_filings | psql $RAILWAY_URL`
+   - Sync pleadings: `psql $RAILWAY_URL -c "TRUNCATE icfs_pleadings_and_comments;"` + `pg_dump strata --no-owner --no-acl --data-only -t icfs_pleadings_and_comments | psql $RAILWAY_URL`
+
+2. **Set up Railway crons** for incremental ingest. Scripts to run daily in order:
+   - `ingest_icfs.py` (incremental new filings/pleadings/notices)
+   - `fetch_icfs_filing_details.py` (picks up any new filings with `detail_fetched_at IS NULL`)
+   - `fetch_icfs_pleading_details.py` (same)
+   - `fetch_icfs_notice_documents.py` (new DA notices)
+   - `extract_icfs_entities.py`, `extract_icfs_notice_entities.py`, `extract_icfs_notice_summaries.py`
+
+3. **Alerting for SAT-PPL-20211207-00172** — Stas asked for this specifically. Watch for new filings/actions/pleadings where `file_number = 'SAT-PPL-20211207-00172'` and send an email when something new appears. Needs: a `watched_file_numbers` table or config, a check script that runs after each ingest, and an email send (sendgrid or SMTP).
 
 ## Next (priority order)
 

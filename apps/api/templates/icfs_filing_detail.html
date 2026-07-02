@@ -83,6 +83,31 @@
     <div class="meta" style="margin-bottom: 24px;">No attachments{% if not filing.detail_fetched_at %} — details not yet fetched{% endif %}.</div>
   {% endif %}
 
+  <!-- Pleading history -->
+  {% if pleadings %}
+    <h3>Pleading History ({{ pleadings | length }})</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Filed</th>
+          <th>Type</th>
+          <th>Filer</th>
+          <th>ICFS Link</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in pleadings %}
+          <tr>
+            <td style="white-space: nowrap;">{{ p.sys_created_on.strftime("%Y-%m-%d") if p.sys_created_on else "—" }}</td>
+            <td><a href="/admin/icfs/pleadings/{{ p.id }}">{{ p.pleading_type or "—" }}</a></td>
+            <td>{{ p.filer_name or "—" }}</td>
+            <td class="actions"><a href="{{ citation_url_pleading(p) }}" target="_blank" rel="noopener">↗</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+
   <!-- Extracted events -->
   {% if filing.extracted_events %}
     <h3>Extracted Events</h3>

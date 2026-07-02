@@ -4,8 +4,8 @@
   <div class="meta" style="margin-bottom: 12px;">{{ total }} total</div>
 
   <form method="get" action="/admin/icfs/filings" style="margin-bottom: 12px;">
-    <input type="text" name="q" value="{{ q }}" placeholder="Filter by applicant name…" style="padding: 6px 8px; width: 280px;">
-    <button type="submit">Filter</button>
+    <input type="text" name="q" value="{{ q }}" placeholder="Search applicant or file number…" style="padding: 6px 8px; width: 300px;">
+    <button type="submit">Search</button>
     {% if q %}<a href="/admin/icfs/filings" style="margin-left: 8px;">Clear</a>{% endif %}
   </form>
 
@@ -16,15 +16,14 @@
         <th>Applicant</th>
         <th>File Number</th>
         <th>Action</th>
-        <th>Entities / Events</th>
-        <th>Links</th>
+        <th>ICFS Link</th>
       </tr>
     </thead>
     <tbody>
     {% for filing in filings %}
       <tr>
-        <td>
-          <div>{{ filing.submission_date.strftime("%Y-%m-%d %H:%M") if filing.submission_date else "—" }}</div>
+        <td style="white-space: nowrap;">
+          <div>{{ filing.submission_date.strftime("%Y-%m-%d") if filing.submission_date else "—" }}</div>
           <div class="meta">{{ filing.call_sign or "" }}</div>
         </td>
         <td>{{ filing.applicant_name or "—" }}</td>
@@ -41,27 +40,9 @@
             <div class="meta">exp {{ filing.expiration_date.strftime("%Y-%m-%d") }}</div>
           {% endif %}
         </td>
-        <td>
-          {% if filing.extracted_events %}
-            <div class="events">
-              {% for event in filing.extracted_events %}
-                <div class="event">
-                  <strong>{{ event.extracted_name }}</strong>
-                  <div class="meta">{{ event.event_type or "event" }}</div>
-                </div>
-              {% endfor %}
-            </div>
-          {% else %}
-            {% if filing.entities_extracted_at %}
-              <div class="meta">Processed: no extracted events</div>
-            {% else %}
-              <div class="meta">Not processed yet</div>
-            {% endif %}
-          {% endif %}
-        </td>
         <td class="actions">
           {% set url = citation_url(filing) %}
-          {% if url %}<a href="{{ url }}" target="_blank" rel="noopener">ICFS</a>{% endif %}
+          {% if url %}<a href="{{ url }}" target="_blank" rel="noopener">↗</a>{% endif %}
           {% if filing.grant_doc_url %}<a href="{{ filing.grant_doc_url }}" target="_blank" rel="noopener">grant PDF</a>{% endif %}
           {% if filing.action_pn_url %}<a href="{{ filing.action_pn_url }}" target="_blank" rel="noopener">PN</a>{% endif %}
         </td>

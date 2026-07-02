@@ -312,9 +312,13 @@ async def list_icfs_filings(request: Request, page: int = 1, page_size: int = 50
     offset = (page - 1) * page_size
 
     async with AsyncSessionLocal() as session:
+        from sqlalchemy import or_
         filters = []
         if q:
-            filters.append(IcfsFiling.applicant_name.ilike(f"%{q}%"))
+            filters.append(or_(
+                IcfsFiling.applicant_name.ilike(f"%{q}%"),
+                IcfsFiling.file_number.ilike(f"%{q}%"),
+            ))
 
         count_stmt = select(func.count()).select_from(IcfsFiling).where(*filters)
         count_result = await session.execute(count_stmt)
@@ -322,7 +326,6 @@ async def list_icfs_filings(request: Request, page: int = 1, page_size: int = 50
 
         stmt = (
             select(IcfsFiling)
-            .options(selectinload(IcfsFiling.extracted_events))
             .where(*filters)
             .order_by(IcfsFiling.submission_date.desc().nullslast(), IcfsFiling.id.desc())
             .offset(offset)
@@ -355,12 +358,23 @@ async def icfs_filing_detail(request: Request, filing_id: int):
         if filing is None:
             raise HTTPException(status_code=404, detail="Filing not found")
 
+        pleadings = []
+        if filing.file_number:
+            p_result = await session.execute(
+                select(IcfsPleadingAndComment)
+                .where(IcfsPleadingAndComment.file_number.ilike(f"%{filing.file_number}%"))
+                .order_by(IcfsPleadingAndComment.sys_created_on.desc().nullslast())
+            )
+            pleadings = list(p_result.scalars().all())
+
     return templates.TemplateResponse(
         "icfs_filing_detail.html",
         {
             "request": request,
             "filing": filing,
+            "pleadings": pleadings,
             "citation_url": _icfs_filing_citation_url,
+            "citation_url_pleading": _icfs_pleading_citation_url,
             "title": f"Strata - {filing.file_number or 'Filing'}",
         },
     )
