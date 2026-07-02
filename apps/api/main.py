@@ -2,8 +2,10 @@
 
 from datetime import datetime, timedelta, timezone, date
 
+import httpx
+
 from fastapi import FastAPI, Request, HTTPException, Form
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, and_
 from sqlalchemy.orm import selectinload
@@ -43,6 +45,27 @@ _EVENT_TYPE_WEIGHTS = {
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/proxy/pdf")
+async def proxy_pdf(url: str):
+    """Fetch a PDF from an external URL and serve it inline so it renders in-browser."""
+    allowed_hosts = {"api-prod.fcc.gov", "docs.fcc.gov", "www.fcc.gov"}
+    from urllib.parse import urlparse
+    host = urlparse(url).hostname or ""
+    if host not in allowed_hosts:
+        raise HTTPException(status_code=400, detail="URL not allowed")
+
+    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+        resp = await client.get(url, headers={"User-Agent": "Mozilla/5.0"})
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail="Failed to fetch PDF")
+
+    return StreamingResponse(
+        iter([resp.content]),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline"},
+    )
 
 
 @app.get("/")
