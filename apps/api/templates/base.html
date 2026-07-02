@@ -238,14 +238,14 @@
   <body>
 
     <div id="header">
-      <a href="/admin/icfs" class="wordmark">Strata</a>
+      <a href="/admin/icfs/canonicals" class="wordmark">Strata</a>
     </div>
 
     <nav id="sidebar">
       {% set path = request.url.path %}
       <div class="nav-section">ICFS</div>
+      <a href="/admin/icfs/canonicals" class="nav-item {% if path.startswith('/admin/icfs/canonicals') or path.startswith('/admin/icfs/entity') %}active{% endif %}">All Companies</a>
       <a href="/admin/icfs/signals"    class="nav-item {% if path.startswith('/admin/icfs/signals') %}active{% endif %}">High Signal Events</a>
-      <a href="/admin/icfs/canonicals" class="nav-item {% if path.startswith('/admin/icfs/canonicals') or path.startswith('/admin/icfs/entity') %}active{% endif %}">Entities</a>
       <a href="/admin/icfs/filings"    class="nav-item {% if path.startswith('/admin/icfs/filings') %}active{% endif %}">Filings &amp; Actions</a>
       <a href="/admin/icfs/pleadings"  class="nav-item {% if path.startswith('/admin/icfs/pleadings') %}active{% endif %}">Pleadings</a>
       <a href="/admin/icfs/notices"    class="nav-item {% if path.startswith('/admin/icfs/notices') %}active{% endif %}">Notices</a>

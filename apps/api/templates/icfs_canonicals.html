@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-  <h2>ICFS — Canonical Entities</h2>
-  <div class="meta" style="margin-bottom: 12px;">{{ total }} distinct companies, collapsed by exact name within ICFS filings only.</div>
+  <h2>All Companies</h2>
+  <div class="meta" style="margin-bottom: 12px;">{{ total }} distinct companies found in ICFS filings</div>
 
   <table>
     <thead>
@@ -10,20 +10,15 @@
         <th>First Seen</th>
         <th>Last Seen</th>
         <th>Appearances</th>
-        <th>Links</th>
       </tr>
     </thead>
     <tbody>
     {% for canonical, mention_count in canonicals %}
       <tr>
-        <td>{{ canonical.canonical_name }}</td>
+        <td><a href="/admin/icfs/entity/{{ canonical.id }}">{{ canonical.canonical_name }}</a></td>
         <td>{{ canonical.first_seen_at.strftime("%Y-%m-%d") if canonical.first_seen_at else "—" }}</td>
         <td>{{ canonical.last_seen_at.strftime("%Y-%m-%d") if canonical.last_seen_at else "—" }}</td>
         <td>{{ mention_count }}</td>
-        <td class="actions">
-          <a href="/admin/icfs/entity/{{ canonical.id }}">timeline</a>
-          · <a href="/admin/icfs/filings?q={{ canonical.canonical_name | urlencode }}">filings</a>
-        </td>
       </tr>
     {% endfor %}
     </tbody>

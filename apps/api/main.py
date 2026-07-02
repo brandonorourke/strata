@@ -447,6 +447,7 @@ async def list_icfs_notices(request: Request, page: int = 1, page_size: int = 50
 
         stmt = (
             select(IcfsPublicNotice)
+            .options(selectinload(IcfsPublicNotice.extracted_events))
             .order_by(IcfsPublicNotice.public_notice_release_date.desc().nullslast(), IcfsPublicNotice.id.desc())
             .offset(offset)
             .limit(page_size)

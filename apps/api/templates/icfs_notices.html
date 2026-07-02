@@ -7,22 +7,31 @@
       <tr>
         <th>Released</th>
         <th>Number</th>
-        <th>Subsystem</th>
         <th>Type</th>
-        <th>Links</th>
+        <th>Companies</th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
     {% for notice in notices %}
+      {% set companies = notice.extracted_events | map(attribute='extracted_name') | unique | list %}
       <tr>
-        <td>{{ notice.public_notice_release_date.strftime("%Y-%m-%d") if notice.public_notice_release_date else "—" }}</td>
-        <td><a href="/admin/icfs/notices/{{ notice.id }}">{{ notice.number or "—" }}</a></td>
-        <td>{{ notice.subsystem or "—" }}</td>
+        <td style="white-space: nowrap;">{{ notice.public_notice_release_date.strftime("%Y-%m-%d") if notice.public_notice_release_date else "—" }}</td>
+        <td><a href="/admin/icfs/notices/{{ notice.id }}">{{ notice.number or "—" }}</a>{% if notice.da_number %}<div class="meta">DA {{ notice.da_number }}</div>{% endif %}</td>
         <td>{{ notice.type_of_document or "—" }}</td>
-        <td class="actions">
-          {% if notice.url %}
-            <a href="{{ notice.url }}" target="_blank" rel="noopener">source filing</a>
+        <td>
+          {% if companies %}
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+              {% for name in companies %}
+                <span class="meta">{{ name }}{% if not loop.last %} &middot;{% endif %}</span>
+              {% endfor %}
+            </div>
+          {% else %}
+            <span class="meta">—</span>
           {% endif %}
+        </td>
+        <td class="actions">
+          {% if notice.url %}<a href="{{ notice.url }}" target="_blank" rel="noopener">↗</a>{% endif %}
         </td>
       </tr>
     {% endfor %}
