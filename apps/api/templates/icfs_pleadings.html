@@ -2,48 +2,47 @@
 {% block content %}
   <h2>ICFS — Pleadings &amp; Comments</h2>
   <div class="meta" style="margin-bottom: 12px;">{{ total }} total</div>
-  <div class="meta" style="margin-bottom: 12px;">
-    Note: applicant_names is blank on every row at the source. Where a row has a file_number that
-    matches an already-ingested filing, we resolve the company via that structural join (zero
-    ambiguity, no document text needed) — shown below. Most rows won't resolve yet, either
-    because file_number itself is blank (~65-80% of rows) or because the referenced filing
-    hasn't been ingested.
-  </div>
 
   <table>
     <thead>
       <tr>
-        <th>Created</th>
-        <th>Pleading Type</th>
+        <th>Filed</th>
         <th>File Number</th>
-        <th>Resolved Company</th>
-        <th>Links</th>
+        <th>Type</th>
+        <th>Filer</th>
+        <th>Associated Applicant</th>
+        <th>ICFS Link</th>
       </tr>
     </thead>
     <tbody>
     {% for pleading in pleadings %}
+      {% set companies = pleading.extracted_events | map(attribute='extracted_name') | unique | list %}
       <tr>
-        <td>{{ pleading.sys_created_on.strftime("%Y-%m-%d %H:%M") if pleading.sys_created_on else "—" }}</td>
-        <td>{{ pleading.pleading_type or "—" }}</td>
-        <td>{{ pleading.file_number or "—" }}</td>
+        <td style="white-space: nowrap;">{{ pleading.sys_created_on.strftime("%Y-%m-%d") if pleading.sys_created_on else "—" }}</td>
         <td>
-          {% if pleading.extracted_events %}
-            {% for event in pleading.extracted_events %}
-              <div class="event">
-                <strong>{{ event.extracted_name }}</strong>
-              </div>
-            {% endfor %}
+          {% if pleading.file_number %}
+            {% set fns = pleading.file_number.split(', ') %}
+            <a href="/admin/icfs/pleadings/{{ pleading.id }}">{{ fns[0] }}</a>
+            {% if fns | length > 1 %}<span class="meta"> +{{ fns | length - 1 }} more</span>{% endif %}
           {% else %}
-            {% if pleading.entities_extracted_at %}
-              <span class="meta">Unresolved</span>
-            {% else %}
-              <span class="meta">Not processed yet</span>
-            {% endif %}
+            <a href="/admin/icfs/pleadings/{{ pleading.id }}" class="meta">No file number</a>
+          {% endif %}
+        </td>
+        <td>{{ pleading.pleading_type or "—" }}</td>
+        <td>{{ pleading.filer_name or "—" }}</td>
+        <td>
+          {% if companies %}
+            <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+              {% for name in companies %}
+                <span class="meta">{{ name }}{% if not loop.last %} &middot;{% endif %}</span>
+              {% endfor %}
+            </div>
+          {% else %}
+            <span class="meta">—</span>
           {% endif %}
         </td>
         <td class="actions">
-          <a href="/admin/icfs/pleadings/{{ pleading.id }}">detail</a>
-          <a href="{{ citation_url(pleading) }}" target="_blank" rel="noopener">ICFS</a>
+          <a href="{{ citation_url(pleading) }}" target="_blank" rel="noopener">↗</a>
         </td>
       </tr>
     {% endfor %}

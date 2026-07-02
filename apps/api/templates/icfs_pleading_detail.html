@@ -19,7 +19,9 @@
       <div class="meta" style="margin-bottom: 2px;">File Number</div>
       <div>
         {% if pleading.file_number %}
-          <a href="/admin/icfs/filings?q={{ pleading.file_number }}">{{ pleading.file_number }}</a>
+          {% for fn in pleading.file_number.split(', ') %}
+            <div><a href="https://fccprod.servicenowservices.com/ibfs?id=ibfs_application_summary&number={{ fn }}" target="_blank" rel="noopener">{{ fn }}</a></div>
+          {% endfor %}
         {% else %}
           —
         {% endif %}

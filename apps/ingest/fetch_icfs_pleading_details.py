@@ -92,6 +92,7 @@ def _extract_detail(result: dict) -> dict:
 
     if summary:
         detail["filer_name"] = _display(summary.get("filer_name"))
+        detail["file_number"] = _display(summary.get("file_numbers"))
 
     attachment_list = []
     for att in raw_attachments:
@@ -155,6 +156,8 @@ async def main(viasat_only: bool = False) -> None:
                     if pleading is None:
                         continue
                     pleading.filer_name = detail.get("filer_name")
+                    if detail.get("file_number") and not pleading.file_number:
+                        pleading.file_number = detail.get("file_number")
                     pleading.attachments = detail.get("attachments")
                     pleading.raw_detail = detail.get("raw_detail")
                     pleading.detail_fetched_at = datetime.now(timezone.utc)
