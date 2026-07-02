@@ -90,11 +90,26 @@
               <div style="font-size: 0.9em; line-height: 1.5; color: var(--text-secondary); margin-bottom: 6px;">{{ row.filing.brief_description }}</div>
             {% endif %}
             <div style="font-size: 0.8em; color: var(--muted); font-family: monospace;">
-              {{ row.filing.file_number }}
+              <a href="/admin/icfs/filings/{{ row.filing.id }}" style="font-family: sans-serif;">{{ row.filing.file_number }}</a>
               {% if row.filing.expiration_date %}<span style="font-family: sans-serif; margin-left: 8px;">exp {{ row.filing.expiration_date.strftime("%Y-%m-%d") }}</span>{% endif %}
               {% if row.doc_url %}&nbsp;<a href="{{ row.doc_url }}" target="_blank" style="font-family: sans-serif; font-size: 0.9em;">↗ ICFS</a>{% endif %}
               {% if row.filing.grant_doc_url %}&nbsp;<a href="{{ row.filing.grant_doc_url }}" target="_blank" style="font-family: sans-serif; font-size: 0.9em;">↗ grant PDF</a>{% endif %}
             </div>
+            {% if row.filing.attachments %}
+              <details style="margin-top: 8px;">
+                <summary style="font-size: 0.8em; color: var(--muted); cursor: pointer;">attachments ({{ row.filing.attachments | length }})</summary>
+                <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px;">
+                  {% for att in row.filing.attachments %}
+                    <div style="font-size: 0.8em; display: flex; gap: 8px; align-items: baseline;">
+                      <a href="{{ att.url }}" target="_blank" rel="noopener" style="flex-shrink: 0;">↗</a>
+                      <span style="color: var(--ink);">{{ att.name or "Document" }}</span>
+                      {% if att.description %}<span class="meta">· {{ att.description }}</span>{% endif %}
+                      {% if att.date %}<span class="meta" style="white-space: nowrap;">{{ att.date }}</span>{% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              </details>
+            {% endif %}
           {% elif card_type == "pleading" %}
             <div style="font-size: 0.8em; color: var(--muted);">
               {{ row.pleading.pleading_type or "Pleading" }}{% if row.filing %} · {{ row.filing.file_number }}{% endif %}

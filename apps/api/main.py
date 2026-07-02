@@ -325,6 +325,24 @@ async def list_icfs_filings(request: Request, page: int = 1, page_size: int = 50
     )
 
 
+@app.get("/admin/icfs/filings/{filing_id}")
+async def icfs_filing_detail(request: Request, filing_id: int):
+    async with AsyncSessionLocal() as session:
+        filing = await session.get(IcfsFiling, filing_id, options=[selectinload(IcfsFiling.extracted_events)])
+        if filing is None:
+            raise HTTPException(status_code=404, detail="Filing not found")
+
+    return templates.TemplateResponse(
+        "icfs_filing_detail.html",
+        {
+            "request": request,
+            "filing": filing,
+            "citation_url": _icfs_filing_citation_url,
+            "title": f"Strata - {filing.file_number or 'Filing'}",
+        },
+    )
+
+
 @app.get("/admin/icfs/pleadings")
 async def list_icfs_pleadings(request: Request, page: int = 1, page_size: int = 50):
     if page < 1:

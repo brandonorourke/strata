@@ -195,6 +195,7 @@ class IcfsFiling(Base):
     begin_date = Column(Date, nullable=True)
     grant_doc_url = Column(Text, nullable=True)
     detail_fetched_at = Column(DateTime(timezone=True), nullable=True)
+    attachments = Column(JSON, nullable=True)
 
     # No real FK on ExtractedEvent.source_id (it's polymorphic) — read-only, icfs_filing-only view.
     extracted_events = relationship(

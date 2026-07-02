@@ -75,9 +75,14 @@ def _fetch_page(client: httpx.Client, g_ck: str, file_number: str) -> dict | Non
 def _extract_detail(result: dict) -> dict:
     """
     Walk the ServiceNow page widget tree to extract summary fields and attachment URLs.
-    The page response nests data inside containers → rows → columns → widgets.
-    We search all widgets: one has data.summary (application fields), another has
-    data.all_data (attachment list with download sys_ids).
+
+    Summary fields live at:
+      containers → rows → columns → widgets → widget.data.summary
+
+    Attachments live at:
+      containers → rows → columns → widgets → widget.data.tabs.data.widgets[0] (Attachments tab)
+        → widgets → data.all_data[]
+      Each attachment's download URL is at attachment.actions.links[0].url
     """
     summary = None
     attachments = []
@@ -87,10 +92,18 @@ def _extract_detail(result: dict) -> dict:
             for col in row.get("columns", []):
                 for widget_wrap in col.get("widgets", []):
                     data = (widget_wrap.get("widget") or {}).get("data") or {}
+
                     if "summary" in data and summary is None:
                         summary = data["summary"]
-                    if "all_data" in data:
-                        attachments.extend(data["all_data"])
+
+                    # Attachments tab: data.tabs.data.widgets[0].widgets[*].data.all_data
+                    tabs_data = data.get("tabs", {}).get("data", {})
+                    tab_widgets = tabs_data.get("widgets", [])
+                    if tab_widgets:
+                        attachments_tab = tab_widgets[0]  # first tab = Attachments
+                        for sw in attachments_tab.get("widgets", []):
+                            sw_data = sw.get("data") or {}
+                            attachments.extend(sw_data.get("all_data", []))
 
     detail: dict = {}
 
@@ -104,19 +117,23 @@ def _extract_detail(result: dict) -> dict:
         if isinstance(pn, dict):
             detail["action_pn_url"] = pn.get("url") or None
 
-    # Find the STA Grant attachment — first record whose name/description contains "grant"
+    # Build full attachment list and identify the grant PDF.
+    # Download URL is at actions.links[0].url (not constructed from sys_id).
+    attachment_list = []
     for att in attachments:
-        doc_name = (_display(att.get("document_name")) or "").lower()
-        desc = (_display(att.get("u_description")) or "").lower()
-        if "grant" in doc_name or "grant" in desc:
-            sys_id = att.get("sys_id")
-            if isinstance(sys_id, dict):
-                sys_id = sys_id.get("value") or sys_id.get("display_value")
-            if sys_id:
-                detail["grant_doc_url"] = (
-                    f"https://api-prod.fcc.gov/icfs-attachment/exp/api/v1/{sys_id}"
-                )
-                break
+        links = att.get("actions", {}).get("links", [])
+        url = links[0].get("url") if links else None
+        if not url or not url.startswith("http"):
+            continue
+        doc_name = _display(att.get("document_name")) or ""
+        desc = _display(att.get("u_description")) or None
+        date = _display(att.get("sys_created_on")) or None
+        attachment_list.append({"name": doc_name, "description": desc, "date": date, "url": url})
+        if not detail.get("grant_doc_url") and ("grant" in doc_name.lower() or (desc and "grant" in desc.lower())):
+            detail["grant_doc_url"] = url
+
+    if attachment_list:
+        detail["attachments"] = attachment_list
 
     return detail
 
@@ -163,6 +180,7 @@ async def main() -> None:
                     filing.expiration_date = detail.get("expiration_date")
                     filing.begin_date = detail.get("begin_date")
                     filing.grant_doc_url = detail.get("grant_doc_url")
+                    filing.attachments = detail.get("attachments")
                     filing.detail_fetched_at = datetime.now(timezone.utc)
                     await session.commit()
 

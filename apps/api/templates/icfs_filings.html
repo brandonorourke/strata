@@ -31,7 +31,7 @@
         </td>
         <td>{{ filing.applicant_name or "—" }}</td>
         <td>
-          <div>{{ filing.file_number or "—" }}</div>
+          <div><a href="/admin/icfs/filings/{{ filing.id }}">{{ filing.file_number or "—" }}</a></div>
           {% if filing.brief_description %}
             <div class="meta" style="margin-top: 2px;">{{ filing.brief_description }}</div>
           {% endif %}
