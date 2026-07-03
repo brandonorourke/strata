@@ -23,22 +23,21 @@ This means the entity timeline sorts actions by when the FCC acted, and pending 
 
 ## ingest_icfs.py — three modes
 
-### backfill (default: `ICFS_MODE=backfill`)
+### backfill (default)
 
 Walks the full ICFS history from the page stored in `icfs_ingest_state`, table by table.
 Ordered by `submission_date` (filings), `sys_created_on` (pleadings), `public_notice_release_date` (notices).
 Safe to stop and restart — resumes from saved page.
 
-Use `ICFS_STOP_BEFORE_DATE=YYYY-MM-DD` to cap at a cutoff (saves time on incremental catch-up runs).
-Use `ICFS_MAX_PAGES=N` to cap pages (useful for test runs).
-
 ```bash
-ICFS_MODE=backfill python apps/ingest/ingest_icfs.py
+python apps/ingest/ingest_icfs.py
 # with cutoff:
-ICFS_MODE=backfill ICFS_STOP_BEFORE_DATE=2024-01-01 python apps/ingest/ingest_icfs.py
+python apps/ingest/ingest_icfs.py --stop-before-date 2024-01-01
+# cap pages (test runs):
+python apps/ingest/ingest_icfs.py --max-pages 2
 ```
 
-### incremental (`ICFS_MODE=incremental`)
+### incremental
 
 Designed for daily runs after backfill is complete. Runs two passes for filings:
 
@@ -57,7 +56,7 @@ When an action change is detected on an existing filing, the script:
 3. Sets `detail_fetched_at = NULL` so `fetch_icfs_filing_details.py` re-fetches it
 
 ```bash
-ICFS_MODE=incremental python apps/ingest/ingest_icfs.py
+python apps/ingest/ingest_icfs.py --mode incremental
 ```
 
 ### Action history (`icfs_filing_action_history`)
@@ -72,6 +71,31 @@ Watching this table is how alerting works (e.g. alerting on SAT-PPL-20211207-001
 - **Rate limiting**: We use 3s delay between pages. `robots.txt` disallows all bots, but the data is unauthenticated public government records.
 - **Garbage dates**: ICFS contains sentinel dates like `8888-08-08` — filtered out in `_parse_glide_datetime`.
 - **FCC updates in place**: When an action is taken, the *same* `source_sys_id` row is updated in place by FCC. There is no separate "actions" table in the FCC API — just the updated `action` field.
+
+## Scheduler (`apps/ingest/scheduler.py`)
+
+Long-running worker process that runs the full pipeline daily at 03:00 UTC.
+On startup, checks `ingest_runs` — if it's past 03:00 and no completed run exists today, runs immediately (handles container restarts mid-day).
+Each run writes a row to `ingest_runs` (pipeline='icfs') with start/finish times, status, failed script, and per-script exit codes.
+
+Override run time: `SCHEDULER_RUN_AT=HH:MM` env var (24h UTC).
+
+### Railway deployment
+
+1. Apply migration: `psql $DATABASE_URL -f migrations/0030_ingest_runs.sql`
+2. New service → GitHub repo → same repo
+3. Start command: `python apps/ingest/scheduler.py`
+4. Environment variables (Variables tab):
+   - `DATABASE_URL` — Railway Postgres URL
+   - `OPENAI_API_KEY`
+   - `PYTHONPATH=/app` — required: editable install (`-e .`) path doesn't survive the container build; this makes Python find `strata_core` at `/app/strata_core` directly
+5. Deploy
+
+To check run history:
+```sql
+SELECT pipeline, started_at, finished_at, status, failed_script, script_results
+FROM ingest_runs ORDER BY started_at DESC LIMIT 10;
+```
 
 ## Alerting (planned)
 
