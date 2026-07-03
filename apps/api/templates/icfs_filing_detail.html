@@ -68,7 +68,9 @@
             <td class="meta" style="white-space: nowrap;">{{ att.date or "" }}</td>
             <td class="actions">
               <a href="{{ att.url }}" target="_blank" rel="noopener">↗</a>
+              {% if att.name and att.name.lower().endswith('.pdf') %}
               <button class="preview-btn" onclick="togglePreview(this, '{{ att.url }}')" style="font-size: 11px; padding: 3px 8px; background: var(--surface); color: var(--accent); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; font-weight: 500;">preview</button>
+              {% endif %}
             </td>
           </tr>
           <tr class="preview-row" style="display: none;">
