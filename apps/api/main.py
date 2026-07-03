@@ -7,7 +7,7 @@ import httpx
 from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, text, bindparam, String, Integer
 from sqlalchemy.orm import selectinload
 
 from strata_core.db import AsyncSessionLocal
@@ -569,6 +569,54 @@ async def icfs_signals(request: Request, page: int = 1, page_size: int = 50):
             "total": total,
             "total_pages": total_pages,
             "title": "Strata - High Signal ICFS Events",
+        },
+    )
+
+
+@app.get("/admin/icfs/contested")
+async def icfs_contested(request: Request, applicant: str = "", min_pleadings: int = 3):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            text("""
+                SELECT
+                    f.id,
+                    f.file_number,
+                    f.applicant_name,
+                    f.submission_date,
+                    COUNT(p.id) AS pleading_count,
+                    ROUND(EXTRACT(EPOCH FROM (NOW() - f.submission_date)) / 86400 / 365.25, 1)::float AS years_pending,
+                    STRING_AGG(DISTINCT p.filer_name, ' · ' ORDER BY p.filer_name)
+                        FILTER (WHERE p.filer_name IS NOT NULL AND p.filer_name != f.applicant_name)
+                        AS contestants
+                FROM icfs_filings f
+                LEFT JOIN icfs_pleadings_and_comments p
+                    ON p.file_number ILIKE '%' || f.file_number || '%'
+                WHERE f.action IS NULL
+                    AND f.file_number IS NOT NULL
+                    AND (:applicant_pattern IS NULL OR f.applicant_name ILIKE :applicant_pattern)
+                GROUP BY f.id, f.file_number, f.applicant_name, f.submission_date
+                HAVING COUNT(p.id) >= :min_pleadings
+                ORDER BY pleading_count DESC, f.submission_date ASC
+                LIMIT 100
+            """).bindparams(
+                bindparam("applicant_pattern", type_=String),
+                bindparam("min_pleadings", type_=Integer),
+            ),
+            {
+                "applicant_pattern": f"%{applicant}%" if applicant else None,
+                "min_pleadings": min_pleadings,
+            },
+        )
+        rows = result.mappings().all()
+
+    return templates.TemplateResponse(
+        "icfs_contested.html",
+        {
+            "request": request,
+            "rows": rows,
+            "applicant": applicant,
+            "min_pleadings": min_pleadings,
+            "title": "Strata - Contested Proceedings",
         },
     )
 

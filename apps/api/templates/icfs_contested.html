@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Contested Proceedings</h2>
+  <div class="meta" style="margin-bottom: 20px;">Pending filings with {{ min_pleadings }}+ pleadings filed against them, ordered by opposition volume.</div>
+
+  <form method="get" style="margin-bottom: 24px; display: flex; gap: 10px; align-items: center;">
+    <input
+      type="text"
+      name="applicant"
+      value="{{ applicant }}"
+      placeholder="Filter by applicant…"
+      style="padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9em; background: var(--surface); color: var(--text); width: 260px;"
+    >
+    <input type="hidden" name="min_pleadings" value="{{ min_pleadings }}">
+    <button type="submit" style="padding: 7px 14px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 0.9em; cursor: pointer;">Filter</button>
+    {% if applicant %}
+      <a href="/admin/icfs/contested" class="meta" style="font-size: 0.85em;">clear</a>
+    {% endif %}
+  </form>
+
+  {% if rows %}
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 32px;">#</th>
+          <th>File Number</th>
+          <th>Applicant</th>
+          <th>Submitted</th>
+          <th>Age</th>
+          <th style="text-align: right;">Pleadings</th>
+          <th>Opposition</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td class="meta">{{ loop.index }}</td>
+            <td style="white-space: nowrap;"><a href="/admin/icfs/filings/{{ row.id }}">{{ row.file_number }}</a></td>
+            <td>{{ row.applicant_name or "—" }}</td>
+            <td class="meta" style="white-space: nowrap;">{{ row.submission_date.strftime("%Y-%m-%d") if row.submission_date else "—" }}</td>
+            <td class="meta" style="white-space: nowrap;">
+              {% if row.years_pending %}
+                {% if row.years_pending >= 1 %}
+                  {{ "%.1f"|format(row.years_pending) }}y
+                {% else %}
+                  {{ (row.years_pending * 12)|int }}mo
+                {% endif %}
+              {% else %}—{% endif %}
+            </td>
+            <td style="text-align: right; font-weight: 600;">{{ row.pleading_count }}</td>
+            <td class="meta" style="font-size: 0.82em; max-width: 320px; white-space: normal; line-height: 1.4;">{{ row.contestants or "—" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <div class="meta">No contested proceedings found{% if applicant %} for "{{ applicant }}"{% endif %}.</div>
+  {% endif %}
+{% endblock %}
