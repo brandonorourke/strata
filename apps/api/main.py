@@ -568,7 +568,7 @@ async def icfs_signals(request: Request, page: int = 1, page_size: int = 50):
             "page_size": page_size,
             "total": total,
             "total_pages": total_pages,
-            "title": "Strata - High Signal ICFS Events",
+            "title": "Strata - Signal Notices",
         },
     )
 
@@ -616,7 +616,7 @@ async def icfs_contested(request: Request, applicant: str = "", min_pleadings: i
             "rows": rows,
             "applicant": applicant,
             "min_pleadings": min_pleadings,
-            "title": "Strata - Contested Proceedings",
+            "title": "Strata - Contested Filings",
         },
     )
 

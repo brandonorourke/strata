@@ -245,8 +245,8 @@
       {% set path = request.url.path %}
       <div class="nav-section">ICFS</div>
       <a href="/admin/icfs/canonicals" class="nav-item {% if path.startswith('/admin/icfs/canonicals') or path.startswith('/admin/icfs/entity') %}active{% endif %}">All Companies</a>
-      <a href="/admin/icfs/signals"    class="nav-item {% if path.startswith('/admin/icfs/signals') %}active{% endif %}">High Signal Events</a>
-      <a href="/admin/icfs/contested"  class="nav-item {% if path.startswith('/admin/icfs/contested') %}active{% endif %}">Contested Proceedings</a>
+      <a href="/admin/icfs/signals"    class="nav-item {% if path.startswith('/admin/icfs/signals') %}active{% endif %}">Signal Notices</a>
+      <a href="/admin/icfs/contested"  class="nav-item {% if path.startswith('/admin/icfs/contested') %}active{% endif %}">Contested Filings</a>
       <a href="/admin/icfs/filings"    class="nav-item {% if path.startswith('/admin/icfs/filings') %}active{% endif %}">Filings &amp; Actions</a>
       <a href="/admin/icfs/pleadings"  class="nav-item {% if path.startswith('/admin/icfs/pleadings') %}active{% endif %}">Pleadings</a>
       <a href="/admin/icfs/notices"    class="nav-item {% if path.startswith('/admin/icfs/notices') %}active{% endif %}">Notices</a>
