@@ -1,5 +1,14 @@
 # Decisions
 
+## 2026-07-02 — Nav structure: data source as top-level, analysis vs. raw as sub-sections
+- Decision: Sidebar organized as source → sub-type. `FCC / ICFS` is the current top-level section, with `Analysis` (All Companies, Signal Notices, Contested Filings) and `Source Data` (Filings & Actions, Pleadings, Notices) as sub-labels within it.
+- Rationale: Designed to scale — new data sources (Dept of War, SEC, etc.) get their own top-level section with the same Analysis/Source Data split inside.
+
+## 2026-07-02 — Contested filings query is slow; deferred fix
+- Decision: The `/admin/icfs/contested` query (~15s) uses a correlated ILIKE join (`p.file_number ILIKE '%' || f.file_number || '%'`) that can't be indexed. Acceptable for now since it's an admin-only page.
+- Proper fix: Add a `filing_id FK` column to `icfs_pleadings_and_comments`, backfill it during detail fetch, and replace the ILIKE join with a normal indexed join. Deferred until query latency is actually a problem.
+- Note: The per-company version (entity page contested tab) is fast because the outer loop is small (~50 filings vs. 1,400+).
+
 ## 2026-01-28 — Keep event_type/transaction_role as text for v0
 - Decision: Use text columns for `event_type` and `transaction_role` in `extracted_events` during v0.
 - Rationale: Faster iteration while taxonomy is still evolving; avoid enum migration churn.
