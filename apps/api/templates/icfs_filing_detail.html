@@ -51,7 +51,7 @@
   </div>
 
   <!-- Attachments -->
-  {% if filing.attachments %}
+  {% if attachments %}
     <h3>Attachments</h3>
     <table>
       <thead>
@@ -63,7 +63,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for att in filing.attachments %}
+        {% for att in attachments %}
           <tr>
             <td>{{ att.name or "—" }}</td>
             <td class="meta">{{ att.description or "" }}</td>
@@ -81,6 +81,29 @@
     </table>
   {% else %}
     <div class="meta" style="margin-bottom: 24px;">No attachments{% if not filing.detail_fetched_at %} — details not yet fetched{% endif %}.</div>
+  {% endif %}
+
+  <!-- Action history -->
+  {% if action_history %}
+    <h3>Action History ({{ action_history | length }})</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Detected</th>
+          <th>Action</th>
+          <th>Action Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for h in action_history %}
+          <tr>
+            <td class="meta" style="white-space: nowrap;">{{ h.detected_at.strftime("%Y-%m-%d %H:%M") }}</td>
+            <td>{{ h.action or "—" }}</td>
+            <td class="meta" style="white-space: nowrap;">{{ h.action_taken_date.strftime("%Y-%m-%d") if h.action_taken_date else "—" }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   {% endif %}
 
   <!-- Pleading history -->

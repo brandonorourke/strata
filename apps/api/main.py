@@ -22,6 +22,7 @@ from strata_core.models import (
     IcfsPleadingAndComment,
     IcfsPublicNotice,
     IcfsCanonicalEntity,
+    IcfsFilingActionHistory,
 )
 
 app = FastAPI(title="Strata UI")
@@ -367,12 +368,27 @@ async def icfs_filing_detail(request: Request, filing_id: int):
             )
             pleadings = list(p_result.scalars().all())
 
+        ah_result = await session.execute(
+            select(IcfsFilingActionHistory)
+            .where(IcfsFilingActionHistory.filing_id == filing_id)
+            .order_by(IcfsFilingActionHistory.detected_at.desc())
+        )
+        action_history = list(ah_result.scalars().all())
+
+        attachments = sorted(
+            filing.attachments or [],
+            key=lambda a: a.get("date") or "",
+            reverse=True,
+        )
+
     return templates.TemplateResponse(
         "icfs_filing_detail.html",
         {
             "request": request,
             "filing": filing,
+            "attachments": attachments,
             "pleadings": pleadings,
+            "action_history": action_history,
             "citation_url": _icfs_filing_citation_url,
             "citation_url_pleading": _icfs_pleading_citation_url,
             "title": f"Strata - {filing.file_number or 'Filing'}",
