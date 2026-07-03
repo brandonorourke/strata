@@ -8,6 +8,7 @@
 # Three modes (ICFS_MODE env var): backfill (default), incremental (two passes for filings).
 # See main() docstring for details.
 
+import argparse
 import asyncio
 import logging
 import os
@@ -303,9 +304,9 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
     return new_count
 
 
-async def main() -> None:
+async def main(mode: str = "backfill", max_pages: int | None = None, stop_before_date: str | None = None) -> None:
     """
-    Three ingest modes (ICFS_MODE env var):
+    Three ingest modes:
 
     backfill (default):
       Resumes from stored page in icfs_ingest_state per table, walks to end of history.
@@ -318,21 +319,13 @@ async def main() -> None:
         filings submitted in the last day would have their action field updated.
       Pleadings and notices: ordered by their respective date fields, same stop logic.
 
-    ICFS_MAX_PAGES caps pages per table (useful for test runs).
-    ICFS_STOP_BEFORE_DATE (YYYY-MM-DD) stops each table when records older than that date
+    --max-pages caps pages per table (useful for test runs).
+    --stop-before-date (YYYY-MM-DD) stops each table when records older than that date
       are reached. Useful for capping a backfill at a meaningful cutoff date.
     """
-    max_pages_env = os.getenv("ICFS_MAX_PAGES")
-    max_pages = int(max_pages_env) if max_pages_env else None
-
-    mode = os.getenv("ICFS_MODE", "backfill")
-    if mode not in ("backfill", "incremental"):
-        raise ValueError(f"ICFS_MODE must be 'backfill' or 'incremental', got {mode!r}")
-
     stop_date = None
-    stop_date_env = os.getenv("ICFS_STOP_BEFORE_DATE")
-    if stop_date_env:
-        stop_date = datetime.strptime(stop_date_env, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    if stop_before_date:
+        stop_date = datetime.strptime(stop_before_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
 
     logger.info("ICFS ingest mode: %s%s", mode, f", stop_before={stop_date.date()}" if stop_date else "")
 
@@ -369,4 +362,9 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", choices=["backfill", "incremental"], default="backfill")
+    parser.add_argument("--max-pages", type=int, default=None)
+    parser.add_argument("--stop-before-date", default=None, help="YYYY-MM-DD")
+    args = parser.parse_args()
+    asyncio.run(main(mode=args.mode, max_pages=args.max_pages, stop_before_date=args.stop_before_date))
