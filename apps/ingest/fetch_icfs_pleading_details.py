@@ -5,6 +5,8 @@
 #
 # Runs for all pleadings with detail_fetched_at IS NULL.
 # Resumable — committed per row, safe to stop and restart.
+#
+# --viasat   restrict to pleadings on Viasat filings (useful for manual spot-checks)
 
 import argparse
 import asyncio

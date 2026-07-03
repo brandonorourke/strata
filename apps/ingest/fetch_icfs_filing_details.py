@@ -1,6 +1,6 @@
 # apps/ingest/fetch_icfs_filing_details.py
 #
-# Enriches Viasat SES filings with detail from the ICFS application summary page API.
+# Enriches ICFS filings with detail from the application summary page API.
 # Calls /api/now/sp/page?id=ibfs_application_summary&number={file_number} per filing,
 # extracts brief_description, grant/expiration dates, action_pn_url, and grant_doc_url
 # (the direct download URL for the STA Grant PDF), then writes back to icfs_filings.
