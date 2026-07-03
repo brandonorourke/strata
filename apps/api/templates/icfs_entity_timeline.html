@@ -59,18 +59,14 @@
     <button class="chip active" data-filter="notice" onclick="toggleChip(this)">
       Notices <span class="chip-count">{{ counts.notice }}</span>
     </button>
-    <button class="chip" data-filter="action" onclick="toggleChip(this)">
+    <button class="chip active" data-filter="action" onclick="toggleChip(this)">
       Actions <span class="chip-count">{{ counts.action }}</span>
     </button>
-    <button class="chip" data-filter="filing" onclick="toggleChip(this)">
+    <button class="chip active" data-filter="filing" onclick="toggleChip(this)">
       Pending Filings <span class="chip-count">{{ counts.filing }}</span>
     </button>
-    <button class="chip" data-filter="pleading" onclick="toggleChip(this)">
+    <button class="chip active" data-filter="pleading" onclick="toggleChip(this)">
       Pleadings <span class="chip-count">{{ counts.pleading }}</span>
-    </button>
-    <div style="width: 1px; height: 20px; background: var(--border); margin: 0 4px;"></div>
-    <button class="chip chip-signal" data-filter="signal" onclick="toggleSignal(this)">
-      Notable Notices <span class="chip-count">{{ counts.signal }}</span>
     </button>
   </div>
 
@@ -213,16 +209,13 @@
 </style>
 
 <script>
-const activeTypes = new Set(['notice']);
-let signalOnly = false;
+const activeTypes = new Set(['notice', 'action', 'filing', 'pleading']);
 
 function applyFilters() {
   const cards = document.querySelectorAll('.timeline-card');
   let visible = 0;
   cards.forEach(card => {
-    const typeMatch = activeTypes.has(card.dataset.type);
-    const signalMatch = !signalOnly || card.dataset.signal === 'true';
-    const show = typeMatch && signalMatch;
+    const show = activeTypes.has(card.dataset.type);
     card.style.display = show ? 'flex' : 'none';
     if (show) visible++;
   });
@@ -238,12 +231,6 @@ function toggleChip(btn) {
     activeTypes.add(filter);
     btn.classList.add('active');
   }
-  applyFilters();
-}
-
-function toggleSignal(btn) {
-  signalOnly = !signalOnly;
-  btn.classList.toggle('active', signalOnly);
   applyFilters();
 }
 

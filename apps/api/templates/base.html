@@ -62,17 +62,29 @@
         overflow-y: auto;
       }
       .nav-section {
-        padding: 0 12px 4px 16px;
+        padding: 8px 12px 4px 16px;
         font-size: 10px;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.08em;
         color: var(--muted);
-        margin-bottom: 4px;
+        margin-bottom: 2px;
+      }
+      .nav-section:first-child {
+        padding-top: 0;
+      }
+      .nav-subsection {
+        padding: 6px 12px 2px 20px;
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: #9ca3af;
+        margin-bottom: 1px;
       }
       .nav-item {
         display: block;
-        padding: 7px 12px 7px 16px;
+        padding: 7px 12px 7px 24px;
         font-size: 13px;
         font-weight: 500;
         color: #374151;
@@ -243,10 +255,12 @@
 
     <nav id="sidebar">
       {% set path = request.url.path %}
-      <div class="nav-section">ICFS</div>
+      <div class="nav-section">FCC / ICFS</div>
+      <div class="nav-subsection">Analysis</div>
       <a href="/admin/icfs/canonicals" class="nav-item {% if path.startswith('/admin/icfs/canonicals') or path.startswith('/admin/icfs/entity') %}active{% endif %}">All Companies</a>
       <a href="/admin/icfs/signals"    class="nav-item {% if path.startswith('/admin/icfs/signals') %}active{% endif %}">Signal Notices</a>
       <a href="/admin/icfs/contested"  class="nav-item {% if path.startswith('/admin/icfs/contested') %}active{% endif %}">Contested Filings</a>
+      <div class="nav-subsection">Source Data</div>
       <a href="/admin/icfs/filings"    class="nav-item {% if path.startswith('/admin/icfs/filings') %}active{% endif %}">Filings &amp; Actions</a>
       <a href="/admin/icfs/pleadings"  class="nav-item {% if path.startswith('/admin/icfs/pleadings') %}active{% endif %}">Pleadings</a>
       <a href="/admin/icfs/notices"    class="nav-item {% if path.startswith('/admin/icfs/notices') %}active{% endif %}">Notices</a>

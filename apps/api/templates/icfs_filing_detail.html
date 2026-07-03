@@ -46,8 +46,6 @@
   <div style="margin-bottom: 28px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
     {% set url = citation_url(filing) %}
     {% if url %}<a href="{{ url }}" target="_blank" rel="noopener">↗ ICFS Portal</a>{% endif %}
-    {% if filing.grant_doc_url %}<a href="{{ filing.grant_doc_url }}" target="_blank" rel="noopener">↗ Grant PDF</a>{% endif %}
-    {% if filing.action_pn_url %}<a href="{{ filing.action_pn_url }}" target="_blank" rel="noopener">↗ Public Notice</a>{% endif %}
   </div>
 
   <!-- Attachments -->
