@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone, date
 import httpx
 
 from fastapi import FastAPI, Request, HTTPException, Form
+from fastapi.responses import RedirectResponse
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select, func, and_, text, bindparam, String, Integer
@@ -304,6 +305,18 @@ async def list_icfs_canonicals(request: Request, page: int = 1, page_size: int =
             "title": "Strata - FCC Entities",
         },
     )
+
+
+@app.get("/admin/icfs/filings/by-number/{file_number:path}")
+async def icfs_filing_by_number(file_number: str):
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(IcfsFiling.id).where(IcfsFiling.file_number == file_number).limit(1)
+        )
+        filing_id = result.scalar_one_or_none()
+    if filing_id is None:
+        raise HTTPException(status_code=404, detail=f"Filing {file_number} not found")
+    return RedirectResponse(url=f"/admin/icfs/filings/{filing_id}")
 
 
 @app.get("/admin/icfs/filings")

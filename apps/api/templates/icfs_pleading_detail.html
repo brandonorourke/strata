@@ -20,7 +20,7 @@
       <div>
         {% if pleading.file_number %}
           {% for fn in pleading.file_number.split(', ') %}
-            <div><a href="https://fccprod.servicenowservices.com/ibfs?id=ibfs_application_summary&number={{ fn }}" target="_blank" rel="noopener">{{ fn }}</a></div>
+            <div><a href="/admin/icfs/filings/by-number/{{ fn }}">{{ fn }}</a></div>
           {% endfor %}
         {% else %}
           —
