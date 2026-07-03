@@ -257,6 +257,11 @@ async def icfs_home(request: Request):
     return templates.TemplateResponse("icfs_home.html", {"request": request, "title": "Strata - ICFS Home"})
 
 
+@app.get("/admin/dow")
+async def dow_home(request: Request):
+    return templates.TemplateResponse("dow_coming_soon.html", {"request": request, "title": "Strata - Dept. of War"})
+
+
 @app.get("/admin/icfs/canonicals")
 async def list_icfs_canonicals(request: Request, page: int = 1, page_size: int = 50):
     if page < 1:
