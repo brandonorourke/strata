@@ -355,7 +355,7 @@ async def list_icfs_filings(request: Request, page: int = 1, page_size: int = 50
 @app.get("/admin/icfs/filings/{filing_id}")
 async def icfs_filing_detail(request: Request, filing_id: int):
     async with AsyncSessionLocal() as session:
-        filing = await session.get(IcfsFiling, filing_id, options=[selectinload(IcfsFiling.extracted_events)])
+        filing = await session.get(IcfsFiling, filing_id)
         if filing is None:
             raise HTTPException(status_code=404, detail="Filing not found")
 
