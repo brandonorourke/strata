@@ -13,6 +13,14 @@ extract_icfs_notice_entities.py  -- extract entities from notice text
 extract_icfs_notice_summaries.py -- LLM summary + signal tier for notice events
 ```
 
+## extract_icfs_entities.py — event_date logic
+
+Each filing gets one `ExtractedEvent` row (used to drive the entity timeline). `event_date` is set as:
+- `action_taken_date` if the filing has an action (grant, dismissal, etc.)
+- `submission_date` otherwise (pending filings)
+
+This means the entity timeline sorts actions by when the FCC acted, and pending filings by when they were submitted. A recent grant on a 2021 filing appears at the top of the timeline, not buried at 2021.
+
 ## ingest_icfs.py — three modes
 
 ### backfill (default: `ICFS_MODE=backfill`)
