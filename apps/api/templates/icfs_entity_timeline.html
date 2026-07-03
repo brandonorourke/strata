@@ -1,6 +1,51 @@
 {% extends "base.html" %}
 {% block content %}
   <h2>{{ canonical.canonical_name }}</h2>
+
+  <!-- Tabs -->
+  <div style="display: flex; gap: 0; margin-bottom: 24px; border-bottom: 1px solid var(--border);">
+    <a href="?tab=timeline" style="padding: 8px 16px; font-size: 0.9em; font-weight: 500; text-decoration: none; border-bottom: 2px solid {% if tab == 'timeline' %}var(--accent){% else %}transparent{% endif %}; color: {% if tab == 'timeline' %}var(--accent){% else %}var(--muted){% endif %}; margin-bottom: -1px;">
+      Filing Timeline
+    </a>
+    <a href="?tab=contested" style="padding: 8px 16px; font-size: 0.9em; font-weight: 500; text-decoration: none; border-bottom: 2px solid {% if tab == 'contested' %}var(--accent){% else %}transparent{% endif %}; color: {% if tab == 'contested' %}var(--accent){% else %}var(--muted){% endif %}; margin-bottom: -1px;">
+      Contested Filings
+    </a>
+  </div>
+
+  {% if tab == 'contested' %}
+    {% if contested_rows %}
+      <table>
+        <thead>
+          <tr>
+            <th>File Number</th>
+            <th>Submitted</th>
+            <th>Age</th>
+            <th style="text-align: right;">Pleadings</th>
+            <th>Opposition</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in contested_rows %}
+            <tr>
+              <td style="white-space: nowrap;"><a href="/admin/icfs/filings/{{ row.id }}">{{ row.file_number }}</a></td>
+              <td class="meta" style="white-space: nowrap;">{{ row.submission_date.strftime("%Y-%m-%d") if row.submission_date else "—" }}</td>
+              <td class="meta" style="white-space: nowrap;">
+                {% if row.years_pending %}
+                  {% if row.years_pending >= 1 %}{{ "%.1f"|format(row.years_pending) }}y
+                  {% else %}{{ (row.years_pending * 12)|int }}mo{% endif %}
+                {% else %}—{% endif %}
+              </td>
+              <td style="text-align: right; font-weight: 600;">{{ row.pleading_count }}</td>
+              <td class="meta" style="font-size: 0.82em; max-width: 320px; white-space: normal; line-height: 1.4;">{{ row.contestants or "—" }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="meta">No contested filings found for {{ canonical.canonical_name }}.</div>
+    {% endif %}
+  {% else %}
+
   <div class="meta" style="margin-bottom: 16px;">
     FCC activity timeline
     {% if canonical.first_seen_at and canonical.last_seen_at %}
@@ -203,4 +248,5 @@ function toggleSignal(btn) {
 
 applyFilters();
 </script>
+  {% endif %}
 {% endblock %}

@@ -622,7 +622,7 @@ async def icfs_contested(request: Request, applicant: str = "", min_pleadings: i
 
 
 @app.get("/admin/icfs/entity/{canonical_id}")
-async def icfs_entity_timeline(request: Request, canonical_id: int):
+async def icfs_entity_timeline(request: Request, canonical_id: int, tab: str = "timeline"):
     async with AsyncSessionLocal() as session:
         canonical = await session.get(IcfsCanonicalEntity, canonical_id)
         if canonical is None:
@@ -639,7 +639,7 @@ async def icfs_entity_timeline(request: Request, canonical_id: int):
         if not entity_ids:
             return templates.TemplateResponse(
                 "icfs_entity_timeline.html",
-                {"request": request, "canonical": canonical, "timeline": []},
+                {"request": request, "canonical": canonical, "timeline": [], "counts": {}, "tab": tab, "contested_rows": []},
             )
 
         # All events for those entities, with notice + filing + pleading joins
@@ -708,6 +708,34 @@ async def icfs_entity_timeline(request: Request, canonical_id: int):
             "signal": sum(1 for r in timeline if r["event"].signal_tier == "signal"),
         }
 
+        contested_rows = []
+        if tab == "contested":
+            cr = await session.execute(
+                text("""
+                    SELECT
+                        f.id,
+                        f.file_number,
+                        f.applicant_name,
+                        f.submission_date,
+                        COUNT(p.id) AS pleading_count,
+                        ROUND(EXTRACT(EPOCH FROM (NOW() - f.submission_date)) / 86400 / 365.25, 1)::float AS years_pending,
+                        STRING_AGG(DISTINCT p.filer_name, ' · ' ORDER BY p.filer_name)
+                            FILTER (WHERE p.filer_name IS NOT NULL AND p.filer_name != f.applicant_name)
+                            AS contestants
+                    FROM icfs_filings f
+                    LEFT JOIN icfs_pleadings_and_comments p
+                        ON p.file_number ILIKE '%' || f.file_number || '%'
+                    WHERE f.action IS NULL
+                        AND f.file_number IS NOT NULL
+                        AND f.applicant_name ILIKE :applicant_pattern
+                    GROUP BY f.id, f.file_number, f.applicant_name, f.submission_date
+                    HAVING COUNT(p.id) >= 1
+                    ORDER BY pleading_count DESC, f.submission_date ASC
+                """).bindparams(bindparam("applicant_pattern", type_=String)),
+                {"applicant_pattern": f"%{canonical.canonical_name}%"},
+            )
+            contested_rows = cr.mappings().all()
+
     return templates.TemplateResponse(
         "icfs_entity_timeline.html",
         {
@@ -715,7 +743,9 @@ async def icfs_entity_timeline(request: Request, canonical_id: int):
             "canonical": canonical,
             "timeline": timeline,
             "counts": counts,
-            "title": f"Strata - Entity Detail - {canonical.canonical_name}",
+            "tab": tab,
+            "contested_rows": contested_rows,
+            "title": f"Strata - {canonical.canonical_name}",
         },
     )
 
