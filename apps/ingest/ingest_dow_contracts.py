@@ -99,6 +99,7 @@ async def _store_article(article: dict) -> None:
             first_seen_at=datetime.now(timezone.utc),
             fetched_at=datetime.now(timezone.utc),
             raw_text=raw_text,
+            raw_html=html,
             content_hash=content_hash,
         )
         session.add(row)

@@ -36,6 +36,10 @@
     - Proof of concept for: AI synthesis of “friction over time” to answer: “What does this all mean?”
 - The first sellable MVP for the first wedge (litigation finance or special situations or private credit portfolio monitoring)
 
+## Pending cleanup
+
+- **Run `apps/ingest/backfill_dow_raw_html.py` then delete it.** Wait for `ingest_dow_contracts.py --mode backfill` to finish first (don't run both scrapers against war.gov simultaneously). After the HTML backfill completes and all rows have `raw_html`, delete the script — `ingest_dow_contracts.py` stores `raw_html` on all new records going forward.
+
 ## Tabled
 
 - FreightWaves ingestion — was the original v0 bootstrap source; not aligned with the primary-source/credit wedge for now.

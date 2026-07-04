@@ -323,3 +323,4 @@ class DowContractRelease(Base):
     fetched_at    = Column(DateTime(timezone=True), nullable=True)
     raw_text      = Column(Text, nullable=True)
     content_hash  = Column(Text, nullable=True)
+    raw_html      = Column(Text, nullable=True)
