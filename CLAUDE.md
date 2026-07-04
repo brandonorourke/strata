@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Strata ingests news (currently SEC RSS feeds) and extracts companies, events, and entity links for investor-facing screens (litigation finance / special situations / private credit monitoring). Pure Python package `strata_core` plus a FastAPI app under `apps/api`.
 
+Read `docs/findings.md` before working on ingestion, extraction, or classification — it contains verified domain behavior about how the sources actually work that overrides assumptions (e.g. DA ≠ signal, notice families need separate parsing logic, award ceiling ≠ obligated value).
+
 ## Setup
 
 Python 3.12.7 via pyenv + venv. Install with `pip install -r requirements.txt` (installs `strata_core` editable via `-e .`). No CI, no linter/formatter config, and `tests/` is empty — don't assume `pytest` or a linter will run; verify changes manually.
