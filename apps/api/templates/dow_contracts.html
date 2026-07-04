@@ -9,14 +9,11 @@
         <span style="font-size: 12px; color: var(--muted); white-space: nowrap; flex-shrink: 0;">
           {{ release.release_date.strftime("%b %d, %Y") if release.release_date else "—" }}
         </span>
-        <a href="{{ release.url }}" target="_blank" rel="noopener"
-           style="font-weight: 500; color: var(--ink); text-decoration: none; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
-           title="{{ release.title }}">
+        <span style="font-weight: 500; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
           {{ release.title or "Untitled" }}
-        </a>
-        {% if release.raw_text %}
-          <span style="font-size: 11px; color: var(--muted); flex-shrink: 0;">{{ (release.raw_text | length) | int | filesizeformat(true) if false else (release.raw_text | length) }} chars</span>
-        {% endif %}
+        </span>
+        <a href="{{ release.url }}" target="_blank" rel="noopener"
+           style="font-size: 12px; color: var(--accent); text-decoration: none; flex-shrink: 0; white-space: nowrap;">DoW ↗</a>
       </div>
       {% if release.raw_text %}
         <details style="border-top: 1px solid var(--border);">
