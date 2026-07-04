@@ -71,7 +71,17 @@ Watching this table is how alerting works (e.g. alerting on SAT-PPL-20211207-001
 - **Rate limiting**: We use 3s delay between pages. `robots.txt` disallows all bots, but the data is unauthenticated public government records.
 - **Garbage dates**: ICFS contains sentinel dates like `8888-08-08` — filtered out in `_parse_glide_datetime`.
 - **FCC updates in place**: When an action is taken, the *same* `source_sys_id` row is updated in place by FCC. There is no separate "actions" table in the FCC API — just the updated `action` field.
-- **FCC RSS feeds**: Full list at https://www.fcc.gov/news-events/rss-feeds-and-email-updates-fcc — covers public notices, daily digests, proceedings, and bureau-specific feeds. Not yet used (blocked by Akamai like `www.fcc.gov`); potential future ingest source for non-ICFS FCC activity.
+- **FCC RSS feeds**: Full list at https://www.fcc.gov/news-events/rss-feeds-and-email-updates-fcc — covers public notices, daily digests, proceedings, and bureau-specific feeds. Not yet used; potential future ingest source for non-ICFS FCC activity.
+- **EDOCS public API** (`api2.fcc.gov`): Fully accessible — no Akamai block. Three-step path to any FCC document:
+  1. Bureau RSS: `https://api2.fcc.gov/api/exp/v1.0.0/edocspublic/rss/bureaus/SB` → items with `www.fcc.gov/edoc/{id}` links
+  2. Document metadata: `https://api2.fcc.gov/api/exp/v1.0.0/edocspublic/documents/{id}` → returns `docs.fcc.gov/public/attachments/XXX.txt` download URL
+  3. `docs.fcc.gov` → serves the `.txt` file (already confirmed working for DA notices)
+  Space Bureau (`SB`) is active and current. International Bureau (`IB`) inactive post-2023 — FCC created Space Bureau in 2023 absorbing satellite licensing from IB.
+  **This is the confirmed fix for the 985 non-DA SES/SAT notices.** Full path:
+  1. `GET https://api2.fcc.gov/api/exp/v1.0.0/edocspublic/documents?reportNumber=SES-02821` → returns record ID (e.g. `416467`)
+  2. `GET https://docs.fcc.gov/public/attachments/DOC-416467A1.txt` → full notice text
+  Same format as DA notices (`DA-{da_number}A1.txt`), just `DOC-{recordId}A1` for non-DA.
+  `fetch_icfs_notice_documents.py` needs a second fetch path for notices where `da_number IS NULL`.
 
 ## Scheduler (`apps/ingest/scheduler.py`)
 
