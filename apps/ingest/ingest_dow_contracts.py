@@ -37,10 +37,18 @@ INDEX_URL = "https://www.war.gov/news/contracts/"
 REQUEST_DELAY = 2.0
 
 
-def _fetch(url: str) -> str:
-    resp = cffi_requests.get(url, impersonate="chrome", timeout=30)
-    resp.raise_for_status()
-    return resp.text
+def _fetch(url: str, retries: int = 3) -> str:
+    for attempt in range(retries):
+        try:
+            resp = cffi_requests.get(url, impersonate="chrome", timeout=60)
+            resp.raise_for_status()
+            return resp.text
+        except Exception as e:
+            if attempt == retries - 1:
+                raise
+            wait = 10 * (attempt + 1)
+            logger.warning("Fetch failed (%s), retrying in %ds [%d/%d]", e, wait, attempt + 1, retries)
+            time.sleep(wait)
 
 
 def _discover_articles(html: str) -> list[dict]:
@@ -107,14 +115,14 @@ async def _store_article(article: dict) -> None:
     logger.info("Stored %s — %s (%d chars)", article["article_id"], article["title"], len(raw_text))
 
 
-async def main(mode: str = "incremental") -> None:
+async def main(mode: str = "incremental", start_page: int = 1) -> None:
     async with AsyncSessionLocal() as session:
         existing = set(
             r[0] for r in (await session.execute(select(DowContractRelease.article_id))).all()
         )
 
     fetched = errors = 0
-    page = 1
+    page = start_page
 
     while True:
         url = INDEX_URL if page == 1 else f"{INDEX_URL}?Page={page}"
@@ -156,5 +164,6 @@ async def main(mode: str = "incremental") -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mode", choices=["incremental", "backfill"], default="incremental")
+    parser.add_argument("--start-page", type=int, default=1, help="Resume backfill from this page")
     args = parser.parse_args()
-    asyncio.run(main(mode=args.mode))
+    asyncio.run(main(mode=args.mode, start_page=args.start_page))
