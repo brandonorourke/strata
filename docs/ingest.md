@@ -71,6 +71,7 @@ Watching this table is how alerting works (e.g. alerting on SAT-PPL-20211207-001
 - **Rate limiting**: We use 3s delay between pages. `robots.txt` disallows all bots, but the data is unauthenticated public government records.
 - **Garbage dates**: ICFS contains sentinel dates like `8888-08-08` — filtered out in `_parse_glide_datetime`.
 - **FCC updates in place**: When an action is taken, the *same* `source_sys_id` row is updated in place by FCC. There is no separate "actions" table in the FCC API — just the updated `action` field.
+- **FCC RSS feeds**: Full list at https://www.fcc.gov/news-events/rss-feeds-and-email-updates-fcc — covers public notices, daily digests, proceedings, and bureau-specific feeds. Not yet used (blocked by Akamai like `www.fcc.gov`); potential future ingest source for non-ICFS FCC activity.
 
 ## Scheduler (`apps/ingest/scheduler.py`)
 
