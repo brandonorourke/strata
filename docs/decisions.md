@@ -111,6 +111,19 @@
 - **Third-party relationships only visible in notices:** SES-02876 also contained Intelsat License LLC operating TT&C earth stations for Viasat-3 F2 and F3 satellites — filed under Intelsat's call signs, invisible to a Viasat-only query on `icfs_filings`. Cross-entity relationships of this kind (vendor/operator grants relating to a watched entity's assets) are notice-only signals.
 - **Current coverage gap:** all 443 SES notices have `da_number = NULL` → `fetch_icfs_notice_documents.py` skips them → no SES notice text in the DB. SES-02876 was reviewed manually. SES activities are all in `icfs_filings` (1,496 Viasat filings include many `SES-STA-*`), so the grant fact is captured, but not the narrative or cross-entity context. Workaround path: ECFS/EDOCS API (see below).
 
+## 2026-07-04 — DoW entity extraction: source-scoped canonical table, (name, location) as identity key
+
+- **Decision: DoW entities get their own `dow_canonical_entities` table**, mirroring the `icfs_canonical_entities` pattern — not written against the ICFS table or the global `canonical_entities` table.
+- **Identity key within DoW: `(normalized_name, location)`**. Contract text consistently provides city + state (`"Viasat Inc., Carlsbad, California"`), making the tuple a reliable disambiguator within DoW data. Two records with the same normalized name but different locations are treated as distinct entities; two with matching tuple collapse to one canonical row.
+- **Cross-source linking (DoW ↔ ICFS ↔ global) stays human-gated and deferred**, consistent with the 2026-06-23 two-tier decision. The unified Viasat timeline (DoW contracts + ICFS regulatory activity on one view) becomes possible when a bridge row is manually confirmed — not before.
+- **Reuses `extracted_entities` / `extracted_events`** with `source_type = 'dow_contract'`, consistent with how ICFS already uses those polymorphic tables. The one acknowledged wart: `extracted_entities` has an `icfs_canonical_entity_id` FK column baked in — a source-specific leak into the shared table. Accepted for now; a future refactor could move these to a generic linking table.
+
+## 2026-07-04 — Store raw HTML for DoW contract releases
+
+- **Decision: store `raw_html` on `dow_contract_releases`** in addition to the extracted `raw_text`. Rationale: scraping is the expensive/fragile step; if the extraction regex changes or breaks, re-parsing from stored HTML is free. Re-scraping 2,957 pages costs ~75 minutes of rate-limited fetching.
+- `ingest_dow_contracts.py` stores `raw_html` on all new records going forward. `backfill_dow_raw_html.py` (one-shot script, to be deleted after run) backfills existing records.
+- Secondary benefit: raw HTML enables a future preview pane in the UI without an additional fetch.
+
 ## 2026-07-01 — FCC ECFS/EDOCS sanctioned APIs as programmatic path (unverified coverage)
 
 - The FCC offers two sanctioned, free-key APIs that bypass Akamai by design — the intended programmatic front door, not a scraping workaround:
