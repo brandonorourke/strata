@@ -24,6 +24,7 @@ from strata_core.models import (
     IcfsPublicNotice,
     IcfsCanonicalEntity,
     IcfsFilingActionHistory,
+    DowContractRelease,
 )
 
 app = FastAPI(title="Strata UI")
@@ -260,7 +261,32 @@ async def icfs_home(request: Request):
 
 @app.get("/admin/dow")
 async def dow_home(request: Request):
-    return templates.TemplateResponse("dow_coming_soon.html", {"request": request, "title": "Strata - Dept. of War"})
+    return RedirectResponse(url="/admin/dow/contracts", status_code=302)
+
+
+@app.get("/admin/dow/contracts")
+async def dow_contracts(request: Request, page: int = 1, page_size: int = 50):
+    if page < 1:
+        page = 1
+    offset = (page - 1) * page_size
+    async with AsyncSessionLocal() as session:
+        total = (await session.execute(select(func.count()).select_from(DowContractRelease))).scalar_one()
+        releases = (await session.execute(
+            select(DowContractRelease)
+            .order_by(DowContractRelease.release_date.desc().nullslast(), DowContractRelease.first_seen_at.desc())
+            .offset(offset)
+            .limit(page_size)
+        )).scalars().all()
+    total_pages = (total + page_size - 1) // page_size
+    return templates.TemplateResponse("dow_contracts.html", {
+        "request": request,
+        "title": "Strata - DoW Contracts",
+        "releases": releases,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": total_pages,
+    })
 
 
 @app.get("/admin/icfs/canonicals")

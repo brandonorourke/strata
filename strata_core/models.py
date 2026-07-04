@@ -309,3 +309,17 @@ class IcfsIngestState(Base):
     backfill_page = Column(Integer, nullable=False, default=1)
     backfill_complete = Column(Boolean, nullable=False, default=False)
     updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class DowContractRelease(Base):
+    __tablename__ = "dow_contract_releases"
+
+    id            = Column(Integer, primary_key=True)
+    article_id    = Column(Text, nullable=False, unique=True)
+    url           = Column(Text, nullable=False)
+    title         = Column(Text, nullable=True)
+    release_date  = Column(Date, nullable=True)
+    first_seen_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    fetched_at    = Column(DateTime(timezone=True), nullable=True)
+    raw_text      = Column(Text, nullable=True)
+    content_hash  = Column(Text, nullable=True)

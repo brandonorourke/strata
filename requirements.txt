@@ -26,3 +26,9 @@ openai==1.55.3
 
 # Scheduler
 schedule==1.2.2
+
+# HTTP client with Chrome TLS fingerprint (for Akamai-protected sites like war.gov)
+curl_cffi==0.7.4
+
+# Testing
+pytest==9.1.1

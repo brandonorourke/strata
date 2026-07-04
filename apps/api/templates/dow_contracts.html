@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Dept. of War — Contract Releases</h2>
+  <div class="meta" style="margin-bottom: 16px;">{{ total }} releases</div>
+
+  {% for release in releases %}
+    <div style="border: 1px solid var(--border); border-radius: 6px; background: var(--surface); margin-bottom: 10px; overflow: hidden;">
+      <div style="padding: 14px 16px; display: flex; align-items: baseline; gap: 16px;">
+        <span style="font-size: 12px; color: var(--muted); white-space: nowrap; flex-shrink: 0;">
+          {{ release.release_date.strftime("%b %d, %Y") if release.release_date else "—" }}
+        </span>
+        <a href="{{ release.url }}" target="_blank" rel="noopener"
+           style="font-weight: 500; color: var(--ink); text-decoration: none; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"
+           title="{{ release.title }}">
+          {{ release.title or "Untitled" }}
+        </a>
+        {% if release.raw_text %}
+          <span style="font-size: 11px; color: var(--muted); flex-shrink: 0;">{{ (release.raw_text | length) | int | filesizeformat(true) if false else (release.raw_text | length) }} chars</span>
+        {% endif %}
+      </div>
+      {% if release.raw_text %}
+        <details style="border-top: 1px solid var(--border);">
+          <summary style="padding: 8px 16px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; list-style: none; display: flex; align-items: center; gap: 6px;">
+            <span class="chevron" style="display: inline-block; transition: transform 0.15s;">&#9656;</span>
+            <span>show full release</span>
+          </summary>
+          <pre style="font-size: 0.76em; line-height: 1.6; white-space: pre-wrap; color: var(--muted); background: var(--bg); padding: 16px; margin: 0; overflow-x: auto; border-top: 1px solid var(--border);">{{ release.raw_text }}</pre>
+        </details>
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="meta">No contract releases found.</div>
+  {% endfor %}
+
+  {% if total_pages and total_pages > 1 %}
+    <div class="meta" style="margin-top: 16px; display: flex; gap: 12px; align-items: center;">
+      {% if page > 1 %}
+        <a href="/admin/dow/contracts?page={{ page - 1 }}&page_size={{ page_size }}">&#8592; Prev</a>
+      {% endif %}
+      <span>Page {{ page }} of {{ total_pages }}</span>
+      {% if page < total_pages %}
+        <a href="/admin/dow/contracts?page={{ page + 1 }}&page_size={{ page_size }}">Next &#8594;</a>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  <style>
+    details[open] .chevron { transform: rotate(90deg); }
+  </style>
+{% endblock %}
