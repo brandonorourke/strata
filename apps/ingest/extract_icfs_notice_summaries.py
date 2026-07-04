@@ -127,6 +127,7 @@ async def process_batch(limit: int = 100) -> int:
             )
             .where(ExtractedEvent.source_type == "icfs_notice")
             .where(ExtractedEvent.llm_summary.is_(None))
+            .where(ExtractedEvent.signal_tier.is_(None))
             .where(IcfsPublicNotice.document_text.is_not(None))
             .where(IcfsPublicNotice.type_of_document.ilike("Actions Taken%"))
             .order_by(ExtractedEvent.id.asc())
@@ -157,7 +158,12 @@ async def process_batch(limit: int = 100) -> int:
 
             prose_block = _extract_prose_block(notice.document_text, file_number)
             if not prose_block:
-                logger.warning("Prose block extraction failed for %s / %s.", notice.number, file_number)
+                # SCL and other notice families cite file numbers inline (e.g. "See File Nos. X and Y.")
+                # rather than as section headers — the slicer can't extract a meaningful block.
+                # Mark unparseable so this event is excluded from future batches.
+                logger.warning("Prose block extraction failed for %s / %s — marking unparseable.", notice.number, file_number)
+                event.signal_tier = "unparseable"
+                await session.commit()
                 continue
 
             try:
