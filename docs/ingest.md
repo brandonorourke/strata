@@ -1,3 +1,19 @@
+# Bot Protection Notes
+
+Different government sites use different bot protection — matters for which HTTP client to use:
+
+| Site | Protection | Bypass |
+|---|---|---|
+| `fccprod.servicenowservices.com` | None (public ServiceNow API) | Plain `httpx` |
+| `docs.fcc.gov` | None | Plain `httpx` |
+| `api2.fcc.gov` | None | Plain `httpx` |
+| `www.fcc.gov` | Akamai TLS fingerprinting + Drupal antibot JS challenge | `curl_cffi` bypasses TLS layer but JS challenge still blocks — avoid; use `api2.fcc.gov` instead |
+| `www.war.gov` | Akamai TLS fingerprinting only (no JS challenge) | `curl_cffi` with `impersonate='chrome'` fully bypasses |
+
+`curl_cffi` mimics Chrome's TLS handshake (cipher suites, extensions, order) at the network level — not just User-Agent spoofing. Effective against TLS fingerprinting alone. Requires a JS engine for sites that add a JavaScript challenge on top.
+
+---
+
 # ICFS Ingest Pipeline
 
 ## Scripts (run in order for a full pipeline cycle)
