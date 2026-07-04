@@ -13,9 +13,12 @@ import time
 
 from sqlalchemy import select
 
+import sys, os
+sys.path.insert(0, os.path.dirname(__file__))
+
 from strata_core.db import AsyncSessionLocal
 from strata_core.models import DowContractRelease
-from apps.ingest.ingest_dow_contracts import _fetch, _extract_text
+from ingest_dow_contracts import _fetch, _extract_text
 
 from dotenv import load_dotenv
 load_dotenv()
