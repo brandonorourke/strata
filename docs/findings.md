@@ -20,8 +20,9 @@ DA = "delegated authority" (bureau-level action), not "Declaratory Action."
 At least four: ITC/international (ownership %, nationality, CFIUS/Executive
 Branch referrals, PE ownership chains — the richest narrative), SAT/SES
 satellite (technical grants + action-type events), TEL (214 authorizations,
-discontinuances), SCL (submarine cable — current prose-slicer fails on these,
-known gap). One extraction logic does not fit all.
+discontinuances), SCL (submarine cable — prose extraction not yet implemented;
+SCL notices are marked `signal_tier='unparseable'` and skipped rather than
+retried, but no content is extracted). One extraction logic does not fit all.
 
 **Filings are entity-indexed; notices are relationship-bearing.**
 Querying filings by applicant name misses third-party relationships entirely.
