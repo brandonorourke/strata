@@ -54,8 +54,7 @@ async def main() -> None:
                 r.content_hash = content_hash
                 await session.commit()
             ok += 1
-            if ok % 50 == 0:
-                logger.info("Progress: %d / %d", ok, len(rows))
+            logger.info("[%d/%d] %s — %s (%d chars html)", ok, len(rows), row.release_date, row.title, len(html))
         except Exception as e:
             errors += 1
             logger.error("Failed id=%d url=%s: %r", row.id, row.url, e)
