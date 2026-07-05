@@ -293,6 +293,8 @@ Rules:
 - Return null for absent fields. NEVER infer or guess.
 - Preserve raw source wording for names, amounts, PIIDs, dates, contract
   language, and source excerpts.
+- Every excerpt field must be copied VERBATIM, character-for-character, from the
+  source text. Never paraphrase, summarize, or reconstruct an excerpt.
 - Do not infer recipient-level allocation from a combined award amount.
 - Do not infer a parent vehicle, referenced IDV, program ceiling, task-order
   relationship, or future award potential unless explicitly stated.
@@ -308,41 +310,59 @@ Rules:
   - when only a calendar year is stated, use January 1
   - IMPORTANT: if the date is a FISCAL year (e.g. "fiscal 2029", "FY2029"),
     set completion_date to null and preserve the phrase in completion_date_raw.
-    Do NOT convert a fiscal year to a calendar date.
+    Do NOT convert a fiscal year to a calendar date. Fiscal years do not map
+    to calendar dates.
 - purpose must be factual and source-grounded: describe what work, service,
   product, or system is being procured. Do not explain why it matters.
-- purpose_excerpt must be a verbatim span from the source text that supports
-  the purpose summary.
+- purpose_excerpt must be a verbatim span supporting the purpose summary.
 - program_hint may name a program, platform, system, or effort only when
   explicitly named in the source text.
 - Do not treat a cumulative contract value, options value, ceiling, modification
   amount, or minimum guarantee as an initial award amount unless the source says so.
-- source_excerpt: include the full relevant text (paragraph or connected
-  paragraphs) for this award group, verbatim from the source.
 
-Amounts — extract every materially distinct dollar amount:
-- kind must be exactly one of:
-  "individual_award_value", "combined_award_value", "maximum_ceiling",
-  "modification_delta", "cumulative_contract_value",
-  "potential_value_if_options_exercised", "initial_obligation",
-  "minimum_guarantee", "other"
-- scope must be exactly one of:
-  "individual_awardee", "combined_awardees", "unspecified"
+Amounts:
+- Extract every materially distinct dollar amount associated with an award group.
+- Classify each amount using exactly one of:
+  "individual_award_value"
+  "combined_award_value"
+  "maximum_ceiling"
+  "modification_delta"
+  "cumulative_contract_value"
+  "potential_value_if_options_exercised"
+  "initial_obligation"
+  "minimum_guarantee"
+  "other"
+- Do not use an amount type when the text does not support it.
+- If the amount's meaning is unclear, use "other".
+- Record whether an amount applies to one awardee, all listed awardees jointly,
+  or an unspecified scope.
 
 Action and instrument:
-- action_type: "award" | "modification" | "option" | "definitization" | "other" | "unknown"
-- instrument_type: "contract" | "IDIQ" | "delivery_order" | "task_order" | "BPA" | "BOA" | "other" | "unknown"
-- pricing_type_raw: the cost/pricing arrangement ONLY (e.g. "firm-fixed-price",
-  "cost-plus-fixed-fee"). Do NOT include delivery vehicle terms here.
+- action_type must be one of:
+  "award", "modification", "option", "definitization", "other", "unknown"
+- instrument_type must be one of:
+  "contract", "IDIQ", "delivery_order", "task_order", "BPA", "BOA",
+  "other", "unknown"
+- pricing_type_raw is the COST/PRICING ARRANGEMENT ONLY (e.g. "firm-fixed-price",
+  "cost-plus-fixed-fee", "cost-plus-incentive-fee"). Do NOT put the instrument
+  or delivery vehicle (IDIQ, delivery order, task order) in pricing_type_raw —
+  those belong in instrument_type. Preserve exact source wording.
 
 Funding:
-- funding_at_award.status: "amount_stated" | "none_obligated" | "not_stated"
-- When an obligation amount is stated, include it in amounts with kind
+- funding_at_award.status must be one of:
+  "amount_stated", "none_obligated", "not_stated"
+- Use "none_obligated" only when the source explicitly states that no funds
+  are obligated at time of award.
+- When an initial obligation amount is stated, include it in amounts with kind
   "initial_obligation" and set funding_at_award.status to "amount_stated".
 
 Location:
 - For U.S. awardees: city_raw and state_raw as printed; country_raw null.
 - For foreign awardees: populate country_raw; state_raw may be null.
+
+source_excerpt: the coherent source text (the paragraph or connected paragraphs)
+that this award group was drawn from, for human review. Include the full relevant
+text, not a minimal fragment.
 
 The release contains approximately {n} award-trigger phrases. Extract all award groups.
 
@@ -362,13 +382,13 @@ Return a JSON object with exactly one key "awards":
       "amounts": [
         {
           "raw": "string",
-          "kind": "string",
-          "scope": "string",
+          "kind": "string (one of the amount types above)",
+          "scope": "individual_awardee | combined_awardees | unspecified",
           "excerpt": "string"
         }
       ],
       "funding_at_award": {
-        "status": "string",
+        "status": "amount_stated | none_obligated | not_stated",
         "excerpt": "string or null"
       },
       "action_type": "string",
