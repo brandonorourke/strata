@@ -15,8 +15,9 @@ import logging
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone, date
+from datetime import datetime, timezone, date, time as dtime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import asyncpg
 import schedule
@@ -42,7 +43,28 @@ PIPELINE = [
     (INGEST_DIR / "extract_icfs_pleadings.py", []),
     (INGEST_DIR / "extract_icfs_notice_entities.py", []),
     (INGEST_DIR / "extract_icfs_notice_summaries.py", []),
+    # DoW backstop — window poller is the primary path; this catches anything missed
+    (INGEST_DIR / "ingest_dow_contracts.py", ["--mode", "incremental"]),
 ]
+
+ET = ZoneInfo("America/New_York")
+DOW_SCRIPT = INGEST_DIR / "ingest_dow_contracts.py"
+
+
+def _dow_poll_cadence(now_et: datetime) -> int | None:
+    """Return poll interval in seconds during the DoW release window, or None outside it.
+
+    Weekdays only (war.gov contracts are a weekday ritual).
+      4:55–5:20 PM ET  →  90s  (tight window; this is where the latency edge lives)
+      5:20–6:30 PM ET  →  420s (7 min; catches late postings without wasting density)
+    The 8pm ET evening sweep is handled separately in the main loop.
+    """
+    t = now_et.time()
+    if dtime(16, 55) <= t < dtime(17, 20):
+        return 90
+    if dtime(17, 20) <= t < dtime(18, 30):
+        return 420
+    return None
 
 
 def _asyncpg_dsn() -> str:
@@ -93,6 +115,48 @@ async def _db_finish_run(run_id: int, status: str, failed_script: str | None, re
         await conn.close()
 
 
+async def _has_today_dow_release(today_et: date) -> bool:
+    """Return True if we already have a DoW release for today's ET date."""
+    conn = await asyncpg.connect(_asyncpg_dsn())
+    try:
+        row = await conn.fetchrow(
+            "SELECT id FROM dow_contract_releases WHERE release_date = $1 LIMIT 1",
+            today_et,
+        )
+        return row is not None
+    finally:
+        await conn.close()
+
+
+def poll_dow() -> None:
+    """Check if today's DoW release is ingested; fetch it if not.
+
+    Detection is a cheap DB query. Only hits war.gov when we don't have today's
+    release yet. first_seen_at is stamped at store time in ingest_dow_contracts.py,
+    so the detection timestamp is automatically instrumented.
+    """
+    now_et = datetime.now(ET)
+    today_et = now_et.date()
+
+    if asyncio.run(_has_today_dow_release(today_et)):
+        logger.debug("DoW poll: already have today's release (%s)", today_et)
+        return
+
+    logger.info("DoW poll: no release yet for %s — running incremental ingest", today_et)
+    result = subprocess.run(
+        [sys.executable, str(DOW_SCRIPT), "--mode", "incremental"],
+        check=False,
+    )
+    if result.returncode != 0:
+        logger.error("DoW incremental ingest failed (exit %d)", result.returncode)
+        return
+
+    if asyncio.run(_has_today_dow_release(today_et)):
+        logger.info("DoW poll: detected and stored today's release (%s) — first_seen_at stamped", today_et)
+    else:
+        logger.info("DoW poll: ingest ran, no release for %s yet (not posted)", today_et)
+
+
 def run_pipeline() -> None:
     logger.info("Pipeline '%s' starting", PIPELINE_NAME)
     run_id = asyncio.run(_db_start_run(PIPELINE_NAME))
@@ -133,6 +197,28 @@ if __name__ == "__main__":
     logger.info("Scheduler starting, pipeline='%s', daily run at %s UTC", PIPELINE_NAME, RUN_AT)
     maybe_run_missed()
     schedule.every().day.at(RUN_AT).do(run_pipeline)
+
+    _last_dow_poll: datetime | None = None
+    _dow_evening_done: date | None = None
+
     while True:
         schedule.run_pending()
+
+        now_utc = datetime.now(timezone.utc)
+        now_et = now_utc.astimezone(ET)
+
+        # DoW window polling (weekdays, 4:55–6:30 PM ET)
+        cadence = _dow_poll_cadence(now_et)
+        if cadence is not None:
+            if _last_dow_poll is None or (now_utc - _last_dow_poll).total_seconds() >= cadence:
+                poll_dow()
+                _last_dow_poll = now_utc
+
+        # DoW 8pm ET evening sweep — one final check per day
+        if (dtime(20, 0) <= now_et.time() < dtime(20, 30)
+                and _dow_evening_done != now_et.date()):
+            logger.info("DoW evening sweep (8pm ET)")
+            poll_dow()
+            _dow_evening_done = now_et.date()
+
         time.sleep(60)

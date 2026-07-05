@@ -38,6 +38,10 @@
 
 ## Pending cleanup
 
+- **Add DoW to scheduler.** `scheduler.py` currently only runs the ICFS pipeline. Add `ingest_dow_contracts.py --mode incremental` as a daily step so new war.gov releases are picked up automatically. See `apps/ingest/scheduler.py`.
+
+
+
 - **Run `apps/ingest/backfill_dow_raw_html.py` then delete it.** Wait for `ingest_dow_contracts.py --mode backfill` to finish first (don't run both scrapers against war.gov simultaneously). After the HTML backfill completes and all rows have `raw_html`, delete the script — `ingest_dow_contracts.py` stores `raw_html` on all new records going forward.
 
 ## Tabled
