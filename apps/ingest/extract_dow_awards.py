@@ -523,6 +523,7 @@ async def extract_release(client: AsyncOpenAI, session, release: DowContractRele
         logger.warning("Release %d has no raw_text", release.id)
         return 0
 
+    logger.info("Calling LLM for release %d (%s) — %d chars", release.id, release.release_date, len(source_text))
     try:
         response = await client.chat.completions.create(
             model=MODEL,
@@ -532,7 +533,7 @@ async def extract_release(client: AsyncOpenAI, session, release: DowContractRele
             ],
             response_format={'type': 'json_object'},
             temperature=0,
-            timeout=120,
+            timeout=300,
         )
     except Exception as e:
         logger.error("LLM call failed for release %d: %s", release.id, e)
