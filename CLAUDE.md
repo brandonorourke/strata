@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Strata ingests news (currently SEC RSS feeds) and extracts companies, events, and entity links for investor-facing screens (litigation finance / special situations / private credit monitoring). Pure Python package `strata_core` plus a FastAPI app under `apps/api`.
+Strata ingests primary-source data (SEC RSS feeds, FCC ICFS filings/notices, DoD contracts via war.gov) and extracts companies, events, and entity links for investor-facing screens (litigation finance / special situations / private credit monitoring). Pure Python package `strata_core` plus a FastAPI app under `apps/api`.
 
 Read `docs/findings.md` before working on ingestion, extraction, or classification — it contains verified domain behavior about how the sources actually work that overrides assumptions (e.g. DA ≠ signal, notice families need separate parsing logic, award ceiling ≠ obligated value).
 

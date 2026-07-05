@@ -6,6 +6,7 @@ from enum import Enum as PyEnum
 from sqlalchemy import (
     Column,
     Integer,
+    BigInteger,
     String,
     Text,
     DateTime,
@@ -324,3 +325,45 @@ class DowContractRelease(Base):
     raw_text      = Column(Text, nullable=True)
     content_hash  = Column(Text, nullable=True)
     raw_html      = Column(Text, nullable=True)
+
+    llm_raw_response = Column(JSONB, nullable=True)
+    llm_extracted_at = Column(DateTime(timezone=True), nullable=True)
+
+    awards = relationship("DowAward", back_populates="release")
+
+
+class DowAward(Base):
+    __tablename__ = "dow_awards"
+
+    id                          = Column(Integer, primary_key=True)
+    release_id                  = Column(Integer, ForeignKey("dow_contract_releases.id"), nullable=False)
+    award_index                 = Column(Integer, nullable=False)
+
+    awardees                    = Column(JSONB, nullable=True)   # [{name, city, state}]
+    piids                       = Column(JSONB, nullable=True)   # [{value, excerpt}]
+    ceiling_cents               = Column(BigInteger, nullable=True)
+    ceiling_raw                 = Column(Text, nullable=True)
+    ceiling_excerpt             = Column(Text, nullable=True)
+    obligated_cents             = Column(BigInteger, nullable=True)
+    obligated_raw               = Column(Text, nullable=True)
+    obligated_excerpt           = Column(Text, nullable=True)
+    contract_type               = Column(Text, nullable=True)
+    completion_date             = Column(Date, nullable=True)
+    contracting_activity        = Column(Text, nullable=True)
+    program_hint                = Column(Text, nullable=True)
+    llm_status                  = Column(Text, nullable=True)
+
+    val_amount_format           = Column(Boolean, nullable=True)
+    val_obligated_lte_ceiling   = Column(Boolean, nullable=True)
+    val_piid_grammar            = Column(Boolean, nullable=True)
+    val_ceiling_grounded        = Column(Boolean, nullable=True)
+    val_obligated_grounded      = Column(Boolean, nullable=True)
+    val_piid_grounded           = Column(Boolean, nullable=True)
+    val_date_plausible          = Column(Boolean, nullable=True)
+    val_state_codes             = Column(Boolean, nullable=True)
+    val_award_count_sane        = Column(Boolean, nullable=True)
+    val_flag_reasons            = Column(JSONB, nullable=True)
+
+    extracted_at                = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    release = relationship("DowContractRelease", back_populates="awards")

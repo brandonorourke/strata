@@ -2,31 +2,28 @@
 
 ## Next (immediate, in order)
 
-1. **Sync to prod after local pulls finish** (filings ~1hr, pleadings ~4.6hr remaining as of 2026-07-02 afternoon)
-   - Apply migrations on prod: `psql $RAILWAY_URL -f migrations/0027_icfs_pleading_details.sql` and `psql $RAILWAY_URL -f migrations/0028_raw_detail.sql`
-   - Sync filings: `psql $RAILWAY_URL -c "TRUNCATE icfs_filings;"` + `pg_dump strata --no-owner --no-acl --data-only -t icfs_filings | psql $RAILWAY_URL`
-   - Sync pleadings: `psql $RAILWAY_URL -c "TRUNCATE icfs_pleadings_and_comments;"` + `pg_dump strata --no-owner --no-acl --data-only -t icfs_pleadings_and_comments | psql $RAILWAY_URL`
+1. **Apply pending migrations to prod** (0029–0033 not yet on Railway):
+   ```
+   psql $RAILWAY_URL -f migrations/0029_icfs_filing_action_history.sql
+   psql $RAILWAY_URL -f migrations/0030_ingest_runs.sql
+   psql $RAILWAY_URL -f migrations/0031_dow_contract_releases.sql
+   psql $RAILWAY_URL -f migrations/0032_dow_raw_html.sql
+   psql $RAILWAY_URL -f migrations/0033_dow_awards.sql
+   ```
+   After applying 0033, sync DoW data: `pg_dump strata --no-owner --no-acl --data-only -t dow_contract_releases -t dow_awards | psql $RAILWAY_URL`
 
-2. ~~**Fix `ingest_icfs.py` incremental to add second pass by `action_taken_date`**~~ — **DONE.** `ingest_icfs.py` now runs `x_fmc_ibfs_base_table` twice in incremental mode: pass 1 by `submission_date` (new filings), pass 2 by `action_taken_date` (actions on old filings). See `docs/ingest.md` for full documentation.
+2. ~~**Fix `ingest_icfs.py` incremental to add second pass by `action_taken_date`**~~ — **DONE.**
 
-3. **Set up Railway crons** for incremental ingest. Scripts to run daily in order:
-   - `ingest_icfs.py ICFS_MODE=incremental` (two passes: new filings + recent actions)
-   - `fetch_icfs_filing_details.py` (picks up new/updated filings with `detail_fetched_at IS NULL`)
-   - `fetch_icfs_pleading_details.py` (same)
-   - `fetch_icfs_notice_documents.py` (new DA notices)
-   - `extract_icfs_entities.py`, `extract_icfs_notice_entities.py`, `extract_icfs_notice_summaries.py`
+3. ~~**Set up Railway crons**~~ — **DONE.** `scheduler.py` deployed as a Railway worker: full ICFS pipeline at 03:00 UTC daily + DoW window poller (90s cadence 4:55–5:20 PM ET, 7 min 5:20–6:30 PM ET, evening sweep at 8 PM ET).
 
-3. **Alerting for SAT-PPL-20211207-00172** — Stas asked for this specifically. Watch for new filings/actions/pleadings where `file_number = 'SAT-PPL-20211207-00172'` and send an email when something new appears. Needs: a `watched_file_numbers` table or config, a check script that runs after each ingest, and an email send (sendgrid or SMTP).
+4. **Alerting for SAT-PPL-20211207-00172** — Stas asked for this specifically. Watch for new filings/actions/pleadings where `file_number = 'SAT-PPL-20211207-00172'` and send an email when something new appears. Needs: a `watched_file_numbers` table or config, a check script that runs after each ingest, and an email send (sendgrid or SMTP).
 
-## DoW extraction (next immediate)
+## DoW extraction (built — full corpus run needed)
 
-Spec: `docs/specs/dow_extraction.md`. Deliverables in order:
-1. `migrations/0033_dow_awards.sql` — `dow_awards` table
-2. `apps/ingest/extract_dow_regex.py` — regex extractor, full corpus run
-3. `apps/ingest/extract_dow_llm.py` — LLM extractor, full corpus run
-4. `apps/ingest/report_dow_extraction.py` — per-field agreement report
-5. `tests/test_dow_extraction.py` — May 22 fixture acceptance test
-6. `docs/dow_extraction_report.md` — generated output
+Spec: `docs/specs/dow_extraction.md`. Smoke test on release 28 passed (11 awards, all 9 validators green).
+- `apps/ingest/extract_dow_awards.py` — full corpus (~$5, ~2-3hrs); apply 0033 to prod first
+- `--reprocess` flag re-parses stored `llm_raw_response` with zero API cost (useful for validator changes)
+- After full run: review validator flag rates, then build `dow_canonical_entities`
 
 ## Next (priority order)
 
@@ -62,3 +59,6 @@ Spec: `docs/specs/dow_extraction.md`. Deliverables in order:
 - ICFS notice intelligence pipeline: `fetch_icfs_notice_documents.py` (DA notices via `docs.fcc.gov`) → `extract_icfs_notice_entities.py` (file_number → company lookup, no LLM) → `extract_icfs_notice_summaries.py` (per-company prose slice + LLM structured output: `summary`, `signal_tier`, `signal_reason`, `source_excerpt`). First 149 events processed; 13/149 (~9%) classified signal. CFIUS referrals, DIP context, and transfers of control surfaced automatically.
 - Signal events global feed (`/admin/icfs/signals`): all signal-tier notice events across all entities, most recent first, with LLM-generated reason badge. Entity timeline (`/admin/icfs/entity/{id}`): chronological feed of all FCC activity for one canonical entity — filings, pleadings, notice appearances with summaries. Notice detail page (`/admin/icfs/notices/{id}`): per-notice company list with summaries and collapsible source excerpts for hallucination verification.
 - Site redesign (Stripe/Carta-inspired) and a real marketing landing page at `/`.
+- **DoW contracts ingestion**: `ingest_dow_contracts.py` + `fetch_dow_html.py`, `dow_contract_releases` table with `raw_html` and `raw_text`, `/admin/dow` UI (release list + detail).
+- **DoW window poller + daily scheduler**: `scheduler.py` — ICFS pipeline at 03:00 UTC + DoW window polling (90s/7min cadence 4:55–6:30 PM ET, evening sweep 8 PM ET), logged to `ingest_runs`.
+- **DoW award extraction**: `extract_dow_awards.py` — LLM-only (gpt-4o-mini, one call per release), 9 validators (amount format, obligated ≤ ceiling, PIID grammar, ceiling/obligated/PIID grounded, date plausible, state codes, award-count sane), `--reprocess` flag for zero-cost re-validation. Full field trust policy in `docs/decisions.md`.

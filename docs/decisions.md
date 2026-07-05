@@ -111,6 +111,41 @@
 - **Third-party relationships only visible in notices:** SES-02876 also contained Intelsat License LLC operating TT&C earth stations for Viasat-3 F2 and F3 satellites — filed under Intelsat's call signs, invisible to a Viasat-only query on `icfs_filings`. Cross-entity relationships of this kind (vendor/operator grants relating to a watched entity's assets) are notice-only signals.
 - **Current coverage gap:** all 443 SES notices have `da_number = NULL` → `fetch_icfs_notice_documents.py` skips them → no SES notice text in the DB. SES-02876 was reviewed manually. SES activities are all in `icfs_filings` (1,496 Viasat filings include many `SES-STA-*`), so the grant fact is captured, but not the narrative or cross-entity context. Workaround path: ECFS/EDOCS API (see below).
 
+## 2026-07-04 — DoW extraction: LLM-only; deterministic validators guard amounts and PIIDs
+
+- **Decision: DoW extraction is LLM-only.** Regex is not a parallel extractor.
+  Deterministic validators guard amounts and PIIDs (format check, cross-field
+  obligated ≤ ceiling, and value-grounding to source text). A flagged row routes to
+  review; it is never discarded.
+- **Rationale:** A 100-paragraph pilot (spanning 2014–2026 date range) showed the LLM
+  materially outperforms regex on every field except amounts — and amounts agreed at
+  ceiling 91%, obligated 98% before any regex tuning. The remaining regex bugs
+  (missed PIID formats, two completion-date phrase variants, contract-type unicode
+  normalization) were fixable, but the gap on flexible fields (program names, awardee
+  sets in unusual formats, contract-type compound descriptions) was fundamental — not
+  patchable with more patterns. Maintaining two extractors to gain determinism on
+  fields where both methods agree would add ongoing maintenance cost without accuracy
+  benefit.
+- **Value-grounding closes the fabrication risk on money fields.** The LLM's known
+  failure mode (confident hallucination) is worst on amounts and identifiers. The
+  value-grounding validator (confirm the digit string appears in raw_text) is
+  mechanically incapable of false-passing a hallucinated amount — it can only pass
+  if the number is actually in the source. This gives the same fabrication protection
+  regex provided, without the maintenance cost of a second extractor.
+- **Field-trust policy in production:**
+  - LLM primary for all fields.
+  - Validators run post-extraction; failures flag rows for review, never auto-discard.
+  - For amounts specifically: a grounding failure (value not in source) is the most
+    severe flag — treat as likely hallucination, hold for human review before use.
+  - For obligated specifically: `val_obligated_lte_ceiling=FALSE` almost always means
+    field-swap or fabrication — the one error class this product cannot afford.
+- **What "regex is not an extractor" means operationally:** `extract_dow_regex.py`,
+  `extract_dow_llm.py`, and `report_dow_extraction.py` are pilot artifacts, to be
+  deleted after `0034_dow_awards_v2.sql` migration and `extract_dow_awards.py`
+  deployment. The regex patterns developed in the pilot (PIID grammar, state-name
+  mapping, completion-date phrase variants) live on as validator logic, not as an
+  extraction path.
+
 ## 2026-07-04 — DoW entity extraction: source-scoped canonical table, (name, location) as identity key
 
 - **Decision: DoW entities get their own `dow_canonical_entities` table**, mirroring the `icfs_canonical_entities` pattern — not written against the ICFS table or the global `canonical_entities` table.
