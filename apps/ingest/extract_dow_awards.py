@@ -213,9 +213,11 @@ def _validate(award, source_text: str, trigger_count: int, award_total: int) -> 
 
     if award.action_type and award.action_type not in _ACTION_TYPES:
         flags['invalid_enum_action_type'] = f"action_type '{award.action_type}' not in allowed set"
+        award.action_type = 'other'
 
     if award.instrument_type and award.instrument_type not in _INSTRUMENT_TYPES:
         flags['invalid_enum_instrument_type'] = f"instrument_type '{award.instrument_type}' not in allowed set"
+        award.instrument_type = 'other'
 
     status = fa.get('status')
     if status and status not in _FUNDING_STATUSES:
@@ -343,6 +345,10 @@ Action and instrument:
 - instrument_type must be one of:
   "contract", "IDIQ", "delivery_order", "task_order", "BPA", "BOA",
   "other", "unknown"
+  Mapping hints: an "order" placed against a BOA → "delivery_order" or
+  "task_order"; an "order" placed against an IDIQ → "delivery_order" or
+  "task_order"; if the instrument type is unclear → "other". Never invent
+  a value outside this list.
 - pricing_type_raw is the COST/PRICING ARRANGEMENT ONLY (e.g. "firm-fixed-price",
   "cost-plus-fixed-fee", "cost-plus-incentive-fee"). Do NOT put the instrument
   or delivery vehicle (IDIQ, delivery order, task order) in pricing_type_raw —
