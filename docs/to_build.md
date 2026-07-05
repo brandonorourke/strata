@@ -2,12 +2,13 @@
 
 ## Next (immediate, in order)
 
-1. **Apply pending migrations to prod** (0031–0034 not yet on Railway; 0030 and below already applied):
+1. **Apply pending migrations to prod** (0031–0035 not yet on Railway; 0030 and below already applied):
    ```
    psql $RAILWAY_URL -f migrations/0031_dow_contract_releases.sql
    psql $RAILWAY_URL -f migrations/0032_dow_raw_html.sql
    psql $RAILWAY_URL -f migrations/0033_dow_awards.sql
    psql $RAILWAY_URL -f migrations/0034_dow_award_purpose.sql
+   psql $RAILWAY_URL -f migrations/0035_dow_awards_v2.sql
    ```
    After applying, sync DoW data: `pg_dump strata --no-owner --no-acl --data-only -t dow_contract_releases -t dow_awards | psql $RAILWAY_URL`
 

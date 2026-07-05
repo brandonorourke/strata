@@ -1,12 +1,13 @@
 # apps/ingest/extract_dow_awards.py
 #
 # LLM extraction of structured award data from DoW contract releases.
-# One call per release; the model determines award boundaries.
+# One call per release; model determines award boundaries.
 # Deterministic validators run post-extraction and flag suspicious rows.
 #
 # Usage:
-#   python extract_dow_awards.py               # all unextracted releases
+#   python extract_dow_awards.py                   # all unextracted releases
 #   python extract_dow_awards.py --release-id 28   # single release
+#   python extract_dow_awards.py --reprocess        # re-parse stored responses
 
 import argparse
 import asyncio
@@ -32,9 +33,83 @@ MODEL = "gpt-4o-mini"
 COST_INPUT_PER_M  = 0.15
 COST_OUTPUT_PER_M = 0.60
 
-AWARD_TRIGGER_RE = re.compile(r'\b(?:was|is|has been|have been) awarded\b', re.IGNORECASE)
+# ── Award-trigger markers ─────────────────────────────────────────────────────
+# Broadened set; used for advisory award-count sanity check only.
 
-# ── Normalization ─────────────────────────────────────────────────────────────
+AWARD_TRIGGER_RE = re.compile(
+    r'\b(?:'
+    r'(?:was|is|has been|have been|are)\s+awarded'
+    r'|awarded\s+an?'
+    r'|will\s+compete\s+for\s+each\s+order'
+    r'|modification\s+to'
+    r'|task\s+order'
+    r'|delivery\s+order'
+    r')\b',
+    re.IGNORECASE,
+)
+
+# ── Enum sets ─────────────────────────────────────────────────────────────────
+
+_AMOUNT_KINDS = {
+    'individual_award_value', 'combined_award_value', 'maximum_ceiling',
+    'modification_delta', 'cumulative_contract_value',
+    'potential_value_if_options_exercised', 'initial_obligation',
+    'minimum_guarantee', 'other',
+}
+_AMOUNT_SCOPES    = {'individual_awardee', 'combined_awardees', 'unspecified'}
+_ACTION_TYPES     = {'award', 'modification', 'option', 'definitization', 'other', 'unknown'}
+_INSTRUMENT_TYPES = {'contract', 'IDIQ', 'delivery_order', 'task_order', 'BPA', 'BOA', 'other', 'unknown'}
+_FUNDING_STATUSES = {'amount_stated', 'none_obligated', 'not_stated'}
+
+# ── State / territory codes and names ─────────────────────────────────────────
+
+_VALID_STATE_CODES = {
+    'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
+    'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
+    'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
+    'VA','WA','WV','WI','WY','DC','D.C.','PR','GU','VI','AS','MP',
+}
+_VALID_STATE_NAMES = {
+    'alabama','alaska','arizona','arkansas','california','colorado','connecticut',
+    'delaware','florida','georgia','hawaii','idaho','illinois','indiana','iowa',
+    'kansas','kentucky','louisiana','maine','maryland','massachusetts','michigan',
+    'minnesota','mississippi','missouri','montana','nebraska','nevada',
+    'new hampshire','new jersey','new mexico','new york','north carolina',
+    'north dakota','ohio','oklahoma','oregon','pennsylvania','rhode island',
+    'south carolina','south dakota','tennessee','texas','utah','vermont',
+    'virginia','washington','west virginia','wisconsin','wyoming',
+    'district of columbia','puerto rico','guam',
+}
+
+# ── Text normalization ────────────────────────────────────────────────────────
+
+def _normalize_for_grounding(text: str) -> str:
+    """Normalize text before grounding comparisons.
+
+    Unifies Unicode dashes, smart quotes, and non-breaking spaces so that
+    typography artifacts in HTML-sourced text don't cause false ungrounded flags.
+    """
+    if not text:
+        return ''
+    text = re.sub(r'[–—‐]', '-', text)   # en-dash, em-dash, hyphen
+    text = text.replace('‘', "'").replace('’', "'")
+    text = text.replace('“', '"').replace('”', '"')
+    text = text.replace(' ', ' ')                   # non-breaking space
+    text = re.sub(r'\s+', ' ', text)
+    return text
+
+
+def _normalize_name(raw: str | None) -> str | None:
+    """Casefold + strip punctuation + normalize whitespace for entity matching."""
+    if not raw:
+        return None
+    s = _normalize_for_grounding(raw).casefold()
+    s = re.sub(r"[^\w\s\-]", '', s)
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s
+
+
+# ── Amount parsing ────────────────────────────────────────────────────────────
 
 _AMOUNT_RE = re.compile(r'\$([\d,]+(?:\.\d+)?)\s*(million|billion)?', re.IGNORECASE)
 
@@ -58,6 +133,8 @@ def _parse_cents(raw: str | None) -> int | None:
     return cents if cents > 0 else None
 
 
+# ── Date parsing ──────────────────────────────────────────────────────────────
+
 def _parse_date(raw: str | None) -> date | None:
     if not raw:
         return None
@@ -69,133 +146,129 @@ def _parse_date(raw: str | None) -> date | None:
 
 # ── Validators ────────────────────────────────────────────────────────────────
 
-_VALID_STATE_CODES = {
-    'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
-    'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
-    'NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT',
-    'VA','WA','WV','WI','WY','DC','D.C.','PR','GU','VI','AS','MP',
-}
-_VALID_STATE_NAMES = {
-    'alabama','alaska','arizona','arkansas','california','colorado','connecticut',
-    'delaware','florida','georgia','hawaii','idaho','illinois','indiana','iowa',
-    'kansas','kentucky','louisiana','maine','maryland','massachusetts','michigan',
-    'minnesota','mississippi','missouri','montana','nebraska','nevada',
-    'new hampshire','new jersey','new mexico','new york','north carolina',
-    'north dakota','ohio','oklahoma','oregon','pennsylvania','rhode island',
-    'south carolina','south dakota','tennessee','texas','utah','vermont',
-    'virginia','washington','west virginia','wisconsin','wyoming',
-    'district of columbia','puerto rico','guam',
-}
+def _validate(award, source_text: str, trigger_count: int, award_total: int) -> dict:
+    """Run all validators; set award.flags in-place; return flags dict.
 
-# Modern (no hyphen): ≥6 alphanum chars starting with a letter
-_PIID_MODERN  = re.compile(r'^[A-Z][A-Z0-9]{5,19}$')
-# Hyphenated (older): letter, alphanums + hyphens, ≥8 chars, must contain digit
-_PIID_HYPHEN  = re.compile(r'^[A-Z][A-Z0-9-]{7,25}$')
-_HAS_DIGIT    = re.compile(r'\d')
-
-
-def _piid_valid(value: str) -> bool:
-    if _PIID_MODERN.match(value) and _HAS_DIGIT.search(value):
-        return True
-    if _PIID_HYPHEN.match(value) and _HAS_DIGIT.search(value):
-        return True
-    return False
-
-
-def _value_in_source(value_raw: str | None, source_text: str) -> bool:
-    """Check if the dollar amount or PIID value appears in source_text."""
-    if not value_raw or not source_text:
-        return False
-    # For amounts: strip $ and commas, search for the digit string
-    digits_only = re.sub(r'[$,]', '', value_raw).strip()
-    # Also try with commas (as printed in the source)
-    with_commas = re.sub(r'(\d)(?=(\d{3})+(?!\d))', r'\1,', digits_only)
-    return digits_only in source_text or with_commas in source_text
-
-
-def _validate(award: DowAward, source_text: str, trigger_count: int, award_total: int) -> dict:
-    """Run all validators; return {field: reason} for each failure."""
+    Every failure adds an entry to flags. Rows are never discarded.
+    """
     flags: dict[str, str] = {}
+    norm_src = _normalize_for_grounding(source_text)
 
-    # 1. Amount format
-    ceiling_ok   = award.ceiling_raw  is None or award.ceiling_cents  is not None
-    obligated_ok = award.obligated_raw is None or award.obligated_cents is not None
-    if not ceiling_ok:
-        flags['ceiling_format'] = f"could not parse '{award.ceiling_raw}' to cents"
-    if not obligated_ok:
-        flags['obligated_format'] = f"could not parse '{award.obligated_raw}' to cents"
-    award.val_amount_format = len(flags) == 0 or not any(
-        k in flags for k in ('ceiling_format', 'obligated_format')
-    )
-    # Recompute cleanly
-    award.val_amount_format = ceiling_ok and obligated_ok
+    # ── 1. Literal grounding (normalize both sides before comparison) ──────────
 
-    # 2. Obligated ≤ ceiling
-    if award.obligated_cents is not None and award.ceiling_cents is not None:
-        if award.obligated_cents > award.ceiling_cents:
-            flags['obligated_lte_ceiling'] = (
-                f"obligated {award.obligated_cents} > ceiling {award.ceiling_cents} "
-                f"(likely field-swap or hallucination)"
+    for p in (award.piids or []):
+        if p.get('value') and _normalize_for_grounding(p['value']) not in norm_src:
+            flags['ungrounded_piid'] = f"PIID '{p['value']}' not found in (normalized) source text"
+        if p.get('excerpt') and _normalize_for_grounding(p['excerpt']) not in norm_src:
+            flags['ungrounded_piid_excerpt'] = "PIID excerpt not found in (normalized) source text"
+
+    for a in (award.amounts or []):
+        if a.get('raw') and _normalize_for_grounding(a['raw']) not in norm_src:
+            flags['ungrounded_amount'] = f"Amount '{a['raw']}' not found in (normalized) source text"
+        if a.get('excerpt') and _normalize_for_grounding(a['excerpt']) not in norm_src:
+            flags['ungrounded_amount_excerpt'] = "Amount excerpt not found in (normalized) source text"
+
+    for a in (award.awardees or []):
+        if a.get('name_raw') and _normalize_for_grounding(a['name_raw']) not in norm_src:
+            flags['ungrounded_awardee_name'] = f"Awardee name '{a['name_raw']}' not found in source"
+
+    if award.completion_date_raw:
+        if _normalize_for_grounding(award.completion_date_raw) not in norm_src:
+            flags['ungrounded_completion_date_raw'] = (
+                f"completion_date_raw '{award.completion_date_raw}' not found in source"
             )
-        award.val_obligated_lte_ceiling = 'obligated_lte_ceiling' not in flags
-    # else: None (not applicable)
 
-    # 3. PIID grammar
-    if award.piids:
-        bad_piids = [p['value'] for p in award.piids if not _piid_valid(p.get('value', ''))]
-        if bad_piids:
-            flags['piid_grammar'] = f"unrecognized PIID format: {bad_piids}"
-        award.val_piid_grammar = not bad_piids
-    # else: None
+    if award.purpose_excerpt:
+        if _normalize_for_grounding(award.purpose_excerpt) not in norm_src:
+            flags['ungrounded_purpose_excerpt'] = "purpose_excerpt not found in (normalized) source text"
 
-    # 4. Value grounding
-    if award.ceiling_raw is not None:
-        grounded = _value_in_source(award.ceiling_raw, source_text)
-        if not grounded:
-            flags['ceiling_grounded'] = f"'{award.ceiling_raw}' not found in source text"
-        award.val_ceiling_grounded = grounded
+    if award.source_excerpt:
+        if _normalize_for_grounding(award.source_excerpt) not in norm_src:
+            flags['ungrounded_source_excerpt'] = "source_excerpt not found in (normalized) source text"
 
-    if award.obligated_raw is not None:
-        grounded = _value_in_source(award.obligated_raw, source_text)
-        if not grounded:
-            flags['obligated_grounded'] = f"'{award.obligated_raw}' not found in source text"
-        award.val_obligated_grounded = grounded
+    fa = award.funding_at_award or {}
+    if fa.get('status') != 'not_stated' and fa.get('excerpt'):
+        if _normalize_for_grounding(fa['excerpt']) not in norm_src:
+            flags['ungrounded_funding_excerpt'] = "funding_at_award.excerpt not found in (normalized) source text"
 
-    if award.piids:
-        ungrounded = [
-            p['value'] for p in award.piids
-            if p.get('value') and p['value'] not in source_text
-        ]
-        if ungrounded:
-            flags['piid_grounded'] = f"PIIDs not found in source: {ungrounded}"
-        award.val_piid_grounded = not ungrounded
+    # ── 2. Date consistency ───────────────────────────────────────────────────
 
-    # 5. Date plausibility
-    if award.completion_date is not None:
-        plausible = date(2000, 1, 1) <= award.completion_date <= date(2060, 1, 1)
-        if not plausible:
-            flags['date_plausible'] = f"completion_date {award.completion_date} out of plausible range"
-        award.val_date_plausible = plausible
+    if award.completion_date_raw:
+        raw_lower = award.completion_date_raw.lower()
+        is_fiscal = 'fiscal' in raw_lower or 'fy' in raw_lower
+        if is_fiscal and award.completion_date is not None:
+            flags['date_inconsistent'] = (
+                "completion_date must be null when completion_date_raw is a fiscal year"
+            )
 
-    # 6. State codes — accept 2-letter codes AND known full state names
-    if award.awardees:
-        bad_states = [
-            a.get('state') for a in award.awardees
-            if a.get('state')
-            and a['state'].upper() not in _VALID_STATE_CODES
-            and a['state'].lower() not in _VALID_STATE_NAMES
-        ]
-        if bad_states:
-            flags['state_codes'] = f"unrecognized state(s): {bad_states}"
-        award.val_state_codes = not bad_states
+    # ── 3. Enum validation (flag, never reject) ───────────────────────────────
 
-    # 7. Award-count sanity (release-level, same value on all awards for this release)
-    if award_total < trigger_count:
-        flags['award_count_sane'] = (
-            f"expected ~{trigger_count} awards (trigger count), got {award_total}"
+    for i, a in enumerate(award.amounts or []):
+        kind  = a.get('kind')
+        scope = a.get('scope')
+        if kind  and kind  not in _AMOUNT_KINDS:
+            flags['invalid_enum_amount_kind']  = f"amount[{i}].kind '{kind}' not in allowed set"
+        if scope and scope not in _AMOUNT_SCOPES:
+            flags['invalid_enum_amount_scope'] = f"amount[{i}].scope '{scope}' not in allowed set"
+
+    if award.action_type and award.action_type not in _ACTION_TYPES:
+        flags['invalid_enum_action_type'] = f"action_type '{award.action_type}' not in allowed set"
+
+    if award.instrument_type and award.instrument_type not in _INSTRUMENT_TYPES:
+        flags['invalid_enum_instrument_type'] = f"instrument_type '{award.instrument_type}' not in allowed set"
+
+    status = fa.get('status')
+    if status and status not in _FUNDING_STATUSES:
+        flags['invalid_enum_funding_status'] = f"funding_at_award.status '{status}' not in allowed set"
+
+    # ── 4. Conditional math (obligation ≤ ceiling, only when scopes compatible) ─
+
+    amounts = award.amounts or []
+    obligation = next((a for a in amounts if a.get('kind') == 'initial_obligation'),  None)
+    ceiling    = next((a for a in amounts if a.get('kind') == 'maximum_ceiling'),     None)
+    if obligation and ceiling:
+        ob_scope   = obligation.get('scope', 'unspecified')
+        ceil_scope = ceiling.get('scope',    'unspecified')
+        compatible = (ob_scope == ceil_scope or
+                      ob_scope == 'unspecified' or ceil_scope == 'unspecified')
+        if compatible:
+            ob_cents   = obligation.get('cents')
+            ceil_cents = ceiling.get('cents')
+            if ob_cents is not None and ceil_cents is not None and ob_cents > ceil_cents:
+                flags['obligation_exceeds_ceiling'] = (
+                    f"initial_obligation {ob_cents} > maximum_ceiling {ceil_cents}"
+                )
+
+    # ── 5. Funding consistency ────────────────────────────────────────────────
+
+    has_obligation = any(a.get('kind') == 'initial_obligation' for a in amounts)
+    if status == 'amount_stated' and not has_obligation:
+        flags['funding_status_mismatch'] = (
+            "funding_at_award.status=amount_stated but no initial_obligation amount found"
         )
-    award.val_award_count_sane = award_total >= trigger_count
+    elif status == 'none_obligated' and has_obligation:
+        flags['funding_status_mismatch'] = (
+            "funding_at_award.status=none_obligated but initial_obligation amount present"
+        )
 
+    # ── 6. State / country ────────────────────────────────────────────────────
+
+    for a in (award.awardees or []):
+        state   = a.get('state_raw')
+        country = a.get('country_raw')
+        if state and not country:
+            if (state.upper() not in _VALID_STATE_CODES and
+                    state.lower() not in _VALID_STATE_NAMES):
+                flags['state_unrecognized'] = f"unrecognized state: '{state}'"
+
+    # ── 7. Award-count sanity (advisory — never blocks or discards) ───────────
+
+    if award_total < trigger_count:
+        flags['award_count_low'] = (
+            f"expected ~{trigger_count} award markers, got {award_total} awards"
+        )
+
+    award.flags = flags if flags else None
     return flags
 
 
@@ -204,39 +277,110 @@ def _validate(award: DowAward, source_text: str, trigger_count: int, award_total
 SYSTEM_PROMPT = """\
 You are extracting structured data from a U.S. Department of War daily contract
 announcement. The input is the full text of one day's release, which contains
-multiple award announcements.
+multiple distinct award announcements.
+
+Return one record for each distinct source award group.
+
+A source award group is one coherent contract action described in one paragraph
+or a connected set of paragraphs. It may include one awardee or multiple
+awardees. Do not split a jointly described award group into individual awards
+unless the source explicitly assigns separate values or separate actions.
 
 Rules:
-- Extract ALL awards from the text. The text contains approximately {n} award
-  announcements — do not silently merge or drop any.
-- For each award, extract ONLY what is explicitly stated.
+- Extract ALL distinct award groups in the release. Do not silently merge,
+  omit, or invent awards.
+- Extract ONLY facts explicitly stated in the source text.
 - Return null for absent fields. NEVER infer or guess.
-- NEVER infer obligated_raw from ceiling_raw or vice versa. They are different numbers.
-- Return dollar amounts as the exact digit-string as printed (e.g. "$150,000,000").
-- Return PIIDs (contract numbers) as printed (e.g. "FA880726FB004").
-- For completion_date: return as "YYYY-MM-DD". Use first day of month when only
-  month+year are given (e.g. "September 2026" → "2026-09-01").
-- awardee state: 2-letter code if abbreviated, full name if spelled out.
-- For amounts and PIIDs, return the verbatim span from the source text as "excerpt".
-- "purpose": 1-2 sentences describing what the contract covers — what service,
-  product, or work is being procured, and for what system or program if named.
-  Use the source text's own words. Return null only if truly absent.
+- Preserve raw source wording for names, amounts, PIIDs, dates, contract
+  language, and source excerpts.
+- Do not infer recipient-level allocation from a combined award amount.
+- Do not infer a parent vehicle, referenced IDV, program ceiling, task-order
+  relationship, or future award potential unless explicitly stated.
+- Every PIID and every dollar amount must include an exact source excerpt
+  containing that value.
+- Dollar values must be returned exactly as printed, including "$" and commas.
+- PIIDs must be returned exactly as printed.
+- Awardee names should be returned exactly as printed. Do not normalize names.
+- For completion dates:
+  - preserve the source phrase in completion_date_raw
+  - return completion_date as YYYY-MM-DD
+  - when only month + year are stated, use the first day of that month
+  - when only a calendar year is stated, use January 1
+  - IMPORTANT: if the date is a FISCAL year (e.g. "fiscal 2029", "FY2029"),
+    set completion_date to null and preserve the phrase in completion_date_raw.
+    Do NOT convert a fiscal year to a calendar date.
+- purpose must be factual and source-grounded: describe what work, service,
+  product, or system is being procured. Do not explain why it matters.
+- purpose_excerpt must be a verbatim span from the source text that supports
+  the purpose summary.
+- program_hint may name a program, platform, system, or effort only when
+  explicitly named in the source text.
+- Do not treat a cumulative contract value, options value, ceiling, modification
+  amount, or minimum guarantee as an initial award amount unless the source says so.
+- source_excerpt: include the full relevant text (paragraph or connected
+  paragraphs) for this award group, verbatim from the source.
 
-Return a JSON object with exactly one key "awards" containing a list:
+Amounts — extract every materially distinct dollar amount:
+- kind must be exactly one of:
+  "individual_award_value", "combined_award_value", "maximum_ceiling",
+  "modification_delta", "cumulative_contract_value",
+  "potential_value_if_options_exercised", "initial_obligation",
+  "minimum_guarantee", "other"
+- scope must be exactly one of:
+  "individual_awardee", "combined_awardees", "unspecified"
+
+Action and instrument:
+- action_type: "award" | "modification" | "option" | "definitization" | "other" | "unknown"
+- instrument_type: "contract" | "IDIQ" | "delivery_order" | "task_order" | "BPA" | "BOA" | "other" | "unknown"
+- pricing_type_raw: the cost/pricing arrangement ONLY (e.g. "firm-fixed-price",
+  "cost-plus-fixed-fee"). Do NOT include delivery vehicle terms here.
+
+Funding:
+- funding_at_award.status: "amount_stated" | "none_obligated" | "not_stated"
+- When an obligation amount is stated, include it in amounts with kind
+  "initial_obligation" and set funding_at_award.status to "amount_stated".
+
+Location:
+- For U.S. awardees: city_raw and state_raw as printed; country_raw null.
+- For foreign awardees: populate country_raw; state_raw may be null.
+
+The release contains approximately {n} award-trigger phrases. Extract all award groups.
+
+Return a JSON object with exactly one key "awards":
 {
   "awards": [
     {
-      "awardees": [{"name": str, "city": str|null, "state": str|null}],
-      "piids": [{"value": str, "excerpt": str}],
-      "ceiling_raw": str|null,
-      "ceiling_excerpt": str|null,
-      "obligated_raw": str|null,
-      "obligated_excerpt": str|null,
-      "contract_type": str|null,
-      "completion_date": str|null,
-      "contracting_activity": str|null,
-      "program_hint": str|null,
-      "purpose": str|null
+      "awardees": [
+        {
+          "name_raw": "string",
+          "city_raw": "string or null",
+          "state_raw": "string or null",
+          "country_raw": "string or null"
+        }
+      ],
+      "piids": [{"value": "string", "excerpt": "string"}],
+      "amounts": [
+        {
+          "raw": "string",
+          "kind": "string",
+          "scope": "string",
+          "excerpt": "string"
+        }
+      ],
+      "funding_at_award": {
+        "status": "string",
+        "excerpt": "string or null"
+      },
+      "action_type": "string",
+      "instrument_type": "string",
+      "pricing_type_raw": "string or null",
+      "completion_date_raw": "string or null",
+      "completion_date": "YYYY-MM-DD or null",
+      "contracting_activity": "string or null",
+      "program_hint": "string or null",
+      "purpose": "string or null",
+      "purpose_excerpt": "string or null",
+      "source_excerpt": "string"
     }
   ]
 }
@@ -246,11 +390,10 @@ Return a JSON object with exactly one key "awards" containing a list:
 # ── Core extraction ───────────────────────────────────────────────────────────
 
 async def _write_awards(session, release: DowContractRelease, awards_raw: list, source_text: str) -> int:
-    """Parse a list of raw award dicts, write DowAward rows, run validators. Returns count inserted."""
+    """Parse raw award dicts, write DowAward rows, run validators. Returns count inserted."""
     trigger_count = len(AWARD_TRIGGER_RE.findall(source_text))
-    award_total = len(awards_raw)
+    award_total   = len(awards_raw)
 
-    # Delete any existing awards for this release before rewriting
     existing = (await session.execute(
         select(DowAward).where(DowAward.release_id == release.id)
     )).scalars().all()
@@ -259,35 +402,39 @@ async def _write_awards(session, release: DowContractRelease, awards_raw: list, 
     await session.flush()
 
     for idx, a in enumerate(awards_raw):
-        ceiling_raw   = a.get('ceiling_raw')
-        obligated_raw = a.get('obligated_raw')
-        piids_raw     = a.get('piids') or []
-        completion_raw = a.get('completion_date')
+        # Enrich awardees with name_normalized
+        awardees = a.get('awardees') or []
+        for awardee in awardees:
+            awardee['name_normalized'] = _normalize_name(awardee.get('name_raw'))
+
+        # Enrich amounts with cents
+        amounts = a.get('amounts') or []
+        for amt in amounts:
+            amt['cents'] = _parse_cents(amt.get('raw'))
 
         award = DowAward(
             release_id           = release.id,
             award_index          = idx,
-            awardees             = a.get('awardees') or None,
-            piids                = piids_raw or None,
-            ceiling_cents        = _parse_cents(ceiling_raw),
-            ceiling_raw          = ceiling_raw,
-            ceiling_excerpt      = a.get('ceiling_excerpt'),
-            obligated_cents      = _parse_cents(obligated_raw),
-            obligated_raw        = obligated_raw,
-            obligated_excerpt    = a.get('obligated_excerpt'),
-            contract_type        = a.get('contract_type'),
-            completion_date      = _parse_date(completion_raw),
+            awardees             = awardees or None,
+            piids                = a.get('piids') or None,
+            amounts              = amounts or None,
+            funding_at_award     = a.get('funding_at_award') or None,
+            action_type          = a.get('action_type'),
+            instrument_type      = a.get('instrument_type'),
+            pricing_type_raw     = a.get('pricing_type_raw'),
+            completion_date_raw  = a.get('completion_date_raw'),
+            completion_date      = _parse_date(a.get('completion_date')),
             contracting_activity = a.get('contracting_activity'),
             program_hint         = a.get('program_hint'),
             purpose              = a.get('purpose'),
-            llm_status           = 'ok' if (a.get('awardees') and ceiling_raw) else 'partial',
+            purpose_excerpt      = a.get('purpose_excerpt'),
+            source_excerpt       = a.get('source_excerpt'),
+            llm_status           = 'ok' if (awardees and amounts) else 'partial',
         )
         session.add(award)
         await session.flush()
 
-        flags = _validate(award, source_text, trigger_count, award_total)
-        if flags:
-            award.val_flag_reasons = flags
+        _validate(award, source_text, trigger_count, award_total)
 
     await session.commit()
     return award_total
@@ -307,7 +454,7 @@ async def extract_release(client: AsyncOpenAI, session, release: DowContractRele
             model=MODEL,
             messages=[
                 {'role': 'system', 'content': prompt},
-                {'role': 'user', 'content': source_text},
+                {'role': 'user',   'content': source_text},
             ],
             response_format={'type': 'json_object'},
             temperature=0,
@@ -319,7 +466,7 @@ async def extract_release(client: AsyncOpenAI, session, release: DowContractRele
     release.llm_raw_response = {
         'model': response.model,
         'usage': {
-            'prompt_tokens': response.usage.prompt_tokens,
+            'prompt_tokens':     response.usage.prompt_tokens,
             'completion_tokens': response.usage.completion_tokens,
         },
         'content': response.choices[0].message.content,
@@ -337,11 +484,13 @@ async def extract_release(client: AsyncOpenAI, session, release: DowContractRele
 
 
 async def reprocess_release(session, release: DowContractRelease) -> int:
-    """Re-parse stored llm_raw_response and re-run validators. No API call."""
+    """Re-parse stored llm_raw_response and re-run validators. No API call.
+
+    Only meaningful if the stored response was generated with the current prompt schema.
+    """
     if not release.llm_raw_response:
         logger.warning("Release %d has no stored llm_raw_response — skipping", release.id)
         return 0
-
     try:
         awards_raw = json.loads(release.llm_raw_response['content']).get('awards') or []
     except (json.JSONDecodeError, TypeError, KeyError) as e:
@@ -359,7 +508,6 @@ async def reprocess_release(session, release: DowContractRelease) -> int:
 async def run(release_id: int | None = None, reprocess: bool = False) -> None:
     async with AsyncSessionLocal() as session:
         if reprocess:
-            # Re-parse stored responses, no API calls
             stmt = select(DowContractRelease).where(DowContractRelease.llm_raw_response.isnot(None))
             if release_id is not None:
                 stmt = stmt.where(DowContractRelease.id == release_id)
@@ -370,8 +518,7 @@ async def run(release_id: int | None = None, reprocess: bool = False) -> None:
             return
 
         client = AsyncOpenAI()
-        total_input = 0
-        total_output = 0
+        total_input = total_output = 0
 
         if release_id is not None:
             releases = (await session.execute(
@@ -398,19 +545,15 @@ async def run(release_id: int | None = None, reprocess: bool = False) -> None:
             total_output += usage.get('completion_tokens', 0)
 
             if i % 50 == 0 or i == total_releases:
-                cost = (
-                    total_input  / 1_000_000 * COST_INPUT_PER_M +
-                    total_output / 1_000_000 * COST_OUTPUT_PER_M
-                )
+                cost = (total_input / 1_000_000 * COST_INPUT_PER_M +
+                        total_output / 1_000_000 * COST_OUTPUT_PER_M)
                 logger.info(
                     "[%d/%d] awards=%d | tokens in=%d out=%d | cost=$%.4f",
                     i, total_releases, total_awards, total_input, total_output, cost,
                 )
 
-        cost = (
-            total_input  / 1_000_000 * COST_INPUT_PER_M +
-            total_output / 1_000_000 * COST_OUTPUT_PER_M
-        )
+        cost = (total_input / 1_000_000 * COST_INPUT_PER_M +
+                total_output / 1_000_000 * COST_OUTPUT_PER_M)
         logger.info(
             "Done. releases=%d awards=%d | input_tokens=%d output_tokens=%d | cost=$%.4f",
             total_releases, total_awards, total_input, total_output, cost,
