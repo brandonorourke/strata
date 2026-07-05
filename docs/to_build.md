@@ -21,7 +21,7 @@
 ## DoW extraction (built — full corpus run needed)
 
 Spec: `docs/specs/dow_extraction.md`. Smoke test on release 28 passed (11 awards, all 9 validators green).
-- `apps/ingest/extract_dow_awards.py` — full corpus (~$5, ~2-3hrs); apply 0033 to prod first
+- `apps/ingest/extract_dow_awards.py` — full corpus (~$5, ~2-3hrs); apply 0033 + 0034 to prod first
 - `--reprocess` flag re-parses stored `llm_raw_response` with zero API cost (useful for validator changes)
 - After full run: review validator flag rates, then build `dow_canonical_entities`
 

@@ -351,6 +351,7 @@ class DowAward(Base):
     completion_date             = Column(Date, nullable=True)
     contracting_activity        = Column(Text, nullable=True)
     program_hint                = Column(Text, nullable=True)
+    purpose                     = Column(Text, nullable=True)
     llm_status                  = Column(Text, nullable=True)
 
     val_amount_format           = Column(Boolean, nullable=True)

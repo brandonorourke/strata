@@ -57,13 +57,14 @@
               </div>
             {% endif %}
 
-            {# contracting activity + program #}
-            {% if award.contracting_activity or award.program_hint %}
-              <div style="font-size: 12px; color: var(--muted);">
-                {% if award.contracting_activity %}{{ award.contracting_activity }}{% endif %}
-                {% if award.contracting_activity and award.program_hint %} — {% endif %}
-                {% if award.program_hint %}{{ award.program_hint }}{% endif %}
-              </div>
+            {# purpose #}
+            {% if award.purpose %}
+              <div style="font-size: 12px; color: var(--muted); margin-bottom: 4px;">{{ award.purpose }}</div>
+            {% endif %}
+
+            {# contracting activity #}
+            {% if award.contracting_activity %}
+              <div style="font-size: 11px; color: var(--muted);">{{ award.contracting_activity }}</div>
             {% endif %}
 
             {# validator flags #}

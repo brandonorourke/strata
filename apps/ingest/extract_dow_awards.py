@@ -218,6 +218,9 @@ Rules:
   month+year are given (e.g. "September 2026" → "2026-09-01").
 - awardee state: 2-letter code if abbreviated, full name if spelled out.
 - For amounts and PIIDs, return the verbatim span from the source text as "excerpt".
+- "purpose": 1-2 sentences describing what the contract covers — what service,
+  product, or work is being procured, and for what system or program if named.
+  Use the source text's own words. Return null only if truly absent.
 
 Return a JSON object with exactly one key "awards" containing a list:
 {
@@ -232,7 +235,8 @@ Return a JSON object with exactly one key "awards" containing a list:
       "contract_type": str|null,
       "completion_date": str|null,
       "contracting_activity": str|null,
-      "program_hint": str|null
+      "program_hint": str|null,
+      "purpose": str|null
     }
   ]
 }
@@ -275,6 +279,7 @@ async def _write_awards(session, release: DowContractRelease, awards_raw: list, 
             completion_date      = _parse_date(completion_raw),
             contracting_activity = a.get('contracting_activity'),
             program_hint         = a.get('program_hint'),
+            purpose              = a.get('purpose'),
             llm_status           = 'ok' if (a.get('awardees') and ceiling_raw) else 'partial',
         )
         session.add(award)
