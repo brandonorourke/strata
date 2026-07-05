@@ -1,6 +1,7 @@
 # apps/api/main.py
 
 from datetime import datetime, timedelta, timezone, date
+import json
 
 import httpx
 
@@ -25,10 +26,12 @@ from strata_core.models import (
     IcfsCanonicalEntity,
     IcfsFilingActionHistory,
     DowContractRelease,
+    DowAward,
 )
 
 app = FastAPI(title="Strata UI")
 templates = Jinja2Templates(directory="apps/api/templates")
+templates.env.filters["pretty_json"] = lambda v: json.dumps(v, indent=2, default=str)
 
 _EVENT_TYPE_WEIGHTS = {
     "bankruptcy": 6,
@@ -273,6 +276,7 @@ async def dow_contracts(request: Request, page: int = 1, page_size: int = 50):
         total = (await session.execute(select(func.count()).select_from(DowContractRelease))).scalar_one()
         releases = (await session.execute(
             select(DowContractRelease)
+            .options(selectinload(DowContractRelease.awards))
             .order_by(DowContractRelease.release_date.desc().nullslast(), DowContractRelease.first_seen_at.desc())
             .offset(offset)
             .limit(page_size)
