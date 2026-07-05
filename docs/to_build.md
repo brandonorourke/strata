@@ -2,15 +2,14 @@
 
 ## Next (immediate, in order)
 
-1. **Apply pending migrations to prod** (0029–0033 not yet on Railway):
+1. **Apply pending migrations to prod** (0031–0034 not yet on Railway; 0030 and below already applied):
    ```
-   psql $RAILWAY_URL -f migrations/0029_icfs_filing_action_history.sql
-   psql $RAILWAY_URL -f migrations/0030_ingest_runs.sql
    psql $RAILWAY_URL -f migrations/0031_dow_contract_releases.sql
    psql $RAILWAY_URL -f migrations/0032_dow_raw_html.sql
    psql $RAILWAY_URL -f migrations/0033_dow_awards.sql
+   psql $RAILWAY_URL -f migrations/0034_dow_award_purpose.sql
    ```
-   After applying 0033, sync DoW data: `pg_dump strata --no-owner --no-acl --data-only -t dow_contract_releases -t dow_awards | psql $RAILWAY_URL`
+   After applying, sync DoW data: `pg_dump strata --no-owner --no-acl --data-only -t dow_contract_releases -t dow_awards | psql $RAILWAY_URL`
 
 2. ~~**Fix `ingest_icfs.py` incremental to add second pass by `action_taken_date`**~~ — **DONE.**
 
@@ -20,10 +19,14 @@
 
 ## DoW extraction (built — full corpus run needed)
 
-Spec: `docs/specs/dow_extraction.md`. Smoke test on release 28 passed (11 awards, all 9 validators green).
-- `apps/ingest/extract_dow_awards.py` — full corpus (~$5, ~2-3hrs); apply 0033 + 0034 to prod first
+Spec: `docs/specs/dow_extraction.md`. Smoke tested on releases 28 (May 22) and 1 (July 2) — 26 awards, all validators green except one D.C. state code flag (now fixed).
+
+Schema: `dow_awards` has `purpose TEXT` (migration 0034) — 1-2 sentence contract scope description extracted by LLM, populated on all 26 test awards.
+
+- **Run full corpus**: `python apps/ingest/extract_dow_awards.py` — 2,955 releases remaining (~$5, ~2-3hrs). Apply 0033 + 0034 to prod first.
 - `--reprocess` flag re-parses stored `llm_raw_response` with zero API cost (useful for validator changes)
 - After full run: review validator flag rates, then build `dow_canonical_entities`
+- **DoW UI next**: replace card layout with award-level table — columns: Date, Awardee, Purpose, Ceiling, Obligated, Contract Type, PIID, Activity, Flags
 
 ## Next (priority order)
 
@@ -61,4 +64,5 @@ Spec: `docs/specs/dow_extraction.md`. Smoke test on release 28 passed (11 awards
 - Site redesign (Stripe/Carta-inspired) and a real marketing landing page at `/`.
 - **DoW contracts ingestion**: `ingest_dow_contracts.py` + `fetch_dow_html.py`, `dow_contract_releases` table with `raw_html` and `raw_text`, `/admin/dow` UI (release list + detail).
 - **DoW window poller + daily scheduler**: `scheduler.py` — ICFS pipeline at 03:00 UTC + DoW window polling (90s/7min cadence 4:55–6:30 PM ET, evening sweep 8 PM ET), logged to `ingest_runs`.
-- **DoW award extraction**: `extract_dow_awards.py` — LLM-only (gpt-4o-mini, one call per release), 9 validators (amount format, obligated ≤ ceiling, PIID grammar, ceiling/obligated/PIID grounded, date plausible, state codes, award-count sane), `--reprocess` flag for zero-cost re-validation. Full field trust policy in `docs/decisions.md`.
+- **DoW award extraction**: `extract_dow_awards.py` — LLM-only (gpt-4o-mini, one call per release), extracts awardees, PIIDs, ceiling, obligated, contract type, completion date, contracting activity, program hint, and `purpose` (1-2 sentence scope description). 9 validators; `--reprocess` for zero-cost re-validation. Field trust policy in `docs/decisions.md`.
+- **DoW UI**: `/admin/dow/contracts` — release list with per-award cards showing purpose, amounts, PIIDs, activity; collapsible raw text + LLM JSON.
