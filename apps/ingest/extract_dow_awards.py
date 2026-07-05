@@ -48,6 +48,27 @@ AWARD_TRIGGER_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Matches the first DoW agency section heading in a release body
+# (AIR FORCE / ARMY / NAVY / DEFENSE LOGISTICS AGENCY / etc.)
+_AGENCY_HEADING_RE = re.compile(
+    r'^(?:AIR FORCE|ARMY|NAVY|MARINE CORPS|SPACE FORCE|'
+    r'DEFENSE LOGISTICS AGENCY|DEFENSE INFORMATION SYSTEMS AGENCY|'
+    r'DEFENSE ADVANCED RESEARCH PROJECTS AGENCY|MISSILE DEFENSE AGENCY|'
+    r'NATIONAL GEOSPATIAL-INTELLIGENCE AGENCY|DEFENSE THREAT REDUCTION AGENCY|'
+    r'OFFICE OF THE SECRETARY OF DEFENSE|WASHINGTON HEADQUARTERS SERVICES)',
+    re.MULTILINE | re.IGNORECASE,
+)
+
+def _release_body(text: str) -> str:
+    """Return only the contract-body portion of a release (after first agency heading).
+
+    This strips nav/template boilerplate that appears before the first agency
+    section, preventing award-trigger markers in navigation text from inflating
+    the advisory award-count check.
+    """
+    m = _AGENCY_HEADING_RE.search(text)
+    return text[m.start():] if m else text
+
 # ── Enum sets ─────────────────────────────────────────────────────────────────
 
 _AMOUNT_KINDS = {
@@ -86,8 +107,9 @@ _VALID_STATE_NAMES = {
 def _normalize_for_grounding(text: str) -> str:
     """Normalize text before grounding comparisons.
 
-    Unifies Unicode dashes, smart quotes, and non-breaking spaces so that
-    typography artifacts in HTML-sourced text don't cause false ungrounded flags.
+    Unifies Unicode dashes, smart quotes, non-breaking spaces, and DLA small-
+    business footnote markers (* ** ***) so typography artifacts don't cause
+    false ungrounded flags.
     """
     if not text:
         return ''
@@ -95,6 +117,7 @@ def _normalize_for_grounding(text: str) -> str:
     text = text.replace('‘', "'").replace('’', "'")
     text = text.replace('“', '"').replace('”', '"')
     text = text.replace(' ', ' ')                   # non-breaking space
+    text = re.sub(r'\*+', '', text)                 # footnote markers (*, **, ***)
     text = re.sub(r'\s+', ' ', text)
     return text
 
@@ -173,7 +196,10 @@ def _validate(award, source_text: str, trigger_count: int, award_total: int) -> 
             flags['ungrounded_awardee_name'] = f"Awardee name '{a['name_raw']}' not found in source"
 
     if award.completion_date_raw:
-        if _normalize_for_grounding(award.completion_date_raw) not in norm_src:
+        # Strip leading prepositions the model adds ("by ", "in ", "of ") before
+        # checking presence — the source date phrase itself should still ground.
+        date_raw_stripped = re.sub(r'^(by|in|of)\s+', '', award.completion_date_raw, flags=re.IGNORECASE)
+        if _normalize_for_grounding(date_raw_stripped) not in norm_src:
             flags['ungrounded_completion_date_raw'] = (
                 f"completion_date_raw '{award.completion_date_raw}' not found in source"
             )
@@ -245,9 +271,28 @@ def _validate(award, source_text: str, trigger_count: int, award_total: int) -> 
 
     has_obligation = any(a.get('kind') == 'initial_obligation' for a in amounts)
     if status == 'amount_stated' and not has_obligation:
-        flags['funding_status_mismatch'] = (
-            "funding_at_award.status=amount_stated but no initial_obligation amount found"
+        # Grounding-gated promotion: parse the dollar figure out of the funding
+        # excerpt (already validated as present in source) and promote to
+        # initial_obligation only on exact match with an existing amount entry.
+        # Partial-obligation cases (award value ≠ obligation) stay flagged.
+        fa_excerpt = fa.get('excerpt') or ''
+        fa_cents   = _parse_cents(fa_excerpt)
+        matched    = next(
+            (a for a in amounts if fa_cents is not None and a.get('cents') == fa_cents),
+            None,
         )
+        if matched:
+            award.amounts = list(award.amounts) + [{
+                'raw':     matched['raw'],
+                'kind':    'initial_obligation',
+                'scope':   matched.get('scope', 'unspecified'),
+                'excerpt': fa_excerpt,
+                'cents':   fa_cents,
+            }]
+        else:
+            flags['funding_status_mismatch'] = (
+                "funding_at_award.status=amount_stated but no initial_obligation amount found"
+            )
     elif status == 'none_obligated' and has_obligation:
         flags['funding_status_mismatch'] = (
             "funding_at_award.status=none_obligated but initial_obligation amount present"
@@ -361,6 +406,14 @@ Funding:
   are obligated at time of award.
 - When an initial obligation amount is stated, include it in amounts with kind
   "initial_obligation" and set funding_at_award.status to "amount_stated".
+- IMPORTANT: if the obligated amount equals the award value (e.g. a
+  firm-fixed-price contract where "funds in the amount of $X were obligated
+  at the time of the award" and $X is also the award value), include the
+  amount TWICE in amounts: once with its award-value kind (e.g.
+  "individual_award_value") and once with kind "initial_obligation", each
+  with its own supporting excerpt. An obligation stated in the source must
+  always appear as an "initial_obligation" entry, even when the same dollar
+  figure also serves as the award value.
 
 Location:
 - For U.S. awardees: city_raw and state_raw as printed; country_raw null.
@@ -415,7 +468,7 @@ Return a JSON object with exactly one key "awards":
 
 async def _write_awards(session, release: DowContractRelease, awards_raw: list, source_text: str) -> int:
     """Parse raw award dicts, write DowAward rows, run validators. Returns count inserted."""
-    trigger_count = len(AWARD_TRIGGER_RE.findall(source_text))
+    trigger_count = len(AWARD_TRIGGER_RE.findall(_release_body(source_text)))
     award_total   = len(awards_raw)
 
     existing = (await session.execute(
@@ -526,7 +579,7 @@ async def reprocess_release(session, release: DowContractRelease) -> int:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
-async def run(release_id: int | None = None, reprocess: bool = False) -> None:
+async def run(release_id: int | None = None, reprocess: bool = False, limit: int | None = None, newest: bool = False) -> None:
     async with AsyncSessionLocal() as session:
         if reprocess:
             stmt = select(DowContractRelease).where(DowContractRelease.llm_raw_response.isnot(None))
@@ -546,12 +599,15 @@ async def run(release_id: int | None = None, reprocess: bool = False) -> None:
                 select(DowContractRelease).where(DowContractRelease.id == release_id)
             )).scalars().all()
         else:
-            releases = (await session.execute(
-                select(DowContractRelease)
+            order = (DowContractRelease.release_date.desc().nullslast() if newest
+                     else DowContractRelease.release_date.asc().nullslast())
+            q = (select(DowContractRelease)
                 .where(DowContractRelease.raw_text.isnot(None))
                 .where(DowContractRelease.llm_extracted_at.is_(None))
-                .order_by(DowContractRelease.release_date.asc().nullslast())
-            )).scalars().all()
+                .order_by(order))
+            if limit is not None:
+                q = q.limit(limit)
+            releases = (await session.execute(q)).scalars().all()
 
         total_releases = len(releases)
         logger.info("Releases to extract: %d", total_releases)
@@ -584,7 +640,11 @@ async def run(release_id: int | None = None, reprocess: bool = False) -> None:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--release-id', type=int, default=None)
+    parser.add_argument('--limit', type=int, default=None,
+                        help='Process at most N unextracted releases')
+    parser.add_argument('--newest', action='store_true',
+                        help='Process newest releases first (default: oldest first)')
     parser.add_argument('--reprocess', action='store_true',
                         help='Re-parse stored llm_raw_response and re-run validators (no API call)')
     args = parser.parse_args()
-    asyncio.run(run(release_id=args.release_id, reprocess=args.reprocess))
+    asyncio.run(run(release_id=args.release_id, reprocess=args.reprocess, limit=args.limit, newest=args.newest))
