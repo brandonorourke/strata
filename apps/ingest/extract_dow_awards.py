@@ -364,8 +364,6 @@ source_excerpt: the coherent source text (the paragraph or connected paragraphs)
 that this award group was drawn from, for human review. Include the full relevant
 text, not a minimal fragment.
 
-The release contains approximately {n} award-trigger phrases. Extract all award groups.
-
 Return a JSON object with exactly one key "awards":
 {
   "awards": [
@@ -466,14 +464,11 @@ async def extract_release(client: AsyncOpenAI, session, release: DowContractRele
         logger.warning("Release %d has no raw_text", release.id)
         return 0
 
-    trigger_count = len(AWARD_TRIGGER_RE.findall(source_text))
-    prompt = SYSTEM_PROMPT.replace('{n}', str(trigger_count))
-
     try:
         response = await client.chat.completions.create(
             model=MODEL,
             messages=[
-                {'role': 'system', 'content': prompt},
+                {'role': 'system', 'content': SYSTEM_PROMPT},
                 {'role': 'user',   'content': source_text},
             ],
             response_format={'type': 'json_object'},
