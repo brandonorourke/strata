@@ -18,6 +18,16 @@
 
 3. **Alerting for SAT-PPL-20211207-00172** — Stas asked for this specifically. Watch for new filings/actions/pleadings where `file_number = 'SAT-PPL-20211207-00172'` and send an email when something new appears. Needs: a `watched_file_numbers` table or config, a check script that runs after each ingest, and an email send (sendgrid or SMTP).
 
+## DoW extraction (next immediate)
+
+Spec: `docs/specs/dow_extraction.md`. Deliverables in order:
+1. `migrations/0033_dow_awards.sql` — `dow_awards` table
+2. `apps/ingest/extract_dow_regex.py` — regex extractor, full corpus run
+3. `apps/ingest/extract_dow_llm.py` — LLM extractor, full corpus run
+4. `apps/ingest/report_dow_extraction.py` — per-field agreement report
+5. `tests/test_dow_extraction.py` — May 22 fixture acceptance test
+6. `docs/dow_extraction_report.md` — generated output
+
 ## Next (priority order)
 
 - **Pleadings document text + LLM summary.** Pleadings show on entity timeline with type + file_number only; no content fetched or summarized yet. Need a `fetch_icfs_pleading_documents.py` + LLM pass analogous to the notice pipeline.
@@ -38,11 +48,7 @@
 
 ## Pending cleanup
 
-- **Add DoW to scheduler.** `scheduler.py` currently only runs the ICFS pipeline. Add `ingest_dow_contracts.py --mode incremental` as a daily step so new war.gov releases are picked up automatically. See `apps/ingest/scheduler.py`.
-
-
-
-- **Run `apps/ingest/backfill_dow_raw_html.py` then delete it.** Wait for `ingest_dow_contracts.py --mode backfill` to finish first (don't run both scrapers against war.gov simultaneously). After the HTML backfill completes and all rows have `raw_html`, delete the script — `ingest_dow_contracts.py` stores `raw_html` on all new records going forward.
+- **Run `apps/ingest/backfill_dow_raw_html.py` then delete it.** After the HTML backfill completes and all rows have `raw_html`, delete the script — `ingest_dow_contracts.py` stores `raw_html` on all new records going forward.
 
 ## Tabled
 

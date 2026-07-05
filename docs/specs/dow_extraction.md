@@ -60,12 +60,14 @@ CREATE TABLE dow_awards (
     llm_raw_response        JSONB,   -- full model response for provenance
 
     -- Comparison
-    awardee_match           BOOLEAN,
+    awardee_match           BOOLEAN,  -- set equality (complete set must match)
+    awardee_partial_match   BOOLEAN,  -- overlap but not equal (missed co-awardee)
     piid_match              BOOLEAN,
     ceiling_match           BOOLEAN,
     obligated_match         BOOLEAN,
     type_match              BOOLEAN,
     completion_match        BOOLEAN,
+    program_match           BOOLEAN,  -- loose substring overlap
     overall_match           BOOLEAN,
 
     extracted_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -154,13 +156,23 @@ are headers, footers, or administrative lines — skip them.
 
 ## Comparison logic
 After both extractors run on a paragraph, compute match booleans:
-- **awardee_match**: normalized name sets overlap (at least one shared awardee).
+- **awardee_match**: normalized name sets are **equal** (same complete set of
+  awardees). Partial overlap does NOT count as a match — a missed co-awardee
+  must surface as a failure, not be absorbed silently.
+- **awardee_partial_match**: at least one shared awardee but sets differ.
+  Tracked separately so the report can distinguish "wrong set" from "completely
+  different." On the May 22 release, regex-finds-Viasat-only vs
+  LLM-finds-both should show awardee_match=FALSE, awardee_partial_match=TRUE.
 - **piid_match**: piid sets identical.
 - **ceiling_match**: cents values equal (or both null).
 - **obligated_match**: cents values equal (or both null).
 - **type_match**: normalized contract_type equal.
 - **completion_match**: dates equal (or both null).
-- **overall_match**: all non-null fields match.
+- **program_match**: loose boolean — normalized program_hint strings have
+  substring overlap after casefolding and stripping "program"/"programs".
+  Null if both extractors returned null.
+- **overall_match**: awardee_match + piid_match + ceiling_match +
+  obligated_match + type_match + completion_match all true.
 
 ## Comparison report
 Script: `apps/ingest/report_dow_extraction.py`
@@ -178,14 +190,16 @@ The May 22, 2026 PTSG release **must** extract correctly by at least one method:
 ```
 release:    Contracts for May 22, 2026
 url:        https://www.war.gov/News/Contracts/Contract/Article/4499778/...
-awardees:   [{name: "VIASAT Inc.", city: "...", state: "CA"},
-             {name: "INTELSAT General Communications LLC", city: "McLean", state: "VA"}]
+awardees:   [{name: "VIASAT Inc.", city: null, state: null},
+             {name: "INTELSAT General Communications LLC", city: null, state: null}]
+             -- "Work will be performed at the listed contractors' locations" -- no city stated
 piids:      ["FA880726FB004", "FA880726FB005"]
-ceiling:    43766500500  (cents)
-obligated:  15000000000  (cents)
+ceiling:    43766500500  (cents)  -- $437,665,005
+obligated:  15000000000  (cents)  -- $150,000,000 ("Fiscal 2026 RDT&E funds ... obligated at time of award")
 type:       firm-fixed-price / indefinite-delivery/indefinite-quantity
 completion: 2029-03-19
 program:    "Protected Tactical Satellite-Global"
+contracting_activity: "Space Systems Command, Los Angeles Air Force Base, Los Angeles, California"
 ```
 Use stored `raw_text` as the test fixture (no live fetch).
 
