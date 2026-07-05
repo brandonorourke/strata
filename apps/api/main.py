@@ -31,7 +31,13 @@ from strata_core.models import (
 
 app = FastAPI(title="Strata UI")
 templates = Jinja2Templates(directory="apps/api/templates")
-templates.env.filters["pretty_json"] = lambda v: json.dumps(v, indent=2, default=str)
+def _pretty_json(v):
+    if isinstance(v, dict):
+        v = {k: (json.loads(val) if isinstance(val, str) and val.startswith(('{', '[')) else val)
+             for k, val in v.items()}
+    return json.dumps(v, indent=2, default=str)
+
+templates.env.filters["pretty_json"] = _pretty_json
 
 _EVENT_TYPE_WEIGHTS = {
     "bankruptcy": 6,
