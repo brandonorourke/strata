@@ -532,6 +532,7 @@ async def extract_release(client: AsyncOpenAI, session, release: DowContractRele
             ],
             response_format={'type': 'json_object'},
             temperature=0,
+            timeout=120,
         )
     except Exception as e:
         logger.error("LLM call failed for release %d: %s", release.id, e)
