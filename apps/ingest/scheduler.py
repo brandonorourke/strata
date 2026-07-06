@@ -1,9 +1,9 @@
 """
-Daily ingest scheduler. Run as a long-lived worker process (e.g. Railway worker service).
+Ingest scheduler. Run as a long-lived worker process (e.g. Railway worker service).
 
-Runs the full ICFS incremental pipeline once per day at RUN_AT (default 03:00 UTC).
-On startup, checks whether today's run already completed and self-heals if the container
-restarted after the scheduled time but before the run finished.
+Runs the full ICFS incremental pipeline every PIPELINE_EVERY_MINUTES (default 60 —
+hourly, so contested-filing alerts stay fresh) plus once at startup. DoW releases
+are polled separately in their evening window (see _dow_poll_cadence).
 
 Writes each run to ingest_runs (pipeline='icfs'): started_at, finished_at, status,
 failed_script, per-script return codes in script_results JSONB.
@@ -29,7 +29,7 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-RUN_AT = os.getenv("SCHEDULER_RUN_AT", "03:00")  # UTC
+PIPELINE_EVERY_MINUTES = int(os.getenv("SCHEDULER_EVERY_MINUTES", "60"))  # ICFS pipeline cadence
 PIPELINE_NAME = "icfs"
 
 INGEST_DIR = Path(__file__).parent
@@ -111,20 +111,6 @@ def _run_db(coro, what: str):
     except Exception:
         logger.exception("DB ERROR: %s", what)
         raise
-
-
-async def _db_today_completed(pipeline: str) -> bool:
-    """Return True if a completed run for this pipeline already exists today (UTC)."""
-    conn = await _connect()
-    try:
-        row = await conn.fetchrow(
-            "SELECT id FROM ingest_runs WHERE pipeline = $1 AND status = 'completed' AND started_at::date = $2",
-            pipeline,
-            date.today(),
-        )
-        return row is not None
-    finally:
-        await conn.close()
 
 
 async def _db_start_run(pipeline: str) -> int:
@@ -239,32 +225,15 @@ def run_pipeline() -> None:
     logger.info("Pipeline '%s' %s. Results: %s", PIPELINE_NAME, status, results)
 
 
-def maybe_run_missed() -> None:
-    """If it's past RUN_AT today and no completed run exists yet, run now."""
-    now_utc = datetime.now(timezone.utc)
-    run_hour, run_minute = (int(x) for x in RUN_AT.split(":"))
-    scheduled_today = now_utc.replace(hour=run_hour, minute=run_minute, second=0, microsecond=0)
-    if now_utc < scheduled_today:
-        return
-    try:
-        completed = _run_db(_db_today_completed(PIPELINE_NAME), "check today's completed run")
-    except Exception:
-        logger.warning("catch-up check failed — skipping catch-up this startup")
-        return
-    if completed:
-        logger.info("Today's '%s' run already completed, skipping catch-up", PIPELINE_NAME)
-        return
-    logger.info("Past %s UTC with no completed '%s' run — running now (catch-up)", RUN_AT, PIPELINE_NAME)
-    run_pipeline()
-
-
 if __name__ == "__main__":
-    logger.info("Scheduler starting, pipeline='%s', daily run at %s UTC", PIPELINE_NAME, RUN_AT)
+    logger.info("Scheduler starting, pipeline='%s' every %d min", PIPELINE_NAME, PIPELINE_EVERY_MINUTES)
+    # Run once at startup so a restart/deploy doesn't leave up to a full interval
+    # gap in freshness; then on the interval.
     try:
-        maybe_run_missed()
+        run_pipeline()
     except Exception:
-        logger.exception("startup catch-up failed — continuing to main loop")
-    schedule.every().day.at(RUN_AT).do(run_pipeline)
+        logger.exception("startup pipeline run failed — continuing to main loop")
+    schedule.every(PIPELINE_EVERY_MINUTES).minutes.do(run_pipeline)
 
     _last_dow_poll: datetime | None = None
     _dow_evening_done: date | None = None
