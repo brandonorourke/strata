@@ -79,8 +79,8 @@
           <summary style="padding: 8px 16px; font-size: 12px; color: var(--muted); cursor: pointer; user-select: none; list-style: none; display: flex; align-items: center; gap: 6px;">
             <span class="chevron" style="display: inline-block; transition: transform 0.15s;">&#9656;</span>
             <span>LLM raw response</span>
-            {% if release.llm_raw_response.usage %}
-              <span style="color: var(--muted);">· {{ release.llm_raw_response.usage.prompt_tokens }}+{{ release.llm_raw_response.usage.completion_tokens }} tokens</span>
+            {% if release.llm_raw_response.llm and release.llm_raw_response.llm.usage %}
+              <span style="color: var(--muted);">· {{ release.llm_raw_response.llm.usage.prompt_tokens }}+{{ release.llm_raw_response.llm.usage.completion_tokens }} tokens{% if release.llm_raw_response.llm.finish_reason and release.llm_raw_response.llm.finish_reason != "stop" %} · {{ release.llm_raw_response.llm.finish_reason }}{% endif %}</span>
             {% endif %}
           </summary>
           <pre style="font-size: 0.76em; line-height: 1.6; white-space: pre-wrap; color: var(--muted); background: var(--bg); padding: 16px; margin: 0; overflow-x: auto; border-top: 1px solid var(--border);">{{ release.llm_raw_response | pretty_json }}</pre>

@@ -360,11 +360,15 @@ Rules:
   parenthetical PIID is the parent, not a new award — omit it.
 """
 
-async def _llm_groups(body: str, client: AsyncOpenAI) -> list[dict]:
-    """Call LLM once for the full release body. Returns parsed award_groups list.
+async def _llm_call(body: str, client: AsyncOpenAI) -> dict:
+    """Call LLM once for the full release body.
 
     The LLM enumerates awards independently (no regex hint) so that its PIID list
     can be compared against regex to surface regex-brittleness gaps.
+
+    Returns {"groups": [...], "raw": {...}} where "raw" is the full stored response:
+    model, finish_reason, usage, and the model's parsed JSON content. `finish_reason
+    == "length"` flags a truncated (max-tokens) response — diagnostic for enumeration.
     """
     try:
         resp = await client.chat.completions.create(
@@ -376,11 +380,22 @@ async def _llm_groups(body: str, client: AsyncOpenAI) -> list[dict]:
                 {"role": "user", "content": f"Extract all award groups:\n\n{body}"},
             ],
         )
-        data = json.loads(resp.choices[0].message.content)
-        return data.get("award_groups", [])
+        content = resp.choices[0].message.content
+        parsed = json.loads(content)
+        raw = {
+            "model":         resp.model,
+            "finish_reason": resp.choices[0].finish_reason,
+            "usage": {
+                "prompt_tokens":     resp.usage.prompt_tokens,
+                "completion_tokens": resp.usage.completion_tokens,
+                "total_tokens":      resp.usage.total_tokens,
+            },
+            "content": parsed,   # the model's full raw JSON output
+        }
+        return {"groups": parsed.get("award_groups", []), "raw": raw}
     except Exception as e:
         logger.error("LLM call failed: %s", e)
-        return []
+        return {"groups": [], "raw": {"error": str(e)}}
 
 
 # ── Merge: join regex + LLM on PIID ──────────────────────────────────────────
@@ -508,7 +523,8 @@ async def process_release(
 
     body = _release_body(release.raw_text)
     rg = _regex_groups(body)                       # regex is authoritative for the award list
-    lg = await _llm_groups(body, client)           # LLM enumerates independently (no hint)
+    llm = await _llm_call(body, client)            # LLM enumerates independently (no hint)
+    lg = llm["groups"]
     groups, llm_only = _merge(rg, lg)
 
     if not groups:
@@ -547,12 +563,24 @@ async def process_release(
         ))
 
     release.llm_extracted_at = datetime.now(timezone.utc)
+    # Two clearly-separated blocks:
+    #   "llm"   — the raw model response, stored verbatim (model, usage,
+    #             finish_reason, and the model's JSON content). Nothing here is
+    #             computed by us; it is exactly what the LLM returned.
+    #   "merge" — values DERIVED by _merge() from comparing LLM vs regex output.
+    #             NOTE: `llm_only_piids` despite its name is NOT from the LLM — it
+    #             is the set difference {LLM PIIDs} − {regex PIIDs}, i.e. the
+    #             regex-brittleness research signal. Kept out of the "llm" block
+    #             precisely because it is derived, not raw.
     release.llm_raw_response = {
         "extractor": "v2",
-        "n_groups":  len(groups),
-        "n_regex":   len(rg),
-        "n_llm":     len(lg),
-        "llm_only_piids": llm_only,   # regex-brittleness research signal
+        "llm":   llm["raw"],
+        "merge": {
+            "n_groups":       len(groups),
+            "n_regex":        len(rg),
+            "n_llm":          len(lg),
+            "llm_only_piids": llm_only,
+        },
     }
     await session.commit()
     return len(groups)
