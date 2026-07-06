@@ -30,6 +30,13 @@ Covers: solicitations, award notices (`ptype=a`), J&As (`ptype=u`), pre-solicita
 
 **Key limitation**: Returns only currently active notices. Award notices auto-archive 15 days after the contract award date. Historical data requires bulk CSV download (see below).
 
+**Rate limits (important):**
+- **Federal user key: 1,000 requests/day.**
+- **Non-federal user key: 10 requests/day.** (Our key is non-federal.)
+- Response is max 1,000 records/request. A 20-day all-agency award-notice window is ~3,500 records = 4 requests. So a **wide backfill pull is not viable on a non-federal key** (~2 pulls exhausts the daily 10). Poll narrow windows instead.
+
+**Validated 2026-07-06 — the live API DOES carry fresh DoW awards.** Probing our extracted PIIDs against a 20-day live window returned 56 hits, **49 net-new vs the archived CSV** — including same-day multi-award IDIQ pools (ship-repair `N4523A26D100X`, disaster-response `W912HN26DA01X`, construction `W912PL26DA00X`, several posted that very day). This corrects the earlier "SAM is CSV-only/marginal" read: the **live API is the same-day source**; the CSV simply hasn't archived recent awards yet (see archival-lag note below). Delivery orders (F-types) still get no SAM notice.
+
 ### Award notice response fields (ptype=a)
 
 ```
@@ -42,23 +49,26 @@ solicitationNumber    → notice ID
 fullParentPathName    → agency hierarchy
 ```
 
-### Polling for a company watchlist
+### Polling design (constrained by the 10/day non-federal limit)
 
-No contractor filter exists in the API — `award.awardee.ueiSAM` is response-only. Strategy:
+No contractor filter exists in the API — `award.awardee.ueiSAM` and `award.number` are response-only. So the pattern is: pull a narrow recent window, extract award numbers/UEIs, match client-side.
+
+**Must poll narrowly to stay under 10 requests/day.** Pull only the trailing 1–2 days (one day of all-agency award notices ≈ ~180 records = **1 request**), not a wide window.
 
 ```python
-# Daily pull: all DoD award notices, filter client-side by UEI watchlist
+# Forward daily poll: yesterday's award notices only → ~1 request/day
 params = {
     "api_key": SAM_API_KEY,
     "ptype": "a",
-    "postedFrom": (today - 7).strftime("%m/%d/%Y"),
+    "postedFrom": (today - 1).strftime("%m/%d/%Y"),
     "postedTo": today.strftime("%m/%d/%Y"),
     "limit": 1000,
 }
-# Filter: notice["award"]["awardee"]["ueiSAM"] in WATCHLIST_UEIS
+# Match notice["award"]["number"] against extracted PIIDs;
+# capture award.amount (ceiling) + award.awardee.ueiSAM.
 ```
 
-~130 DoD award notices/day — fits in one page (limit=1000) most days. Catches new IDIQ vehicles and standalone awards within the 15-day active window.
+This catches new IDIQ bases and standalone awards same-day, within the 15-day active window, at ~1–2 requests/day. **Cache results locally** — do not re-pull the same window (re-runs burn the daily quota; that's what caused a 429 during testing). For anything older than the active window, use the bulk CSV, never the live API.
 
 ---
 
@@ -69,7 +79,9 @@ Available at SAM.gov → Data Services. Files are organized by fiscal year (Oct�
 - `FY2025_archived_opportunities.csv` — contains IDIQ base awards, solicitations, J&As from Oct 2024–Sep 2025
 - `FY2026_archived_opportunities.csv` — Oct 2025–present
 
-CSV columns (positional, no header): notice ID, title, solicitation number, dept, dept code, subtier, subtier code, office, office code, posted date, type, base type, archive type, archive date, set-aside description, set-aside code, response deadline, NAICS, classification code, city, state, zip, country, active flag, **award number (PIID)**, **award date**, **award amount**, **awardee name+location**, POC fields, office address, SAM UI link, description.
+The CSV has a **header row**. Award number is column `AwardNumber` (index 25), `Award$` (27), `Awardee` (28), `Type` (10 — filter `Award Notice`).
+
+**Archival-lag — the CSV is a snapshot that trails real-time by ~3–6 weeks (validated 2026-07-06).** It contains only *archived* opportunities; award notices archive ~15 days after award, solicitations after their deadline. Measured on the FY2026 file (downloaded Jul 6): award notices by month were full through ~mid-May (May: 7,183), partial in June (4,407), and **essentially empty in July (1)** — even though the file's latest PostedDate was Jul 2. **Consequence: the CSV can never enrich a this-week release** — that's why fresh multi-award pools (`FA8109-26-D-B###`, `FA8903-26-D-####`) are absent from it while present in the live API. It also does not auto-update; re-download to advance the window. **Use the CSV only for backfill of releases older than ~6 weeks; use the live API for fresh ones.**
 
 ### PTS-G case study (from FY2025 bulk CSV)
 
