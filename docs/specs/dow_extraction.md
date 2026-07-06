@@ -81,30 +81,26 @@ CREATE TABLE dow_awards (
 ```
 
 `llm_raw_response JSONB` and `llm_extracted_at TIMESTAMPTZ` live on
-`dow_contract_releases` (one LLM call per release). `llm_raw_response` has two
-clearly-separated blocks:
+`dow_contract_releases` (one LLM call per release). **`llm_raw_response` stores
+ONLY the raw API response — nothing we compute:**
 
 ```jsonc
 {
-  "extractor": "v2",
-  "llm": {                    // RAW model response, stored verbatim — nothing we compute
-    "model":         "gpt-4o-mini-...",
-    "finish_reason": "stop",  // "length" ⇒ response truncated at max-tokens (incomplete)
-    "usage":         { "prompt_tokens": …, "completion_tokens": …, "total_tokens": … },
-    "content":       { "award_groups": [ … ] }   // the model's full JSON output
-  },
-  "merge": {                  // DERIVED by _merge() — comparison of LLM vs regex output
-    "n_groups": …, "n_regex": …, "n_llm": …,
-    "llm_only_piids": [ … ]   // set diff {LLM PIIDs} − {regex PIIDs}; NOT from the LLM
-  }
+  "model":         "gpt-4o-mini-...",
+  "finish_reason": "stop",   // "length" ⇒ response truncated at max-tokens (incomplete)
+  "usage":         { "prompt_tokens": …, "completion_tokens": …, "total_tokens": … },
+  "content":       { "award_groups": [ … ] }   // the model's full JSON output
 }
 ```
 
-**Important:** `llm_only_piids`, despite the "llm" in its name, is **not** produced
-by the model — it is a derived set difference (the regex-brittleness research
-signal). It is deliberately kept in the `merge` block, out of the raw `llm` block,
-so the stored raw response is exactly what the model returned. Any LLM call always
-persists the full raw response here.
+**Derived merge/comparison metadata is deliberately NOT persisted here.** Values
+like `n_regex`, `n_llm`, and `llm_only_piids` (the set diff {LLM PIIDs} −
+{regex PIIDs}, i.e. the regex-brittleness signal) are computed by `_merge()` at
+run time and **logged**, not stored — they mix derived analysis into the raw
+record. They are fully recomputable for research from this stored `content` plus
+re-running the deterministic regex on `raw_text`, so nothing is lost by omitting
+them. The extraction outcome itself is captured in the `dow_awards` rows
+(`awardees[*].pairing_confidence`).
 
 PIID lives inside each awardee (`awardees[*].piid`); the standalone `piids`
 column was dropped in migration 0036. Query by PIID with the JSONB containment

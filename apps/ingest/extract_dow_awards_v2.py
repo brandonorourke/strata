@@ -563,25 +563,14 @@ async def process_release(
         ))
 
     release.llm_extracted_at = datetime.now(timezone.utc)
-    # Two clearly-separated blocks:
-    #   "llm"   — the raw model response, stored verbatim (model, usage,
-    #             finish_reason, and the model's JSON content). Nothing here is
-    #             computed by us; it is exactly what the LLM returned.
-    #   "merge" — values DERIVED by _merge() from comparing LLM vs regex output.
-    #             NOTE: `llm_only_piids` despite its name is NOT from the LLM — it
-    #             is the set difference {LLM PIIDs} − {regex PIIDs}, i.e. the
-    #             regex-brittleness research signal. Kept out of the "llm" block
-    #             precisely because it is derived, not raw.
-    release.llm_raw_response = {
-        "extractor": "v2",
-        "llm":   llm["raw"],
-        "merge": {
-            "n_groups":       len(groups),
-            "n_regex":        len(rg),
-            "n_llm":          len(lg),
-            "llm_only_piids": llm_only,
-        },
-    }
+    # Store ONLY the raw LLM response — nothing we compute. This is a faithful
+    # record of the API call: model, finish_reason, usage, and the model's JSON
+    # content. Merge/comparison metadata (n_regex, n_llm, llm_only_piids) is
+    # deliberately NOT stored here: it is derived, and fully recomputable for
+    # research from this stored content + re-running the deterministic regex on
+    # raw_text. `llm_only` is still logged during the run (see _merge) for
+    # operational visibility, just not persisted into the raw response.
+    release.llm_raw_response = llm["raw"]
     await session.commit()
     return len(groups)
 
