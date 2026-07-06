@@ -62,7 +62,20 @@ Requires the parent contract's PIID:
 GET /api/v2/awards/CONT_AWD_{ORDER_PIID}_{AGENCY}_{PARENT_PIID}_{PARENT_AGENCY}/
 ```
 
-The parent PIID is not in the press release — requires a separate lookup or can be found on USASpending by searching the company name.
+Example (PTS-G Swarm 1, Viasat, May 2026 — delivery order under a FY2025 IDIQ):
+```
+GET /api/v2/awards/CONT_AWD_FA880726FB004_9700_FA880725DB002_9700/
+```
+
+**Getting the parent PIID**: The DoW press release does not include it. Best sources:
+1. **SAM.gov award notice** — the notice for the original IDIQ award lists "Contract Award Number" which is the parent PIID. For PTS-G: notice ID `_PA` / related `FA880725X000X-PTSG-RFP` shows parent `FA880725DB002`.
+2. **USASpending recipient search** — search the company name and filter to IDIQ awards from the same office/year.
+
+**Fallback**: If the delivery order isn't indexed (F-type lag can exceed 6 weeks — PTS-G delivery order from May 22, 2026 was still absent on July 6, 2026), resolve the parent D-type IDIQ instead:
+```
+GET /api/v2/awards/CONT_IDV_FA880725DB002_9700/
+```
+This returns the $4B program ceiling and description even when no delivery orders are indexed yet. Check `child_award_count` to see how many orders are indexed.
 
 ### Condensed (no-dash) PIID format
 
@@ -221,7 +234,7 @@ Tested against our 679-PIID DB (30 releases, Jul 2014 and Jun-Jul 2026):
 | FY2026 | ~5% within 1 week (data lag observed: at least 7 calendar days) |
 | F-type (any year) | ~0% without parent PIID |
 
-**Observed lag**: Contracts announced June 29-30 and July 1-2, 2026 (tested July 5) were not yet indexed — 4-5 business days with a July 4 holiday in between. The lag appears to be at least 1 week, possibly longer. The press release is the only same-day source; USASpending enrichment should be treated as async/deferred.
+**Observed lag**: Contracts announced June 29-30 and July 1-2, 2026 (tested July 5) were not yet indexed — 4-5 business days with a July 4 holiday in between. F-type delivery orders can lag significantly longer: PTS-G Swarm 1 (May 22, 2026 award) had zero child awards indexed under its parent IDIQ as of July 6, 2026 — 6+ weeks. USASpending enrichment must be treated as async/deferred.
 
 PIID type distribution in DoW press releases: D=69%, C=22%, F=6%, other=3%.
 
@@ -258,4 +271,11 @@ async def fetch_award(piid: str) -> dict | None:
 
 ## SAM.gov
 
-SAM.gov requires an API key for entity lookups — no open access. USASpending is the right open data source for contract enrichment. The `recipient_uei` field from USASpending is the UEI that would be used to look up the entity in SAM.gov if a key is available.
+SAM.gov requires an API key for automated access (TOS prohibits bots without a key). However, SAM.gov **award notices** are the best source for:
+- Parent PIIDs for F-type delivery orders (listed as "Contract Award Number" on the IDIQ award notice)
+- Program-level IDIQ ceilings (listed as "Base and All Options Value")
+- 5-awardee / multi-award IDIQ structure
+
+Example: PTS-G IDIQ award notice on SAM.gov listed `FA880725DB002` as Viasat's IDIQ base contract with a $4B ceiling — this is what defense analysts use to report program value. The $437M DoW press release was just the first delivery order (Swarm 1) against that vehicle.
+
+USASpending is the right open data source for transaction-level contract enrichment. The `recipient_uei` from USASpending can be used to link back to SAM.gov entity registration if an API key is available.
