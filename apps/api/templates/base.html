@@ -265,7 +265,9 @@
       <a href="/admin/icfs/pleadings"  class="nav-item {% if path.startswith('/admin/icfs/pleadings') %}active{% endif %}">Pleadings</a>
       <a href="/admin/icfs/notices"    class="nav-item {% if path.startswith('/admin/icfs/notices') %}active{% endif %}">Notices</a>
       <div class="nav-section" style="margin-top: 16px;">Dept. of War</div>
-      <a href="/admin/dow/contracts" class="nav-item {% if path.startswith('/admin/dow') %}active{% endif %}">Contracts</a>
+      <a href="/dow"                 class="nav-item {% if path == '/dow' %}active{% endif %}">Awards</a>
+      <div class="nav-subsection">Admin</div>
+      <a href="/admin/dow/contracts" class="nav-item {% if path.startswith('/admin/dow') %}active{% endif %}">Releases</a>
     </nav>
 
     <main id="main">

@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.responses import RedirectResponse
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select, func, and_, text, bindparam, String, Integer
+from sqlalchemy import select, func, and_, cast, text, bindparam, String, Integer, Text
 from sqlalchemy.orm import selectinload
 
 from strata_core.db import AsyncSessionLocal
@@ -38,6 +38,20 @@ def _pretty_json(v):
     return json.dumps(v, indent=2, default=str)
 
 templates.env.filters["pretty_json"] = _pretty_json
+
+def _fmt_dollars(cents):
+    if not cents:
+        return "—"
+    b = cents / 100
+    if b >= 1_000_000_000:
+        return f"${b/1e9:.1f}B"
+    if b >= 1_000_000:
+        return f"${b/1e6:.1f}M"
+    if b >= 1_000:
+        return f"${b/1e3:.0f}K"
+    return f"${b:,.0f}"
+
+templates.env.filters["fmt_dollars"] = _fmt_dollars
 
 _EVENT_TYPE_WEIGHTS = {
     "bankruptcy": 6,
@@ -296,6 +310,108 @@ async def dow_contracts(request: Request, page: int = 1, page_size: int = 50):
         "page": page,
         "page_size": page_size,
         "total_pages": total_pages,
+    })
+
+
+@app.get("/dow")
+async def dow_awards_screen(
+    request: Request,
+    page:       int = 1,
+    page_size:  int = 100,
+    from_date:  str | None = None,
+    to_date:    str | None = None,
+    q:          str | None = None,
+    action:     str | None = None,
+):
+    def _parse_date(s):
+        if not s:
+            return None
+        try:
+            return date.fromisoformat(s)
+        except ValueError:
+            return None
+
+    fd = _parse_date(from_date)
+    td = _parse_date(to_date)
+
+    async with AsyncSessionLocal() as session:
+        def _apply_filters(stmt):
+            stmt = stmt.join(DowContractRelease, DowAward.release_id == DowContractRelease.id)
+            if fd:
+                stmt = stmt.where(DowContractRelease.release_date >= fd)
+            if td:
+                stmt = stmt.where(DowContractRelease.release_date <= td)
+            if action:
+                stmt = stmt.where(DowAward.action_type == action)
+            if q:
+                stmt = stmt.where(cast(DowAward.awardees, Text).ilike(f"%{q}%"))
+            return stmt
+
+        # Summary scan (all filtered rows, no pagination)
+        sum_stmt = _apply_filters(
+            select(DowAward.amounts, DowAward.action_type, DowContractRelease.release_date)
+        )
+        rows = (await session.execute(sum_stmt)).all()
+
+        total = len(rows)
+        total_obligated = 0
+        total_ceiling   = 0
+        award_count     = 0
+        mod_count       = 0
+        dates           = []
+
+        for amounts, atype, rdate in rows:
+            if atype == 'award':
+                award_count += 1
+            elif atype == 'modification':
+                mod_count += 1
+            if rdate:
+                dates.append(rdate)
+            for amt in (amounts or []):
+                c = amt.get('cents') or 0
+                k = amt.get('kind', '')
+                if k == 'initial_obligation':
+                    total_obligated += c
+                elif k in ('ceiling', 'total_value'):
+                    total_ceiling += c
+
+        date_min = min(dates).strftime("%b %d, %Y") if dates else "—"
+        date_max = max(dates).strftime("%b %d, %Y") if dates else "—"
+
+        # Paginated data
+        if page < 1:
+            page = 1
+        offset = (page - 1) * page_size
+        data_stmt = _apply_filters(
+            select(DowAward)
+            .options(selectinload(DowAward.release))
+        ).order_by(
+            DowContractRelease.release_date.desc().nullslast(),
+            DowAward.award_index.asc(),
+        ).offset(offset).limit(page_size)
+
+        awards = (await session.execute(data_stmt)).scalars().unique().all()
+
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
+    return templates.TemplateResponse("dow_awards.html", {
+        "request":        request,
+        "title":          "Strata — DoW Awards",
+        "awards":         awards,
+        "total":          total,
+        "page":           page,
+        "page_size":      page_size,
+        "total_pages":    total_pages,
+        "total_obligated": total_obligated,
+        "total_ceiling":  total_ceiling,
+        "award_count":    award_count,
+        "mod_count":      mod_count,
+        "date_min":       date_min,
+        "date_max":       date_max,
+        "from_date":      from_date or "",
+        "to_date":        to_date or "",
+        "q":              q or "",
+        "action_filter":  action or "",
     })
 
 
