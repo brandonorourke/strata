@@ -2,244 +2,107 @@
 {% block content %}
 
 <style>
-  .summary-bar {
-    display: flex;
-    gap: 0;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    box-shadow: 0 1px 2px rgba(16,24,40,.04);
-    overflow: hidden;
-    margin-bottom: 20px;
-  }
-  .stat-block {
-    flex: 1;
-    padding: 16px 20px;
-    border-right: 1px solid var(--border);
-  }
-  .stat-block:last-child { border-right: none; }
-  .stat-value {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--ink);
-    line-height: 1.2;
-  }
-  .stat-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted);
-    margin-top: 3px;
-  }
+  .page-head { margin-bottom: 18px; }
+  .page-head h2 { margin-bottom: 4px; }
+  .page-sub { font-size: 12.5px; color: var(--muted); }
 
+  /* ── Filters ── */
   .filters-row {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 22px;
   }
   .filters-row input[type="date"],
   .filters-row input[type="text"],
   .filters-row select {
-    font-family: inherit;
-    font-size: 13px;
-    padding: 7px 11px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface);
-    color: var(--ink);
-    height: 34px;
+    font-family: inherit; font-size: 13px; padding: 7px 11px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); color: var(--ink); height: 34px;
   }
   .filters-row select { padding-right: 28px; }
   .filters-row input:focus, .filters-row select:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px var(--accent-tint);
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint);
   }
   .btn-filter {
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 7px 16px;
-    height: 34px;
-    border: none;
-    border-radius: 8px;
-    background: var(--accent);
-    color: #fff;
-    cursor: pointer;
+    font-family: inherit; font-size: 13px; font-weight: 600; padding: 7px 16px; height: 34px;
+    border: none; border-radius: 8px; background: var(--accent); color: #fff; cursor: pointer;
   }
   .btn-filter:hover { background: var(--accent-dark); }
   .btn-clear {
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 7px 12px;
-    height: 34px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface);
-    color: var(--muted);
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
+    font-family: inherit; font-size: 13px; font-weight: 500; padding: 7px 12px; height: 34px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+    color: var(--muted); cursor: pointer; text-decoration: none;
+    display: inline-flex; align-items: center;
   }
   .btn-clear:hover { background: var(--bg); color: var(--ink); text-decoration: none; }
 
-  .awards-table th, .awards-table td {
-    padding: 10px 13px;
-    vertical-align: top;
+  /* ── Day section ── */
+  .day { margin-bottom: 26px; }
+  .day-header {
+    display: flex; align-items: baseline; gap: 12px;
+    padding: 0 2px 8px; margin-bottom: 0; border-bottom: 2px solid var(--ink);
   }
+  .day-date { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+  .day-count {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;
+    color: var(--muted);
+  }
+  .day-source { margin-left: auto; font-size: 12px; font-weight: 500; }
+
+  /* ── Awards table ── */
+  .awards-table { border-radius: 0 0 var(--radius) var(--radius); border-top: none; }
+  .awards-table th, .awards-table td { padding: 9px 13px; vertical-align: top; }
   .awards-table th { white-space: nowrap; }
-  .awards-table tbody tr.data-row {
-    cursor: pointer;
-  }
-  .awards-table tbody tr.data-row:hover { background: #f5f7ff; }
-  .awards-table tbody tr.detail-row { display: none; background: #fafbfc; }
-  .awards-table tbody tr.detail-row.open { display: table-row; }
-  .awards-table tbody tr.detail-row td {
-    padding: 12px 16px 16px 32px;
-    border-top: none;
-  }
+  .awards-table td.grp { border-left: 1px solid var(--border); }
+
+  .awardee-name { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+  .awardee-loc  { font-size: 11px; color: var(--muted); }
+  .piid { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 11.5px; color: #374151; white-space: nowrap; }
+  .amt  { font-weight: 600; color: var(--ink); white-space: nowrap; }
+  .amt-more { font-weight: 500; color: var(--muted); font-size: 11px; }
+  .purpose { font-size: 12.5px; color: var(--ink); line-height: 1.45; }
 
   .badge {
-    display: inline-block;
-    padding: 2px 8px;
-    border-radius: 5px;
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    white-space: nowrap;
+    display: inline-block; padding: 2px 8px; border-radius: 5px; font-size: 10.5px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
   }
   .badge-award        { background: #ecfdf5; color: #047857; }
   .badge-modification { background: #eff6ff; color: #1d4ed8; }
   .badge-other        { background: #f3f4f6; color: #6b7280; }
-  .badge-flag         { background: #fff0ee; color: #c0392b; padding: 0 5px; margin-left: 4px; cursor: help; }
+  .badge-program {
+    background: var(--accent-tint); color: var(--accent-dark);
+    text-transform: none; font-weight: 600; margin-left: 6px; letter-spacing: 0;
+  }
 
-  .mono-piid {
-    font-family: "SF Mono", Menlo, Consolas, monospace;
-    font-size: 11.5px;
-    color: #374151;
-    white-space: nowrap;
-  }
-  .mono-piid div { line-height: 1.35; }
-
-  .dollar-val  { font-weight: 600; color: var(--ink); }
-  .dollar-muted { font-weight: 500; color: var(--muted); }
-
-  .detail-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px 32px;
-    font-size: 12.5px;
-  }
-  .detail-label {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--muted);
-    margin-bottom: 3px;
-  }
-  .detail-val { color: var(--ink); line-height: 1.5; }
-  .detail-val.mono {
-    font-family: "SF Mono", Menlo, Consolas, monospace;
-    font-size: 11.5px;
-    color: #374151;
-  }
-  .detail-excerpt {
-    font-size: 12px;
-    color: var(--muted);
-    font-style: italic;
-    border-left: 3px solid var(--border);
-    padding-left: 10px;
-    line-height: 1.6;
-    margin-top: 2px;
-  }
-  .amounts-list { display: flex; flex-wrap: wrap; gap: 8px; }
-  .amt-chip {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-size: 12px;
-  }
-  .amt-chip .ak { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; display: block; }
-  .amt-chip .av { font-weight: 600; }
-
-  .pager {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    justify-content: flex-end;
-    margin-top: 16px;
-    font-size: 13px;
-  }
+  /* ── Pager ── */
+  .pager { display: flex; gap: 6px; align-items: center; justify-content: flex-end; margin-top: 20px; font-size: 13px; }
   .pager a, .pager span {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 32px;
-    height: 32px;
-    padding: 0 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    color: var(--ink);
-    text-decoration: none;
-    font-size: 13px;
+    display: inline-flex; align-items: center; justify-content: center; min-width: 32px; height: 32px;
+    padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; color: var(--ink);
+    text-decoration: none; font-size: 13px;
   }
   .pager span { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
   .pager a:hover { background: var(--bg); text-decoration: none; }
   .pager .disabled { color: var(--muted); pointer-events: none; background: #f9f9f9; }
 
-  .trunc60 {
-    max-width: 260px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    display: block;
-  }
+  .empty { text-align: center; color: var(--muted); padding: 48px; }
 </style>
 
-<h2>Dept. of War — Contract Awards</h2>
-
-{# ── Summary Bar ── #}
-<div class="summary-bar">
-  <div class="stat-block">
-    <div class="stat-value">{{ total }}</div>
-    <div class="stat-label">Award Groups</div>
-  </div>
-  <div class="stat-block">
-    <div class="stat-value">{{ award_count }}</div>
-    <div class="stat-label">Awards</div>
-  </div>
-  <div class="stat-block">
-    <div class="stat-value">{{ mod_count }}</div>
-    <div class="stat-label">Modifications</div>
-  </div>
-  <div class="stat-block">
-    <div class="stat-value">{{ flagged_count }}</div>
-    <div class="stat-label">Flagged (review)</div>
-  </div>
-  <div class="stat-block">
-    <div class="stat-value" style="font-size: 13px; font-weight: 500; padding-top: 4px; line-height: 1.4;">{{ date_min }}<br>→ {{ date_max }}</div>
-    <div class="stat-label">Date Range</div>
+<div class="page-head">
+  <h2>Dept. of War — Contract Awards</h2>
+  <div class="page-sub">
+    Daily contract announcements from the U.S. Department of War.
+    {{ total_awards }} award{{ "s" if total_awards != 1 }} across {{ total_days }} release day{{ "s" if total_days != 1 }}.
   </div>
 </div>
 
 {# ── Filters ── #}
 <form method="get" class="filters-row">
-  <input type="date" name="from_date" value="{{ from_date }}" placeholder="From" style="width: 140px;">
-  <input type="date" name="to_date"   value="{{ to_date }}"   placeholder="To"   style="width: 140px;">
-  <input type="text" name="q" value="{{ q }}" placeholder="Awardee search…" style="width: 200px;">
+  <input type="date" name="from_date" value="{{ from_date }}" style="width: 150px;">
+  <input type="date" name="to_date"   value="{{ to_date }}"   style="width: 150px;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Awardee search…" style="width: 210px;">
   <select name="action">
     <option value="">All actions</option>
     <option value="award"        {% if action_filter == "award" %}selected{% endif %}>Awards only</option>
-    <option value="modification" {% if action_filter == "modification" %}selected{% endif %}>Mods only</option>
+    <option value="modification" {% if action_filter == "modification" %}selected{% endif %}>Modifications only</option>
   </select>
   <button type="submit" class="btn-filter">Filter</button>
   {% if from_date or to_date or q or action_filter %}
@@ -247,162 +110,84 @@
   {% endif %}
 </form>
 
-{# ── Table ── #}
-<div style="font-size: 12.5px; color: var(--muted); margin-bottom: 8px;">
-  {{ total }} award{{ "s" if total != 1 }}
-  {% if total > page_size %} — showing {{ (page-1)*page_size + 1 }}–{{ [page*page_size, total]|min }}{% endif %}
-</div>
-
-<table class="awards-table">
-  <thead>
-    <tr>
-      <th>Date</th>
-      <th>Awardee(s)</th>
-      <th>PIID</th>
-      <th>Amount</th>
-      <th>Action</th>
-      <th>Purpose</th>
-      <th>Activity</th>
-      <th>Program</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for award in awards %}
-      <tr class="data-row" onclick="toggleDetail({{ award.id }})">
-        <td style="white-space: nowrap; color: var(--muted); font-size: 12px;">
-          {{ award.release.release_date.strftime("%b %d, %Y") if award.release and award.release.release_date else "—" }}
-        </td>
-        <td style="max-width: 240px;">
-          {% if award.awardees %}
-            {% for a in award.awardees %}
-              <div style="font-size: 13px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                {{ a.name_raw or "(unnamed)" }}
-                {% if a.pairing_confidence == "regex_only" %}<span class="badge badge-flag" title="Regex found this PIID but the LLM did not classify it as an award — usually a parent-contract reference. Review.">⚑</span>{% endif %}
-              </div>
-              {% set loc = [a.city_raw, a.state_raw] | select | list %}
-              {% if loc %}<div style="font-size: 11px; color: var(--muted);">{{ loc | join(", ") }}</div>{% endif %}
-            {% endfor %}
-          {% else %}—{% endif %}
-        </td>
-        <td class="mono-piid">
-          {% if award.awardees %}
-            {% for a in award.awardees %}<div>{{ a.piid or "—" }}</div>{% endfor %}
-          {% else %}—{% endif %}
-        </td>
-        <td style="white-space: nowrap;">
-          {% if award.amounts and award.amounts[0].raw %}
-            <span class="dollar-val">{{ award.amounts[0].raw }}</span>
-            {% if award.amounts|length > 1 %}<span class="dollar-muted" title="{{ award.amounts|length }} amounts in source"> +{{ award.amounts|length - 1 }}</span>{% endif %}
-          {% else %}—{% endif %}
-        </td>
-        <td>
-          {% if award.action_type %}
-            <span class="badge badge-{{ award.action_type }}">{{ award.action_type }}</span>
-          {% else %}—{% endif %}
-        </td>
-        <td>
-          {% if award.purpose %}
-            <span class="trunc60" title="{{ award.purpose }}">{{ award.purpose }}</span>
-          {% else %}—{% endif %}
-        </td>
-        <td style="font-size: 12px; color: var(--muted); max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          {{ award.contracting_activity or "—" }}
-        </td>
-        <td style="font-size: 12px; color: var(--muted); max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          {{ award.program_hint or "—" }}
-        </td>
-      </tr>
-
-      {# ── Detail row ── #}
-      <tr class="detail-row" id="detail-{{ award.id }}">
-        <td colspan="8">
-          <div class="detail-grid">
-
-            <div>
-              <div class="detail-label">Awardees / PIID</div>
-              <div class="detail-val mono">
-                {% for a in award.awardees %}
-                  <div>{{ a.piid or "—" }} — {{ a.name_raw or "(unnamed)" }}
-                    <span style="color: var(--muted);">[{{ a.pairing_confidence or "?" }}]</span></div>
-                {% endfor %}
-              </div>
-            </div>
-
-            {% if award.completion_date or award.completion_date_raw %}
-            <div>
-              <div class="detail-label">Est. Completion</div>
-              <div class="detail-val">{{ award.completion_date.strftime("%b %d, %Y") if award.completion_date else award.completion_date_raw }}</div>
-            </div>
-            {% endif %}
-
-            {% if award.purpose %}
-            <div style="grid-column: 1 / -1;">
-              <div class="detail-label">Purpose</div>
-              <div class="detail-val">{{ award.purpose }}</div>
-            </div>
-            {% endif %}
-
-            {% if award.amounts %}
-            <div style="grid-column: 1 / -1;">
-              <div class="detail-label">Amounts (raw, from press release)</div>
-              <div class="amounts-list">
-                {% for amt in award.amounts %}
-                  {% if amt.raw %}<div class="amt-chip"><span class="av">{{ amt.raw }}</span></div>{% endif %}
-                {% endfor %}
-              </div>
-            </div>
-            {% endif %}
-
-            {% if award.source_excerpt %}
-            <div style="grid-column: 1 / -1;">
-              <div class="detail-label">Source</div>
-              <div class="detail-excerpt">{{ award.source_excerpt }}</div>
-            </div>
-            {% endif %}
-
-          </div>
-        </td>
-      </tr>
-
-    {% else %}
-      <tr><td colspan="8" style="text-align: center; color: var(--muted); padding: 32px;">No awards found.</td></tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-{# ── Pagination ── #}
-{% if total_pages > 1 %}
-<div class="pager">
-  {% set qs_base = "&from_date=" ~ from_date ~ "&to_date=" ~ to_date ~ "&q=" ~ q ~ "&action=" ~ action_filter %}
-  {% if page > 1 %}
-    <a href="?page={{ page - 1 }}{{ qs_base }}">←</a>
-  {% else %}
-    <a class="disabled">←</a>
-  {% endif %}
-
-  {% for p in range([1, page - 2]|max, [total_pages + 1, page + 3]|min) %}
-    {% if p == page %}
-      <span>{{ p }}</span>
-    {% else %}
-      <a href="?page={{ p }}{{ qs_base }}">{{ p }}</a>
-    {% endif %}
+{# ── Day sections ── #}
+{% for release, awards in days %}
+  {# count displayable awardee rows (exclude parent-reference entries) for the header #}
+  {% set dns = namespace(rows=0) %}
+  {% for award in awards %}
+    {% set dns.rows = dns.rows + (award.awardees | rejectattr("pairing_confidence", "equalto", "regex_only") | list | length) %}
   {% endfor %}
 
-  {% if page < total_pages %}
-    <a href="?page={{ page + 1 }}{{ qs_base }}">→</a>
-  {% else %}
-    <a class="disabled">→</a>
+  {% if dns.rows > 0 %}
+  <section class="day">
+    <div class="day-header">
+      <span class="day-date">{{ release.release_date.strftime("%A, %B %-d, %Y") if release.release_date else "Undated" }}</span>
+      <span class="day-count">{{ dns.rows }} award{{ "s" if dns.rows != 1 }}</span>
+      {% if release.url %}<a href="{{ release.url }}" target="_blank" rel="noopener" class="day-source">DoW source ↗</a>{% endif %}
+    </div>
+
+    <table class="awards-table">
+      <thead>
+        <tr>
+          <th>Awardee</th>
+          <th>PIID</th>
+          <th>Amount</th>
+          <th>Action</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for award in awards %}
+          {% set shown = award.awardees | rejectattr("pairing_confidence", "equalto", "regex_only") | list %}
+          {% if shown %}
+            {% set n = shown | length %}
+            {% for a in shown %}
+              <tr>
+                <td>
+                  <div class="awardee-name">{{ a.name_raw or "(unnamed)" }}</div>
+                  {% set loc = [a.city_raw, a.state_raw] | select | list %}
+                  {% if loc %}<div class="awardee-loc">{{ loc | join(", ") }}</div>{% endif %}
+                </td>
+                <td class="piid">{{ a.piid or "—" }}</td>
+
+                {% if loop.first %}
+                  {# group-level cells span all awardees in this contract action #}
+                  <td class="grp amt" rowspan="{{ n }}">
+                    {% if award.amounts and award.amounts[0].raw %}
+                      {{ award.amounts[0].raw }}
+                      {% if award.amounts | length > 1 %}<span class="amt-more" title="{{ award.amounts | length }} figures in source"> +{{ award.amounts|length - 1 }}</span>{% endif %}
+                    {% else %}—{% endif %}
+                  </td>
+                  <td class="grp" rowspan="{{ n }}">
+                    {% if award.action_type %}<span class="badge badge-{{ award.action_type }}">{{ award.action_type }}</span>{% else %}—{% endif %}
+                  </td>
+                  <td class="grp purpose" rowspan="{{ n }}">
+                    {{ award.purpose or "—" }}
+                    {% if award.program_hint %}<span class="badge badge-program">{{ award.program_hint }}</span>{% endif %}
+                  </td>
+                {% endif %}
+              </tr>
+            {% endfor %}
+          {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
   {% endif %}
+{% else %}
+  <div class="empty">No contract awards found.</div>
+{% endfor %}
+
+{# ── Pagination (by day) ── #}
+{% if total_pages > 1 %}
+<div class="pager">
+  {% set qs = "&from_date=" ~ from_date ~ "&to_date=" ~ to_date ~ "&q=" ~ q ~ "&action=" ~ action_filter %}
+  {% if page > 1 %}<a href="?page={{ page - 1 }}{{ qs }}">←</a>{% else %}<a class="disabled">←</a>{% endif %}
+  {% for p in range([1, page - 2]|max, [total_pages + 1, page + 3]|min) %}
+    {% if p == page %}<span>{{ p }}</span>{% else %}<a href="?page={{ p }}{{ qs }}">{{ p }}</a>{% endif %}
+  {% endfor %}
+  {% if page < total_pages %}<a href="?page={{ page + 1 }}{{ qs }}">→</a>{% else %}<a class="disabled">→</a>{% endif %}
 </div>
 {% endif %}
-
-<script>
-function toggleDetail(id) {
-  const row = document.getElementById('detail-' + id);
-  if (!row) return;
-  row.classList.toggle('open');
-  row.style.display = row.classList.contains('open') ? 'table-row' : 'none';
-}
-</script>
 
 {% endblock %}

@@ -316,8 +316,8 @@ async def dow_contracts(request: Request, page: int = 1, page_size: int = 50):
 @app.get("/dow")
 async def dow_awards_screen(
     request: Request,
-    page:       int = 1,
-    page_size:  int = 100,
+    page:       int = 1,       # paginates by RELEASE DAY, not by award
+    page_size:  int = 15,
     from_date:  str | None = None,
     to_date:    str | None = None,
     q:          str | None = None,
@@ -333,78 +333,79 @@ async def dow_awards_screen(
 
     fd = _parse_date(from_date)
     td = _parse_date(to_date)
+    if page < 1:
+        page = 1
 
     async with AsyncSessionLocal() as session:
-        def _apply_filters(stmt):
-            stmt = stmt.join(DowContractRelease, DowAward.release_id == DowContractRelease.id)
-            if fd:
-                stmt = stmt.where(DowContractRelease.release_date >= fd)
-            if td:
-                stmt = stmt.where(DowContractRelease.release_date <= td)
-            if action:
-                stmt = stmt.where(DowAward.action_type == action)
-            if q:
-                stmt = stmt.where(cast(DowAward.awardees, Text).ilike(f"%{q}%"))
-            return stmt
+        # Shared filter conditions (award + date + search)
+        conds = []
+        if fd:
+            conds.append(DowContractRelease.release_date >= fd)
+        if td:
+            conds.append(DowContractRelease.release_date <= td)
+        if action:
+            conds.append(DowAward.action_type == action)
+        if q:
+            conds.append(cast(DowAward.awardees, Text).ilike(f"%{q}%"))
 
-        # Summary scan (all filtered rows, no pagination)
-        sum_stmt = _apply_filters(
-            select(DowAward.awardees, DowAward.action_type, DowContractRelease.release_date)
+        # Distinct release DAYS that have matching awards, newest first
+        days_stmt = (
+            select(DowContractRelease.id, DowContractRelease.release_date)
+            .join(DowAward, DowAward.release_id == DowContractRelease.id)
+            .where(*conds)
+            .distinct()
+            .order_by(DowContractRelease.release_date.desc().nullslast(),
+                      DowContractRelease.id.desc())
         )
-        rows = (await session.execute(sum_stmt)).all()
+        all_days = (await session.execute(days_stmt)).all()
+        total_days = len(all_days)
 
-        total = len(rows)
-        award_count   = 0
-        mod_count     = 0
-        flagged_count = 0   # awards with ≥1 regex_only awardee (parent ref / needs review)
-        dates         = []
+        # Total matching awards (for the header line)
+        total_awards = (await session.execute(
+            select(func.count())
+            .select_from(DowAward)
+            .join(DowContractRelease, DowAward.release_id == DowContractRelease.id)
+            .where(*conds)
+        )).scalar_one()
 
-        for awardees, atype, rdate in rows:
-            if atype == 'award':
-                award_count += 1
-            elif atype == 'modification':
-                mod_count += 1
-            if rdate:
-                dates.append(rdate)
-            if any((a or {}).get('pairing_confidence') == 'regex_only' for a in (awardees or [])):
-                flagged_count += 1
-
-        date_min = min(dates).strftime("%b %d, %Y") if dates else "—"
-        date_max = max(dates).strftime("%b %d, %Y") if dates else "—"
-
-        # Paginated data
-        if page < 1:
-            page = 1
+        # Page the days, then fetch their awards
         offset = (page - 1) * page_size
-        data_stmt = _apply_filters(
-            select(DowAward)
-            .options(selectinload(DowAward.release))
-        ).order_by(
-            DowContractRelease.release_date.desc().nullslast(),
-            DowAward.award_index.asc(),
-        ).offset(offset).limit(page_size)
+        page_day_ids = [d.id for d in all_days[offset:offset + page_size]]
 
-        awards = (await session.execute(data_stmt)).scalars().unique().all()
+        days = []  # list of (release, [awards]) in date order
+        if page_day_ids:
+            awards_stmt = (
+                select(DowAward)
+                .options(selectinload(DowAward.release))
+                .join(DowContractRelease, DowAward.release_id == DowContractRelease.id)
+                .where(DowAward.release_id.in_(page_day_ids), *conds)
+                .order_by(DowContractRelease.release_date.desc().nullslast(),
+                          DowAward.award_index.asc())
+            )
+            awards = (await session.execute(awards_stmt)).scalars().unique().all()
+            by_release = {}
+            for a in awards:
+                by_release.setdefault(a.release_id, []).append(a)
+            for rid in page_day_ids:
+                rel_awards = by_release.get(rid)
+                if rel_awards:
+                    days.append((rel_awards[0].release, rel_awards))
 
-    total_pages = max(1, (total + page_size - 1) // page_size)
+    total_pages = max(1, (total_days + page_size - 1) // page_size)
 
     return templates.TemplateResponse("dow_awards.html", {
-        "request":        request,
-        "title":          "Strata — DoW Awards",
-        "awards":         awards,
-        "total":          total,
-        "page":           page,
-        "page_size":      page_size,
-        "total_pages":    total_pages,
-        "flagged_count":  flagged_count,
-        "award_count":    award_count,
-        "mod_count":      mod_count,
-        "date_min":       date_min,
-        "date_max":       date_max,
-        "from_date":      from_date or "",
-        "to_date":        to_date or "",
-        "q":              q or "",
-        "action_filter":  action or "",
+        "request":       request,
+        "title":         "Strata — DoW Contract Awards",
+        "days":          days,
+        "total_days":    total_days,
+        "total_awards":  total_awards,
+        "page":          page,
+        "page_size":     page_size,
+        "total_pages":   total_pages,
+        "from_date":     from_date or "",
+        "to_date":       to_date or "",
+        "q":             q or "",
+        "action_filter": action or "",
     })
 
 
