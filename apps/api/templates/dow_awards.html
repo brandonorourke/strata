@@ -118,7 +118,15 @@
   .badge-award        { background: #ecfdf5; color: #047857; }
   .badge-modification { background: #eff6ff; color: #1d4ed8; }
   .badge-other        { background: #f3f4f6; color: #6b7280; }
-  .badge-instrument   { background: #faf5ff; color: #7c3aed; font-weight: 500; text-transform: none; }
+  .badge-flag         { background: #fff0ee; color: #c0392b; padding: 0 5px; margin-left: 4px; cursor: help; }
+
+  .mono-piid {
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    color: #374151;
+    white-space: nowrap;
+  }
+  .mono-piid div { line-height: 1.35; }
 
   .dollar-val  { font-weight: 600; color: var(--ink); }
   .dollar-muted { font-weight: 500; color: var(--muted); }
@@ -202,12 +210,8 @@
 {# ── Summary Bar ── #}
 <div class="summary-bar">
   <div class="stat-block">
-    <div class="stat-value">{{ total_obligated | fmt_dollars }}</div>
-    <div class="stat-label">Total Obligated</div>
-  </div>
-  <div class="stat-block">
-    <div class="stat-value">{{ total_ceiling | fmt_dollars }}</div>
-    <div class="stat-label">Total Ceiling</div>
+    <div class="stat-value">{{ total }}</div>
+    <div class="stat-label">Award Groups</div>
   </div>
   <div class="stat-block">
     <div class="stat-value">{{ award_count }}</div>
@@ -216,6 +220,10 @@
   <div class="stat-block">
     <div class="stat-value">{{ mod_count }}</div>
     <div class="stat-label">Modifications</div>
+  </div>
+  <div class="stat-block">
+    <div class="stat-value">{{ flagged_count }}</div>
+    <div class="stat-label">Flagged (review)</div>
   </div>
   <div class="stat-block">
     <div class="stat-value" style="font-size: 13px; font-weight: 500; padding-top: 4px; line-height: 1.4;">{{ date_min }}<br>→ {{ date_max }}</div>
@@ -250,10 +258,9 @@
     <tr>
       <th>Date</th>
       <th>Awardee(s)</th>
-      <th style="text-align: right;">Ceiling</th>
-      <th style="text-align: right;">Obligated</th>
+      <th>PIID</th>
+      <th>Amount</th>
       <th>Action</th>
-      <th>Instrument</th>
       <th>Purpose</th>
       <th>Activity</th>
       <th>Program</th>
@@ -261,44 +268,36 @@
   </thead>
   <tbody>
     {% for award in awards %}
-      {# extract key amounts #}
-      {% set ns = namespace(ceiling=None, obligated=None) %}
-      {% for amt in (award.amounts or []) %}
-        {% if amt.kind in ('ceiling', 'total_value') and ns.ceiling is none %}{% set ns.ceiling = amt.cents %}{% endif %}
-        {% if amt.kind == 'initial_obligation' and ns.obligated is none %}{% set ns.obligated = amt.cents %}{% endif %}
-      {% endfor %}
-
       <tr class="data-row" onclick="toggleDetail({{ award.id }})">
         <td style="white-space: nowrap; color: var(--muted); font-size: 12px;">
           {{ award.release.release_date.strftime("%b %d, %Y") if award.release and award.release.release_date else "—" }}
         </td>
-        <td style="max-width: 220px;">
+        <td style="max-width: 240px;">
           {% if award.awardees %}
             {% for a in award.awardees %}
-              <div style="font-size: 13px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ a.name_normalized or a.name_raw }}</div>
-              {% set loc = [a.city_raw, a.state_raw or a.country_raw] | select | list %}
+              <div style="font-size: 13px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                {{ a.name_raw or "(unnamed)" }}
+                {% if a.pairing_confidence == "regex_only" %}<span class="badge badge-flag" title="Regex found this PIID but the LLM did not classify it as an award — usually a parent-contract reference. Review.">⚑</span>{% endif %}
+              </div>
+              {% set loc = [a.city_raw, a.state_raw] | select | list %}
               {% if loc %}<div style="font-size: 11px; color: var(--muted);">{{ loc | join(", ") }}</div>{% endif %}
             {% endfor %}
           {% else %}—{% endif %}
         </td>
-        <td style="text-align: right; white-space: nowrap;">
-          {% if ns.ceiling is not none %}
-            <span class="dollar-val">{{ ns.ceiling | fmt_dollars }}</span>
+        <td class="mono-piid">
+          {% if award.awardees %}
+            {% for a in award.awardees %}<div>{{ a.piid or "—" }}</div>{% endfor %}
           {% else %}—{% endif %}
         </td>
-        <td style="text-align: right; white-space: nowrap;">
-          {% if ns.obligated is not none %}
-            <span class="dollar-val">{{ ns.obligated | fmt_dollars }}</span>
-          {% else %}<span class="dollar-muted">—</span>{% endif %}
+        <td style="white-space: nowrap;">
+          {% if award.amounts and award.amounts[0].raw %}
+            <span class="dollar-val">{{ award.amounts[0].raw }}</span>
+            {% if award.amounts|length > 1 %}<span class="dollar-muted" title="{{ award.amounts|length }} amounts in source"> +{{ award.amounts|length - 1 }}</span>{% endif %}
+          {% else %}—{% endif %}
         </td>
         <td>
           {% if award.action_type %}
             <span class="badge badge-{{ award.action_type }}">{{ award.action_type }}</span>
-          {% else %}—{% endif %}
-        </td>
-        <td>
-          {% if award.instrument_type %}
-            <span class="badge badge-instrument">{{ award.instrument_type | replace("_", " ") }}</span>
           {% else %}—{% endif %}
         </td>
         <td>
@@ -316,29 +315,23 @@
 
       {# ── Detail row ── #}
       <tr class="detail-row" id="detail-{{ award.id }}">
-        <td colspan="9">
+        <td colspan="8">
           <div class="detail-grid">
 
-            {% if award.piids %}
             <div>
-              <div class="detail-label">Contract / PIID</div>
+              <div class="detail-label">Awardees / PIID</div>
               <div class="detail-val mono">
-                {% for p in award.piids %}{{ p.value }}{% if not loop.last %} · {% endif %}{% endfor %}
+                {% for a in award.awardees %}
+                  <div>{{ a.piid or "—" }} — {{ a.name_raw or "(unnamed)" }}
+                    <span style="color: var(--muted);">[{{ a.pairing_confidence or "?" }}]</span></div>
+                {% endfor %}
               </div>
             </div>
-            {% endif %}
 
-            {% if award.completion_date %}
+            {% if award.completion_date or award.completion_date_raw %}
             <div>
               <div class="detail-label">Est. Completion</div>
-              <div class="detail-val">{{ award.completion_date.strftime("%b %d, %Y") }}</div>
-            </div>
-            {% endif %}
-
-            {% if award.pricing_type_raw %}
-            <div>
-              <div class="detail-label">Pricing Type</div>
-              <div class="detail-val">{{ award.pricing_type_raw }}</div>
+              <div class="detail-val">{{ award.completion_date.strftime("%b %d, %Y") if award.completion_date else award.completion_date_raw }}</div>
             </div>
             {% endif %}
 
@@ -351,15 +344,10 @@
 
             {% if award.amounts %}
             <div style="grid-column: 1 / -1;">
-              <div class="detail-label">Amounts</div>
+              <div class="detail-label">Amounts (raw, from press release)</div>
               <div class="amounts-list">
                 {% for amt in award.amounts %}
-                  {% if amt.cents %}
-                    <div class="amt-chip">
-                      <span class="ak">{{ amt.kind | replace("_", " ") }}{% if amt.scope and amt.scope != "unspecified" %} ({{ amt.scope }}){% endif %}</span>
-                      <span class="av">{{ amt.cents | fmt_dollars }}</span>
-                    </div>
-                  {% endif %}
+                  {% if amt.raw %}<div class="amt-chip"><span class="av">{{ amt.raw }}</span></div>{% endif %}
                 {% endfor %}
               </div>
             </div>
@@ -377,7 +365,7 @@
       </tr>
 
     {% else %}
-      <tr><td colspan="9" style="text-align: center; color: var(--muted); padding: 32px;">No awards found.</td></tr>
+      <tr><td colspan="8" style="text-align: center; color: var(--muted); padding: 32px;">No awards found.</td></tr>
     {% endfor %}
   </tbody>
 </table>

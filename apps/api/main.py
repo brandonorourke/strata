@@ -349,31 +349,25 @@ async def dow_awards_screen(
 
         # Summary scan (all filtered rows, no pagination)
         sum_stmt = _apply_filters(
-            select(DowAward.amounts, DowAward.action_type, DowContractRelease.release_date)
+            select(DowAward.awardees, DowAward.action_type, DowContractRelease.release_date)
         )
         rows = (await session.execute(sum_stmt)).all()
 
         total = len(rows)
-        total_obligated = 0
-        total_ceiling   = 0
-        award_count     = 0
-        mod_count       = 0
-        dates           = []
+        award_count   = 0
+        mod_count     = 0
+        flagged_count = 0   # awards with ≥1 regex_only awardee (parent ref / needs review)
+        dates         = []
 
-        for amounts, atype, rdate in rows:
+        for awardees, atype, rdate in rows:
             if atype == 'award':
                 award_count += 1
             elif atype == 'modification':
                 mod_count += 1
             if rdate:
                 dates.append(rdate)
-            for amt in (amounts or []):
-                c = amt.get('cents') or 0
-                k = amt.get('kind', '')
-                if k == 'initial_obligation':
-                    total_obligated += c
-                elif k in ('ceiling', 'total_value'):
-                    total_ceiling += c
+            if any((a or {}).get('pairing_confidence') == 'regex_only' for a in (awardees or [])):
+                flagged_count += 1
 
         date_min = min(dates).strftime("%b %d, %Y") if dates else "—"
         date_max = max(dates).strftime("%b %d, %Y") if dates else "—"
@@ -402,8 +396,7 @@ async def dow_awards_screen(
         "page":           page,
         "page_size":      page_size,
         "total_pages":    total_pages,
-        "total_obligated": total_obligated,
-        "total_ceiling":  total_ceiling,
+        "flagged_count":  flagged_count,
         "award_count":    award_count,
         "mod_count":      mod_count,
         "date_min":       date_min,
