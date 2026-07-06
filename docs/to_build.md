@@ -26,9 +26,9 @@ supplies semantic fields (company name, purpose, program_hint, action_type) and 
 independent PIID enumeration. Merge is regex-authoritative, joined on a normalized PIID
 key; `awardees[*].pairing_confidence` = `agreed` | `regex_only`. `llm_only` PIIDs are
 logged/stored in `llm_raw_response.llm_only_piids` as a regex-brittleness research signal.
-Smoke tested + reprocessed on releases 1–5 (271 awardees: 195 agreed w/ names, 7 regex_only
-= parent refs). NOTE: `docs/specs/dow_extraction.md` still describes the old LLM-only design
-and needs rewriting.
+Spec: `docs/specs/dow_extraction.md` (rewritten for v2). Enrichment design (next major
+build): `docs/dow_enrichment.md` — 3-lane PIID enrichment (SAM live / SAM CSV / USASpending),
+71% backfill vs ~15–20% real-time coverage (progressive-enrichment model), F-type parent ladder.
 
 Schema: PIID is embedded per awardee (`awardees[*].piid`); the standalone `piids` column was
 dropped in migration 0036. Unused 15-field-era columns remain but v2 never writes them
