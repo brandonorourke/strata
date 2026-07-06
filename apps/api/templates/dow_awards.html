@@ -112,10 +112,10 @@
 
 {# ── Day sections ── #}
 {% for release, awards in days %}
-  {# count displayable awardee rows (exclude parent-reference entries) for the header #}
+  {# count displayable awardee rows for the day header #}
   {% set dns = namespace(rows=0) %}
   {% for award in awards %}
-    {% set dns.rows = dns.rows + (award.awardees | rejectattr("pairing_confidence", "equalto", "regex_only") | list | length) %}
+    {% set dns.rows = dns.rows + (award.shown_awardees | length) %}
   {% endfor %}
 
   {% if dns.rows > 0 %}
@@ -138,7 +138,7 @@
       </thead>
       <tbody>
         {% for award in awards %}
-          {% set shown = award.awardees | rejectattr("pairing_confidence", "equalto", "regex_only") | list %}
+          {% set shown = award.shown_awardees %}
           {% if shown %}
             {% set n = shown | length %}
             {% for a in shown %}

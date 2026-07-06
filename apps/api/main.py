@@ -346,7 +346,13 @@ async def dow_awards_screen(
         if action:
             conds.append(DowAward.action_type == action)
         if q:
-            conds.append(cast(DowAward.awardees, Text).ilike(f"%{q}%"))
+            # Match the awardee NAME only — not city/state/PIID/status. Casting the
+            # whole awardees JSONB to text matched any field (e.g. "rand" hit the
+            # city "Grand Rapids"); scope to name_raw via an EXISTS over the array.
+            conds.append(text(
+                "EXISTS (SELECT 1 FROM jsonb_array_elements(dow_awards.awardees) e "
+                "WHERE e->>'name_raw' ILIKE :awardee_q)"
+            ).bindparams(awardee_q=f"%{q}%"))
 
         # Distinct release DAYS that have matching awards, newest first
         days_stmt = (
@@ -383,9 +389,26 @@ async def dow_awards_screen(
                           DowAward.award_index.asc())
             )
             awards = (await session.execute(awards_stmt)).scalars().unique().all()
+
+            # Per-award displayable awardees: drop parent-reference (regex_only)
+            # entries, and — when searching — keep only awardees whose NAME matches,
+            # so a search hit in a large multi-award pool doesn't surface every
+            # co-awardee. Attached as a runtime attr for the template.
+            ql = q.lower() if q else None
+            for a in awards:
+                shown = []
+                for aw in (a.awardees or []):
+                    if aw.get("pairing_confidence") == "regex_only":
+                        continue
+                    if ql and ql not in (aw.get("name_raw") or "").lower():
+                        continue
+                    shown.append(aw)
+                a.shown_awardees = shown
+
             by_release = {}
             for a in awards:
-                by_release.setdefault(a.release_id, []).append(a)
+                if a.shown_awardees:
+                    by_release.setdefault(a.release_id, []).append(a)
             for rid in page_day_ids:
                 rel_awards = by_release.get(rid)
                 if rel_awards:
