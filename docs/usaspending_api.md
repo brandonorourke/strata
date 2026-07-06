@@ -67,15 +67,24 @@ Example (PTS-G Swarm 1, Viasat, May 2026 — delivery order under a FY2025 IDIQ)
 GET /api/v2/awards/CONT_AWD_FA880726FB004_9700_FA880725DB002_9700/
 ```
 
-**Getting the parent PIID**: The DoW press release does not include it. Best sources:
-1. **SAM.gov award notice** — the notice for the original IDIQ award lists "Contract Award Number" which is the parent PIID. For PTS-G: notice ID `_PA` / related `FA880725X000X-PTSG-RFP` shows parent `FA880725DB002`.
-2. **USASpending recipient search** — search the company name and filter to IDIQ awards from the same office/year.
+**Getting the parent PIID**: Two sources:
+1. **DoW press release text** — often states "order against previously issued basic ordering agreement (PARENT-PIID)" or similar. Reliable when present.
+2. **SAM.gov award notice** — the IDIQ base award notice lists "Contract Award Number" = parent PIID. For PTS-G: `FA880725DB002` visible in FY2025 bulk CSV.
 
-**Fallback**: If the delivery order isn't indexed (F-type lag can exceed 6 weeks — PTS-G delivery order from May 22, 2026 was still absent on July 6, 2026), resolve the parent D-type IDIQ instead:
+**FY2025 F-types resolve correctly** once you have the parent PIID. Validated examples:
+
+| Order PIID | Parent PIID | Awardee | DoW Amount | USASpending | Match |
+|---|---|---|---|---|---|
+| `N0001925F0264` | `N0001924G0010` | Lockheed (F-35 DMSMS) | $22,662,794 | $22,662,794 | ✓ exact |
+| `N0001925F0056` | `N0001920G0007` | Raytheon (MV-22 software) | $9,490,815 | $10,969,216 | higher — contract modified since award |
+| `FA880725FB017` | `FA880725DB002` | Viasat (PTS-G D&D) | ~$7.4M | $7.5M | ✓ match |
+
+**DoW press release = initial award amount. USASpending = current cumulative obligation** including all subsequent modifications. If USASpending shows more than the press release, the contract has been modified — that's useful signal, not a discrepancy.
+
+**Fallback**: If the delivery order isn't indexed (FY2026 F-types absent as of July 2026), resolve the parent D/G-type instead to get program ceiling and description:
 ```
 GET /api/v2/awards/CONT_IDV_FA880725DB002_9700/
 ```
-This returns the $4B program ceiling and description even when no delivery orders are indexed yet. Check `child_award_count` to see how many orders are indexed.
 
 ### Condensed (no-dash) PIID format
 

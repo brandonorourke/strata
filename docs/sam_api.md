@@ -14,7 +14,9 @@ SAM.gov is now the unified federal acquisition system. FPDS has migrated into it
 | **DoW press releases** | Delivery orders / task orders against existing IDIQs | Same day as award |
 | **USASpending** | All of the above, structured, queryable | Days to weeks lag |
 
-**Key finding**: Delivery orders placed against existing multi-award IDIQs do NOT get separate SAM.gov award notices. The DoW press release is the only same-day public record for them. Confirmed by grepping `FY2026_archived_opportunities.csv` for `FA880726FB004` (PTS-G Swarm 1, $437M, May 22 2026) — nothing. The parent IDIQ (`FA880725DB002`) IS in SAM.
+**Key finding**: Delivery orders placed against existing IDIQs/BOAs do NOT get separate SAM.gov award notices — confirmed for both FY2025 and FY2026 delivery orders by grepping bulk CSVs. The DoW press release is the only same-day public record for them. The parent IDIQ/BOA IS in SAM.
+
+**Same-day split**: On July 28, 2025, SAM published the D-type IDIQ base contracts (`FA880725DB002–DB006`, $4B ceiling) while the DoW press release announced the F-type Design & Demo delivery orders (`FA8807-25-F-B017–B021`, $37M combined) placed against those same vehicles. They cover different instruments. The $4B program ceiling is only visible via SAM — the press releases alone would make PTS-G look like a $37M then $437M program.
 
 ---
 
