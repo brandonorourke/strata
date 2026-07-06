@@ -81,8 +81,30 @@ CREATE TABLE dow_awards (
 ```
 
 `llm_raw_response JSONB` and `llm_extracted_at TIMESTAMPTZ` live on
-`dow_contract_releases` (one LLM call per release). `llm_raw_response` records
-`{extractor, n_groups, n_regex, n_llm, llm_only_piids}`.
+`dow_contract_releases` (one LLM call per release). `llm_raw_response` has two
+clearly-separated blocks:
+
+```jsonc
+{
+  "extractor": "v2",
+  "llm": {                    // RAW model response, stored verbatim — nothing we compute
+    "model":         "gpt-4o-mini-...",
+    "finish_reason": "stop",  // "length" ⇒ response truncated at max-tokens (incomplete)
+    "usage":         { "prompt_tokens": …, "completion_tokens": …, "total_tokens": … },
+    "content":       { "award_groups": [ … ] }   // the model's full JSON output
+  },
+  "merge": {                  // DERIVED by _merge() — comparison of LLM vs regex output
+    "n_groups": …, "n_regex": …, "n_llm": …,
+    "llm_only_piids": [ … ]   // set diff {LLM PIIDs} − {regex PIIDs}; NOT from the LLM
+  }
+}
+```
+
+**Important:** `llm_only_piids`, despite the "llm" in its name, is **not** produced
+by the model — it is a derived set difference (the regex-brittleness research
+signal). It is deliberately kept in the `merge` block, out of the raw `llm` block,
+so the stored raw response is exactly what the model returned. Any LLM call always
+persists the full raw response here.
 
 PIID lives inside each awardee (`awardees[*].piid`); the standalone `piids`
 column was dropped in migration 0036. Query by PIID with the JSONB containment
