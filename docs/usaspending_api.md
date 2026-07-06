@@ -271,11 +271,6 @@ async def fetch_award(piid: str) -> dict | None:
 
 ## SAM.gov
 
-SAM.gov requires an API key for automated access (TOS prohibits bots without a key). However, SAM.gov **award notices** are the best source for:
-- Parent PIIDs for F-type delivery orders (listed as "Contract Award Number" on the IDIQ award notice)
-- Program-level IDIQ ceilings (listed as "Base and All Options Value")
-- 5-awardee / multi-award IDIQ structure
+See `docs/sam_api.md` for full SAM.gov reference including the Opportunities API, bulk CSV downloads, FPDS migration, and the PTS-G case study.
 
-Example: PTS-G IDIQ award notice on SAM.gov listed `FA880725DB002` as Viasat's IDIQ base contract with a $4B ceiling — this is what defense analysts use to report program value. The $437M DoW press release was just the first delivery order (Swarm 1) against that vehicle.
-
-USASpending is the right open data source for transaction-level contract enrichment. The `recipient_uei` from USASpending can be used to link back to SAM.gov entity registration if an API key is available.
+Short version: SAM.gov award notices cover IDIQ base contracts (same day as award, includes $4B ceiling and all awardee PIIDs). Delivery orders do NOT get SAM notices — DoW press release is their only same-day record. The `recipient_uei` from USASpending links to SAM entity registration.
