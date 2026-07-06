@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict SlWvSyrj3voySBwdaxy1NKueNJmkC8IECuvTyNs7rkw7eruqYcb4DgNjIsPQt8v
+\restrict cfR9hA854yMObp69SYJPJ0h4rdLcJdf8PP5DH6kTcVqcJvtQGqlZxnhyQgwwl9X
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -109,6 +109,88 @@ CREATE SEQUENCE public.canonical_entities_id_seq
 --
 
 ALTER SEQUENCE public.canonical_entities_id_seq OWNED BY public.canonical_entities.id;
+
+
+--
+-- Name: dow_awards; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dow_awards (
+    id integer NOT NULL,
+    release_id integer NOT NULL,
+    award_index integer NOT NULL,
+    awardees jsonb,
+    amounts jsonb,
+    action_type text,
+    completion_date_raw text,
+    completion_date date,
+    contracting_activity text,
+    program_hint text,
+    purpose text,
+    source_excerpt text,
+    llm_status text,
+    extracted_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: dow_awards_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dow_awards_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: dow_awards_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dow_awards_id_seq OWNED BY public.dow_awards.id;
+
+
+--
+-- Name: dow_contract_releases; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.dow_contract_releases (
+    id integer NOT NULL,
+    article_id text NOT NULL,
+    url text NOT NULL,
+    title text,
+    release_date date,
+    first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+    fetched_at timestamp with time zone,
+    raw_text text,
+    content_hash text,
+    raw_html text,
+    llm_raw_response jsonb,
+    llm_extracted_at timestamp with time zone
+);
+
+
+--
+-- Name: dow_contract_releases_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.dow_contract_releases_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: dow_contract_releases_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.dow_contract_releases_id_seq OWNED BY public.dow_contract_releases.id;
 
 
 --
@@ -267,6 +349,39 @@ ALTER SEQUENCE public.icfs_canonical_entities_id_seq OWNED BY public.icfs_canoni
 
 
 --
+-- Name: icfs_filing_action_history; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.icfs_filing_action_history (
+    id integer NOT NULL,
+    filing_id integer NOT NULL,
+    action text,
+    action_taken_date timestamp with time zone,
+    detected_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: icfs_filing_action_history_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.icfs_filing_action_history_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: icfs_filing_action_history_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.icfs_filing_action_history_id_seq OWNED BY public.icfs_filing_action_history.id;
+
+
+--
 -- Name: icfs_filings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -288,7 +403,9 @@ CREATE TABLE public.icfs_filings (
     expiration_date date,
     begin_date date,
     grant_doc_url text,
-    detail_fetched_at timestamp with time zone
+    detail_fetched_at timestamp with time zone,
+    attachments jsonb,
+    raw_detail jsonb
 );
 
 
@@ -336,7 +453,11 @@ CREATE TABLE public.icfs_pleadings_and_comments (
     sys_created_on timestamp with time zone,
     ingested_at timestamp with time zone DEFAULT now() NOT NULL,
     file_number text,
-    entities_extracted_at timestamp with time zone
+    entities_extracted_at timestamp with time zone,
+    filer_name text,
+    attachments jsonb,
+    detail_fetched_at timestamp with time zone,
+    raw_detail jsonb
 );
 
 
@@ -402,6 +523,41 @@ ALTER SEQUENCE public.icfs_public_notices_id_seq OWNED BY public.icfs_public_not
 
 
 --
+-- Name: ingest_runs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ingest_runs (
+    id integer NOT NULL,
+    pipeline text DEFAULT 'icfs'::text NOT NULL,
+    started_at timestamp with time zone DEFAULT now() NOT NULL,
+    finished_at timestamp with time zone,
+    status text DEFAULT 'running'::text NOT NULL,
+    failed_script text,
+    script_results jsonb
+);
+
+
+--
+-- Name: ingest_runs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.ingest_runs_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: ingest_runs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.ingest_runs_id_seq OWNED BY public.ingest_runs.id;
+
+
+--
 -- Name: news_articles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -455,6 +611,20 @@ ALTER TABLE ONLY public.canonical_entities ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
+-- Name: dow_awards id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dow_awards ALTER COLUMN id SET DEFAULT nextval('public.dow_awards_id_seq'::regclass);
+
+
+--
+-- Name: dow_contract_releases id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dow_contract_releases ALTER COLUMN id SET DEFAULT nextval('public.dow_contract_releases_id_seq'::regclass);
+
+
+--
 -- Name: entity_links id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -483,6 +653,13 @@ ALTER TABLE ONLY public.icfs_canonical_entities ALTER COLUMN id SET DEFAULT next
 
 
 --
+-- Name: icfs_filing_action_history id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.icfs_filing_action_history ALTER COLUMN id SET DEFAULT nextval('public.icfs_filing_action_history_id_seq'::regclass);
+
+
+--
 -- Name: icfs_filings id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -501,6 +678,13 @@ ALTER TABLE ONLY public.icfs_pleadings_and_comments ALTER COLUMN id SET DEFAULT 
 --
 
 ALTER TABLE ONLY public.icfs_public_notices ALTER COLUMN id SET DEFAULT nextval('public.icfs_public_notices_id_seq'::regclass);
+
+
+--
+-- Name: ingest_runs id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ingest_runs ALTER COLUMN id SET DEFAULT nextval('public.ingest_runs_id_seq'::regclass);
 
 
 --
@@ -524,6 +708,38 @@ ALTER TABLE ONLY public.article_domains
 
 ALTER TABLE ONLY public.canonical_entities
     ADD CONSTRAINT canonical_entities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dow_awards dow_awards_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dow_awards
+    ADD CONSTRAINT dow_awards_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: dow_awards dow_awards_release_id_award_index_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dow_awards
+    ADD CONSTRAINT dow_awards_release_id_award_index_key UNIQUE (release_id, award_index);
+
+
+--
+-- Name: dow_contract_releases dow_contract_releases_article_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dow_contract_releases
+    ADD CONSTRAINT dow_contract_releases_article_id_key UNIQUE (article_id);
+
+
+--
+-- Name: dow_contract_releases dow_contract_releases_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dow_contract_releases
+    ADD CONSTRAINT dow_contract_releases_pkey PRIMARY KEY (id);
 
 
 --
@@ -564,6 +780,14 @@ ALTER TABLE ONLY public.icfs_canonical_entities
 
 ALTER TABLE ONLY public.icfs_canonical_entities
     ADD CONSTRAINT icfs_canonical_entities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: icfs_filing_action_history icfs_filing_action_history_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.icfs_filing_action_history
+    ADD CONSTRAINT icfs_filing_action_history_pkey PRIMARY KEY (id);
 
 
 --
@@ -620,6 +844,14 @@ ALTER TABLE ONLY public.icfs_public_notices
 
 ALTER TABLE ONLY public.icfs_public_notices
     ADD CONSTRAINT icfs_public_notices_source_sys_id_key UNIQUE (source_sys_id);
+
+
+--
+-- Name: ingest_runs ingest_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ingest_runs
+    ADD CONSTRAINT ingest_runs_pkey PRIMARY KEY (id);
 
 
 --
@@ -794,6 +1026,14 @@ ALTER TABLE ONLY public.article_domains
 
 
 --
+-- Name: dow_awards dow_awards_release_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.dow_awards
+    ADD CONSTRAINT dow_awards_release_id_fkey FOREIGN KEY (release_id) REFERENCES public.dow_contract_releases(id);
+
+
+--
 -- Name: entity_links entity_links_canonical_entity_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -826,8 +1066,16 @@ ALTER TABLE ONLY public.extracted_events
 
 
 --
+-- Name: icfs_filing_action_history icfs_filing_action_history_filing_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.icfs_filing_action_history
+    ADD CONSTRAINT icfs_filing_action_history_filing_id_fkey FOREIGN KEY (filing_id) REFERENCES public.icfs_filings(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict SlWvSyrj3voySBwdaxy1NKueNJmkC8IECuvTyNs7rkw7eruqYcb4DgNjIsPQt8v
+\unrestrict cfR9hA854yMObp69SYJPJ0h4rdLcJdf8PP5DH6kTcVqcJvtQGqlZxnhyQgwwl9X
 

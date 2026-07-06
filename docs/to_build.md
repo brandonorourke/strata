@@ -18,16 +18,27 @@
 
 4. **Alerting for SAT-PPL-20211207-00172** — Stas asked for this specifically. Watch for new filings/actions/pleadings where `file_number = 'SAT-PPL-20211207-00172'` and send an email when something new appears. Needs: a `watched_file_numbers` table or config, a check script that runs after each ingest, and an email send (sendgrid or SMTP).
 
-## DoW extraction (built — full corpus run needed)
+## DoW extraction (redesigned v2 — regex-primary + LLM semantic; full corpus run needed)
 
-Spec: `docs/specs/dow_extraction.md`. Smoke tested on releases 28 (May 22) and 1 (July 2) — 26 awards, all validators green except one D.C. state code flag (now fixed).
+Extractor: `apps/ingest/extract_dow_awards_v2.py`. Regex owns the award list (PIIDs,
+city/state, amounts, completion date, contracting activity); one LLM call per release
+supplies semantic fields (company name, purpose, program_hint, action_type) and an
+independent PIID enumeration. Merge is regex-authoritative, joined on a normalized PIID
+key; `awardees[*].pairing_confidence` = `agreed` | `regex_only`. `llm_only` PIIDs are
+logged/stored in `llm_raw_response.llm_only_piids` as a regex-brittleness research signal.
+Smoke tested + reprocessed on releases 1–5 (271 awardees: 195 agreed w/ names, 7 regex_only
+= parent refs). NOTE: `docs/specs/dow_extraction.md` still describes the old LLM-only design
+and needs rewriting.
 
-Schema: `dow_awards` has `purpose TEXT` (migration 0034) — 1-2 sentence contract scope description extracted by LLM, populated on all 26 test awards.
+Schema: PIID is embedded per awardee (`awardees[*].piid`); the standalone `piids` column was
+dropped in migration 0036. Unused 15-field-era columns remain but v2 never writes them
+(`funding_at_award`, `instrument_type`, `pricing_type_raw`, `purpose_excerpt`, `flags`) —
+candidates for a drop migration.
 
-- **Run full corpus**: `python apps/ingest/extract_dow_awards.py` — 2,955 releases remaining (~$5, ~2-3hrs). Apply 0033 + 0034 to prod first.
-- `--reprocess` flag re-parses stored `llm_raw_response` with zero API cost (useful for validator changes)
-- After full run: review validator flag rates, then build `dow_canonical_entities`
-- **DoW UI next**: replace card layout with award-level table — columns: Date, Awardee, Purpose, Ceiling, Obligated, Contract Type, PIID, Activity, Flags
+- **Run full corpus**: `python apps/ingest/extract_dow_awards_v2.py` — ~2,945 releases remaining (~$3, gpt-4o-mini). Apply migration 0036 to prod first.
+- `--reprocess` re-runs regex + LLM for already-extracted releases (incurs LLM cost — not free like the old validator re-parse)
+- After full run: SAM/USASpending enrichment keyed on PIID, then `dow_canonical_entities`
+- **DoW UI next**: award-level table — columns: Date, Awardee (raw), PIID, Amount, Purpose, Activity, Confidence
 
 ## Next (priority order)
 
@@ -65,5 +76,5 @@ Schema: `dow_awards` has `purpose TEXT` (migration 0034) — 1-2 sentence contra
 - Site redesign (Stripe/Carta-inspired) and a real marketing landing page at `/`.
 - **DoW contracts ingestion**: `ingest_dow_contracts.py` + `fetch_dow_html.py`, `dow_contract_releases` table with `raw_html` and `raw_text`, `/admin/dow` UI (release list + detail).
 - **DoW window poller + daily scheduler**: `scheduler.py` — ICFS pipeline at 03:00 UTC + DoW window polling (90s/7min cadence 4:55–6:30 PM ET, evening sweep 8 PM ET), logged to `ingest_runs`.
-- **DoW award extraction**: `extract_dow_awards.py` — LLM-only (gpt-4o-mini, one call per release), extracts awardees, PIIDs, ceiling, obligated, contract type, completion date, contracting activity, program hint, and `purpose` (1-2 sentence scope description). 9 validators; `--reprocess` for zero-cost re-validation. Field trust policy in `docs/decisions.md`.
+- **DoW award extraction**: `extract_dow_awards_v2.py` — regex-primary (award list, PIIDs, city/state, amounts, dates, activity) + one LLM call per release for semantic fields (name, purpose, program_hint, action_type) and independent PIID enumeration. Regex-authoritative merge on normalized PIID key; per-awardee `pairing_confidence`. Superseded the LLM-only 15-field extractor (`extract_dow_awards.py`, deleted). PIID embedded per awardee; `piids` column dropped in 0036.
 - **DoW UI**: `/admin/dow/contracts` — release list with per-award cards showing purpose, amounts, PIIDs, activity; collapsible raw text + LLM JSON.

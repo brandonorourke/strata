@@ -113,6 +113,10 @@
 
 ## 2026-07-04 — DoW extraction: LLM-only; deterministic validators guard amounts and PIIDs
 
+> **SUPERSEDED 2026-07-06** by "DoW extraction: regex-primary reversal" below.
+> The core claim ("regex is not an extractor") was reversed: regex is now the
+> primary/authoritative extraction path. This section is kept for history.
+
 - **Decision: DoW extraction is LLM-only.** Regex is not a parallel extractor.
   Deterministic validators guard amounts and PIIDs (format check, cross-field
   obligated ≤ ceiling, and value-grounding to source text). A flagged row routes to
@@ -145,6 +149,43 @@
   deployment. The regex patterns developed in the pilot (PIID grammar, state-name
   mapping, completion-date phrase variants) live on as validator logic, not as an
   extraction path.
+
+## 2026-07-06 — DoW extraction: regex-primary reversal
+
+Reverses the 2026-07-04 "LLM-only" decision above. Implemented in
+`apps/ingest/extract_dow_awards_v2.py`; spec in `docs/specs/dow_extraction.md`.
+
+- **Decision: regex is the primary/authoritative extractor for the award list.**
+  Every regex-found award group becomes a row; every regex PIID becomes an
+  awardee. The LLM runs once per release for semantic fields (company name,
+  purpose, program_hint, action_type) and an independent PIID enumeration. The
+  merge is regex-authoritative, joined on a normalized PIID key.
+- **What forced the reversal:** under an LLM-authoritative merge, the LLM
+  silently under-enumerated / reformatted PIIDs on long releases and dropped
+  ~50% of awards on a real example (release 2: 14 awards, half missing). The
+  failure was structural (LLMs under-count long lists and normalize identifiers),
+  not promptable. Regex enumerates positionally and reliably, so it must own row
+  existence. The LLM's genuine strength — judging which PIID is a real award vs.
+  a parent-contract reference — is preserved via `pairing_confidence`, not by
+  letting it gate rows.
+- **Scope narrowed vs. the old spec.** The 15-field schema (amount
+  classification, instrument_type, pricing_type, funding_at_award, 9 grounding
+  validators) is dropped. Rationale: PIID is the load-bearing field; SAM.gov /
+  USASpending return authoritative amounts, canonical names, UEIs, ceilings, and
+  instrument type keyed on PIID (see `docs/usaspending_api.md`, `docs/sam_api.md`).
+  Re-deriving those from press-release prose was effort spent on fields an
+  authoritative source already provides. The press release supplies the same-day
+  record and the PIID; SAM matures it.
+- **What survives from the old decision:** the regex grammar built "as validator
+  logic" (PIID format, state-name mapping, completion-date phrases) became the
+  regex *extraction* path — the pilot patterns were reused, just promoted from
+  guardrail to primary.
+- **Company `name_raw` is raw, not canonical (by design).** The press-release
+  name is enough to display/disambiguate; SAM's `recipient_name`/UEI (PIID join)
+  is the canonical form. See `docs/decisions.md` v0 canonicalization policy.
+- **Known accepted limitation:** parent-contract references surface as flagged
+  `regex_only` rows (nameless). Visible and filterable; not silently dropped.
+  Full list of limitations in the spec.
 
 ## 2026-07-04 — DoW entity extraction: source-scoped canonical table, (name, location) as identity key
 

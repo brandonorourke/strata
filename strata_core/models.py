@@ -339,22 +339,16 @@ class DowAward(Base):
     release_id           = Column(Integer, ForeignKey("dow_contract_releases.id"), nullable=False)
     award_index          = Column(Integer, nullable=False)
 
-    awardees             = Column(JSONB, nullable=True)   # [{name_raw, name_normalized, city_raw, state_raw, country_raw}]
-    piids                = Column(JSONB, nullable=True)   # [{value, excerpt}]
-    amounts              = Column(JSONB, nullable=True)   # [{raw, cents, kind, scope, excerpt}]
-    funding_at_award     = Column(JSONB, nullable=True)   # {status, excerpt}
-    action_type          = Column(Text, nullable=True)
-    instrument_type      = Column(Text, nullable=True)
-    pricing_type_raw     = Column(Text, nullable=True)
+    awardees             = Column(JSONB, nullable=True)   # [{name_raw, city_raw, state_raw, piid, parse_status, pairing_confidence}]
+    amounts              = Column(JSONB, nullable=True)   # [{raw}]
+    action_type          = Column(Text, nullable=True)    # award | modification | other (LLM)
     completion_date_raw  = Column(Text, nullable=True)
     completion_date      = Column(Date, nullable=True)
     contracting_activity = Column(Text, nullable=True)
     program_hint         = Column(Text, nullable=True)
     purpose              = Column(Text, nullable=True)
-    purpose_excerpt      = Column(Text, nullable=True)
     source_excerpt       = Column(Text, nullable=True)
     llm_status           = Column(Text, nullable=True)
-    flags                = Column(JSONB, nullable=True)   # {flag_name: reason_string}
     extracted_at         = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     release = relationship("DowContractRelease", back_populates="awards")
