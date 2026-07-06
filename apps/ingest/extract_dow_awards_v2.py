@@ -107,6 +107,20 @@ def _is_piid(s: str) -> bool:
     tc = _piid_type_code(s)
     return tc not in _SOLICITATION_TYPES if tc else True
 
+def _piid_key(s: str) -> str:
+    """
+    Normalized join key for matching PIIDs across regex and LLM output.
+
+    Strips parentheses, whitespace, and dashes so that '(FA8520-26-D-B001)',
+    'FA8520-26-D-B001', and 'FA852026DB001' all key identically. A trailing
+    modification token (e.g. 'W58RGZ-19-C-0003 P00109') is dropped — the LLM
+    sometimes appends the mod number; the contract PIID is the first token.
+    """
+    if not s:
+        return ""
+    first = s.strip().strip("()").split()[0] if s.strip().strip("()").split() else ""
+    return re.sub(r'[^A-Z0-9]', '', first.upper())
+
 # ── Body extraction ───────────────────────────────────────────────────────────
 
 def _release_body(text: str) -> str:
@@ -330,7 +344,7 @@ Each entry:
 
 Rules:
 - One award_group per coherent announcement. Multi-awardee announcements with N companies = ONE group with N awardees.
-- PIID is the contract number in parentheses, e.g. (W9126G-26-D-A042). Copy it verbatim.
+- PIID is the contract number shown in parentheses in the text. Return it WITHOUT the surrounding parentheses, e.g. text "(W9126G-26-D-A042)" → piid "W9126G-26-D-A042".
 - One PIID per awardee. Never share a PIID across awardees.
 - name_raw: company name as written (e.g. "Lockheed Martin Corp."). Exclude city and state.
 - purpose: what is being procured (the work/goods, not the contract action). 1-2 sentences, use words from the text. Start with a noun or gerund, not "awarded" — e.g. "Maintenance and repair of USS Wichita" not "was awarded a contract for maintenance...".
@@ -387,20 +401,24 @@ def _merge(regex_groups: list[dict], llm_groups: list[dict]) -> tuple[list[dict]
     Returns (merged_groups, llm_only_piids). llm_only_piids = PIIDs the LLM
     enumerated that regex never found — the regex-brittleness research signal.
     """
-    # Index LLM output by PIID (LLM enumerates independently, no regex hint)
-    piid_to_llm_name:  dict[str, str]  = {}
-    piid_to_llm_group: dict[str, dict] = {}
-    llm_piids: set[str] = set()
+    # Index LLM output by normalized PIID key (LLM enumerates independently;
+    # its PIID strings may carry parens/mod-numbers, so match on _piid_key).
+    key_to_llm_name:  dict[str, str]  = {}
+    key_to_llm_group: dict[str, dict] = {}
+    llm_keys: set[str] = set()
+    llm_raw_by_key: dict[str, str] = {}
     for lg in llm_groups:
         for a in lg.get("awardees", []):
-            piid = a.get("piid")
-            if not piid:
+            raw = a.get("piid")
+            key = _piid_key(raw or "")
+            if not key:
                 continue
-            llm_piids.add(piid)
-            piid_to_llm_name[piid]  = a.get("name_raw")
-            piid_to_llm_group[piid] = lg
+            llm_keys.add(key)
+            key_to_llm_name[key]  = a.get("name_raw")
+            key_to_llm_group[key] = lg
+            llm_raw_by_key[key]   = raw
 
-    regex_piids: set[str] = set()
+    regex_keys: set[str] = set()
     merged: list[dict] = []
 
     for rg in regex_groups:
@@ -409,19 +427,20 @@ def _merge(regex_groups: list[dict], llm_groups: list[dict]) -> tuple[list[dict]
 
         for chunk in rg["piid_chunks"]:
             piid = chunk["piid"]
-            regex_piids.add(piid)
-            if piid in llm_piids:
+            key = _piid_key(piid)
+            regex_keys.add(key)
+            if key in llm_keys:
                 confidence = "agreed"
                 if group_llm is None:
-                    group_llm = piid_to_llm_group.get(piid)
+                    group_llm = key_to_llm_group.get(key)
             else:
                 confidence = "regex_only"
 
             awardees_out.append({
-                "name_raw":           piid_to_llm_name.get(piid),
+                "name_raw":           key_to_llm_name.get(key),
                 "city_raw":           chunk["city_raw"],
                 "state_raw":          chunk["state_raw"],
-                "piid":               piid,
+                "piid":               piid,   # regex's clean string is stored
                 "parse_status":       chunk["parse_status"],
                 "pairing_confidence": confidence,
             })
@@ -439,7 +458,7 @@ def _merge(regex_groups: list[dict], llm_groups: list[dict]) -> tuple[list[dict]
         })
 
     # Research signal: PIIDs the LLM found that regex missed → possible regex gap.
-    llm_only = sorted(llm_piids - regex_piids)
+    llm_only = sorted(llm_raw_by_key[k] for k in (llm_keys - regex_keys))
     if llm_only:
         logger.warning("llm_only PIIDs (regex may have missed — research signal): %s", llm_only)
 
