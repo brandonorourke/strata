@@ -226,15 +226,30 @@ POST /api/v2/search/spending_by_award/
 
 ## Resolution Rates (DoW data)
 
-Tested against our 679-PIID DB (30 releases, Jul 2014 and Jun-Jul 2026):
+Tested against our DB (30+ releases, FY2014–FY2026). Key finding: **resolution depends on the PIID's fiscal year, not the press release date.**
 
-| Vintage | Resolution |
-|---------|-----------|
-| Pre-FY2026 | ~100% for non-F types |
-| FY2026 | ~5% within 1 week (data lag observed: at least 7 calendar days) |
-| F-type (any year) | ~0% without parent PIID |
+| PIID Vintage | Resolution | Notes |
+|---------|-----------|-------|
+| Pre-FY2026 (C/D types) | ~100% | Resolves even when appearing in recent mods |
+| FY2026 (C/D types) | 0% | Entire FY still unindexed as of July 6, 2026 |
+| F-type (any year) | ~0% without parent PIID | Need parent from SAM.gov |
 
-**Observed lag**: Contracts announced June 29-30 and July 1-2, 2026 (tested July 5) were not yet indexed — 4-5 business days with a July 4 holiday in between. F-type delivery orders can lag significantly longer: PTS-G Swarm 1 (May 22, 2026 award) had zero child awards indexed under its parent IDIQ as of July 6, 2026 — 6+ weeks. USASpending enrichment must be treated as async/deferred.
+**The lag is fiscal-year-wide, not per-contract.** FY2026 started October 2025 — as of July 6, 2026 (9 months in), no FY2026 base contracts resolve on USASpending. Pre-FY2026 contracts resolve immediately, including recent modifications. The year digits in the PIID (e.g. `26` in `N0002426C4415`) determine resolution, not the press release date.
+
+**Practical implication**: ~30% of DoW press release PIIDs will be FY2026 originations that can't be enriched yet. The other ~70% are modifications to pre-FY2026 contracts that resolve immediately and often reveal much larger underlying contract values (see examples below).
+
+**Resolved contract examples** (appeared in Jun-Jul 2026 press releases as modifications):
+
+| PIID | Awardee | Signed | Obligated | Description |
+|---|---|---|---|---|
+| `N0001914C0037` | General Atomics | 2014-05-08 | $1.7B | CVN 79 EMALS long lead time material |
+| `N0001919C0010` | Lockheed Martin | 2018-11-15 | $4.3B | Dual capable aircraft UCA |
+| `N0001924C0032` | Raytheon | 2024-09-27 | $2.0B | LOT 24-26 production FMS |
+| `W912CH-25-C-0055` | General Dynamics | 2025-06-30 | $465M | Abrams engineering program |
+| `N0001925C0009` | Lockheed Martin | 2025-09-30 | $233M | IRST sensor new contract |
+| `N0001923D0011` | Sikorsky | 2022-11-29 | $0 (IDIQ) | VH sustainment support, $315M ceiling |
+
+The modification amount in the press release is typically small; USASpending reveals the full contract size.
 
 PIID type distribution in DoW press releases: D=69%, C=22%, F=6%, other=3%.
 
