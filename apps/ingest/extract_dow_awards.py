@@ -48,26 +48,40 @@ AWARD_TRIGGER_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Matches the first DoW agency section heading in a release body
-# (AIR FORCE / ARMY / NAVY / DEFENSE LOGISTICS AGENCY / etc.)
-_AGENCY_HEADING_RE = re.compile(
-    r'^(?:AIR FORCE|ARMY|NAVY|MARINE CORPS|SPACE FORCE|'
-    r'DEFENSE LOGISTICS AGENCY|DEFENSE INFORMATION SYSTEMS AGENCY|'
-    r'DEFENSE ADVANCED RESEARCH PROJECTS AGENCY|MISSILE DEFENSE AGENCY|'
-    r'NATIONAL GEOSPATIAL-INTELLIGENCE AGENCY|DEFENSE THREAT REDUCTION AGENCY|'
-    r'OFFICE OF THE SECRETARY OF DEFENSE|WASHINGTON HEADQUARTERS SERVICES)',
-    re.MULTILINE | re.IGNORECASE,
-)
+# Matches the first all-caps agency heading line to locate the contract body.
+_BODY_START_RE = re.compile(r'^[A-Z][A-Z .\-]+$', re.MULTILINE)
+
+CHUNK_SIZE = 6_000  # chars per LLM call — well under the output token ceiling
 
 def _release_body(text: str) -> str:
-    """Return only the contract-body portion of a release (after first agency heading).
-
-    This strips nav/template boilerplate that appears before the first agency
-    section, preventing award-trigger markers in navigation text from inflating
-    the advisory award-count check.
-    """
-    m = _AGENCY_HEADING_RE.search(text)
+    """Strip nav/template boilerplate before the first all-caps heading line."""
+    m = _BODY_START_RE.search(text)
     return text[m.start():] if m else text
+
+
+def _chunk_body(body: str) -> list[str]:
+    """Split release body into chunks at paragraph boundaries, each ≤ CHUNK_SIZE chars.
+
+    Greedily packs paragraphs into chunks. A single oversized paragraph becomes
+    its own chunk rather than being split mid-sentence.
+    """
+    paragraphs = [p.strip() for p in re.split(r'\n{2,}', body) if p.strip()]
+    if not paragraphs:
+        return [body]
+    chunks: list[str] = []
+    current: list[str] = []
+    current_len = 0
+    for para in paragraphs:
+        if current and current_len + len(para) + 2 > CHUNK_SIZE:
+            chunks.append('\n\n'.join(current))
+            current = [para]
+            current_len = len(para)
+        else:
+            current.append(para)
+            current_len += len(para) + 2
+    if current:
+        chunks.append('\n\n'.join(current))
+    return chunks
 
 # ── Enum sets ─────────────────────────────────────────────────────────────────
 
@@ -517,61 +531,97 @@ async def _write_awards(session, release: DowContractRelease, awards_raw: list, 
     return award_total
 
 
+async def _call_llm(client: AsyncOpenAI, release_id: int, heading: str, text: str) -> dict | None:
+    """Make one LLM call for a single section. Returns raw response dict or None on failure."""
+    try:
+        response = await client.chat.completions.create(
+            model=MODEL,
+            messages=[
+                {'role': 'system', 'content': SYSTEM_PROMPT},
+                {'role': 'user',   'content': text},
+            ],
+            response_format={'type': 'json_object'},
+            temperature=0,
+            timeout=120,
+        )
+    except Exception as e:
+        logger.error("LLM call failed for release %d section '%s': %s", release_id, heading, e)
+        return None
+    return {
+        'heading':  heading,
+        'usage': {
+            'prompt_tokens':     response.usage.prompt_tokens,
+            'completion_tokens': response.usage.completion_tokens,
+        },
+        'content': response.choices[0].message.content,
+        'model':   response.model,
+    }
+
+
 async def extract_release(client: AsyncOpenAI, session, release: DowContractRelease) -> int:
     source_text = release.raw_text or ''
     if not source_text.strip():
         logger.warning("Release %d has no raw_text", release.id)
         return 0
 
-    logger.info("Calling LLM for release %d (%s) — %d chars", release.id, release.release_date, len(source_text))
-    try:
-        response = await client.chat.completions.create(
-            model=MODEL,
-            messages=[
-                {'role': 'system', 'content': SYSTEM_PROMPT},
-                {'role': 'user',   'content': source_text},
-            ],
-            response_format={'type': 'json_object'},
-            temperature=0,
-            timeout=300,
-        )
-    except Exception as e:
-        logger.error("LLM call failed for release %d: %s", release.id, e)
+    chunks = _chunk_body(_release_body(source_text))
+    logger.info("Release %d (%s) — %d chunk(s), %d chars",
+                release.id, release.release_date, len(chunks), len(source_text))
+
+    section_responses = []
+    all_awards_raw    = []
+
+    for i, text in enumerate(chunks):
+        resp = await _call_llm(client, release.id, f"chunk {i+1}/{len(chunks)}", text)
+        if resp is None:
+            continue
+        section_responses.append(resp)
+        try:
+            awards = json.loads(resp['content']).get('awards') or []
+            all_awards_raw.extend(awards)
+        except (json.JSONDecodeError, TypeError):
+            logger.error("Could not parse LLM response for release %d section '%s'",
+                         release.id, heading)
+
+    if not section_responses:
         return 0
 
+    total_in  = sum(s['usage']['prompt_tokens']     for s in section_responses)
+    total_out = sum(s['usage']['completion_tokens']  for s in section_responses)
     release.llm_raw_response = {
-        'model': response.model,
-        'usage': {
-            'prompt_tokens':     response.usage.prompt_tokens,
-            'completion_tokens': response.usage.completion_tokens,
-        },
-        'content': response.choices[0].message.content,
+        'model':    section_responses[-1]['model'],
+        'usage':    {'prompt_tokens': total_in, 'completion_tokens': total_out},
+        'sections': section_responses,
     }
     release.llm_extracted_at = datetime.now(timezone.utc)
 
-    try:
-        awards_raw = json.loads(response.choices[0].message.content).get('awards') or []
-    except (json.JSONDecodeError, TypeError):
-        logger.error("Could not parse LLM response for release %d", release.id)
-        await session.commit()
-        return 0
-
-    return await _write_awards(session, release, awards_raw, source_text)
+    return await _write_awards(session, release, all_awards_raw, source_text)
 
 
 async def reprocess_release(session, release: DowContractRelease) -> int:
-    """Re-parse stored llm_raw_response and re-run validators. No API call.
-
-    Only meaningful if the stored response was generated with the current prompt schema.
-    """
+    """Re-parse stored llm_raw_response and re-run validators. No API call."""
     if not release.llm_raw_response:
         logger.warning("Release %d has no stored llm_raw_response — skipping", release.id)
         return 0
-    try:
-        awards_raw = json.loads(release.llm_raw_response['content']).get('awards') or []
-    except (json.JSONDecodeError, TypeError, KeyError) as e:
-        logger.error("Could not parse stored response for release %d: %s", release.id, e)
-        return 0
+
+    resp = release.llm_raw_response
+    awards_raw: list = []
+
+    if 'sections' in resp:
+        # New multi-section format
+        for sec in resp['sections']:
+            try:
+                awards_raw.extend(json.loads(sec['content']).get('awards') or [])
+            except (json.JSONDecodeError, TypeError, KeyError) as e:
+                logger.error("Could not parse section '%s' for release %d: %s",
+                             sec.get('heading', '?'), release.id, e)
+    else:
+        # Legacy single-call format
+        try:
+            awards_raw = json.loads(resp['content']).get('awards') or []
+        except (json.JSONDecodeError, TypeError, KeyError) as e:
+            logger.error("Could not parse stored response for release %d: %s", release.id, e)
+            return 0
 
     source_text = release.raw_text or ''
     n = await _write_awards(session, release, awards_raw, source_text)
