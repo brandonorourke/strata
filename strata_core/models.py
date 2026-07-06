@@ -352,3 +352,24 @@ class DowAward(Base):
     extracted_at         = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     release = relationship("DowContractRelease", back_populates="awards")
+
+
+class Alert(Base):
+    __tablename__ = "alerts"
+
+    id          = Column(Integer, primary_key=True)
+    kind        = Column(Text, nullable=False)                 # dow_match | dow_scan | icfs_match
+    subject     = Column(Text, nullable=True)                  # watchlist company or release date
+    title       = Column(Text, nullable=False)
+    body        = Column(Text, nullable=True)
+    meta        = Column(JSONB, nullable=True)                 # structured payload (piids, file_numbers, etc.)
+    created_at  = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    sent_at     = Column(DateTime(timezone=True), nullable=True)  # NULL until a sender delivers it
+
+
+class AlertState(Base):
+    __tablename__ = "alert_state"
+
+    key         = Column(Text, primary_key=True)               # e.g. last_dow_award_id, last_icfs_ingested_at
+    value       = Column(Text, nullable=True)
+    updated_at  = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

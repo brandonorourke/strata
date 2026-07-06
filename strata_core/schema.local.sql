@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict cfR9hA854yMObp69SYJPJ0h4rdLcJdf8PP5DH6kTcVqcJvtQGqlZxnhyQgwwl9X
+\restrict KFdJLZGyU6ruQoe5de8iVbA3KaLzfFUHsULq2jkdJGgKxFXesD6tJHfqWTczSed
 
 -- Dumped from database version 17.6 (Postgres.app)
 -- Dumped by pg_dump version 17.6 (Postgres.app)
@@ -39,6 +39,53 @@ CREATE TYPE public.news_source_enum AS ENUM (
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: alert_state; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.alert_state (
+    key text NOT NULL,
+    value text,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: alerts; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.alerts (
+    id integer NOT NULL,
+    kind text NOT NULL,
+    subject text,
+    title text NOT NULL,
+    body text,
+    meta jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    sent_at timestamp with time zone
+);
+
+
+--
+-- Name: alerts_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.alerts_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: alerts_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.alerts_id_seq OWNED BY public.alerts.id;
+
 
 --
 -- Name: article_domains; Type: TABLE; Schema: public; Owner: -
@@ -597,6 +644,13 @@ ALTER SEQUENCE public.news_articles_id_seq OWNED BY public.news_articles.id;
 
 
 --
+-- Name: alerts id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alerts ALTER COLUMN id SET DEFAULT nextval('public.alerts_id_seq'::regclass);
+
+
+--
 -- Name: article_domains id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -692,6 +746,22 @@ ALTER TABLE ONLY public.ingest_runs ALTER COLUMN id SET DEFAULT nextval('public.
 --
 
 ALTER TABLE ONLY public.news_articles ALTER COLUMN id SET DEFAULT nextval('public.news_articles_id_seq'::regclass);
+
+
+--
+-- Name: alert_state alert_state_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alert_state
+    ADD CONSTRAINT alert_state_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: alerts alerts_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.alerts
+    ADD CONSTRAINT alerts_pkey PRIMARY KEY (id);
 
 
 --
@@ -868,6 +938,20 @@ ALTER TABLE ONLY public.news_articles
 
 ALTER TABLE ONLY public.news_articles
     ADD CONSTRAINT news_articles_url_key UNIQUE (url);
+
+
+--
+-- Name: idx_alerts_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_alerts_created_at ON public.alerts USING btree (created_at DESC);
+
+
+--
+-- Name: idx_alerts_unsent; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_alerts_unsent ON public.alerts USING btree (created_at) WHERE (sent_at IS NULL);
 
 
 --
@@ -1077,5 +1161,5 @@ ALTER TABLE ONLY public.icfs_filing_action_history
 -- PostgreSQL database dump complete
 --
 
-\unrestrict cfR9hA854yMObp69SYJPJ0h4rdLcJdf8PP5DH6kTcVqcJvtQGqlZxnhyQgwwl9X
+\unrestrict KFdJLZGyU6ruQoe5de8iVbA3KaLzfFUHsULq2jkdJGgKxFXesD6tJHfqWTczSed
 
