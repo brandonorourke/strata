@@ -50,6 +50,19 @@ PIPELINE = [
 ET = ZoneInfo("America/New_York")
 DOW_SCRIPT = INGEST_DIR / "ingest_dow_contracts.py"
 
+# ── Robustness knobs (why: a single hung DB/subprocess call used to freeze the
+#    whole single-threaded loop silently — no timeout, no log, no recovery) ──
+# DB timeouts set generously — only meant to break a genuine wedge (hung
+# half-open connection), never to abort a slow-but-fine query. Our queries are
+# trivial indexed lookups (<10ms), so 5 min is enormous headroom.
+DB_CONNECT_TIMEOUT = 60           # asyncpg connection establishment (s)
+DB_COMMAND_TIMEOUT = 300          # per-query ceiling (s) — 5 min
+DB_TIMEOUT = 300                  # outer hard ceiling on a DB call (s) — matches command
+HEARTBEAT_EVERY = 1800            # liveness log cadence (s) — silence => truly dead
+# No subprocess timeouts by design: the child ingest scripts set their own HTTP
+# timeouts (60s/30s/15s), so they can't hang on the network. Rely on logging
+# ("Running X" before each) to see where a run is spending time.
+
 
 def _dow_poll_cadence(now_et: datetime) -> int | None:
     """Return poll interval in seconds during the DoW release window, or None outside it.
@@ -73,9 +86,36 @@ def _asyncpg_dsn() -> str:
     return url.replace("postgresql+asyncpg://", "postgresql://")
 
 
+async def _connect():
+    """Fresh connection per call, with connect + per-command timeouts.
+
+    A fresh connection avoids reusing a stale/dead one (the likely cause of the
+    silent freeze); the timeouts ensure a wedged DB can't block us forever.
+    """
+    return await asyncpg.connect(
+        _asyncpg_dsn(),
+        timeout=DB_CONNECT_TIMEOUT,
+        command_timeout=DB_COMMAND_TIMEOUT,
+    )
+
+
+def _run_db(coro, what: str):
+    """Run a DB coroutine with a hard timeout + log around it (log BEFORE trying,
+    so a hang is visible as 'starting X' with no 'done', and a timeout is logged)."""
+    logger.debug("DB: %s …", what)
+    try:
+        return asyncio.run(asyncio.wait_for(coro, timeout=DB_TIMEOUT))
+    except asyncio.TimeoutError:
+        logger.error("DB TIMEOUT (%ds): %s", DB_TIMEOUT, what)
+        raise
+    except Exception:
+        logger.exception("DB ERROR: %s", what)
+        raise
+
+
 async def _db_today_completed(pipeline: str) -> bool:
     """Return True if a completed run for this pipeline already exists today (UTC)."""
-    conn = await asyncpg.connect(_asyncpg_dsn())
+    conn = await _connect()
     try:
         row = await conn.fetchrow(
             "SELECT id FROM ingest_runs WHERE pipeline = $1 AND status = 'completed' AND started_at::date = $2",
@@ -88,7 +128,7 @@ async def _db_today_completed(pipeline: str) -> bool:
 
 
 async def _db_start_run(pipeline: str) -> int:
-    conn = await asyncpg.connect(_asyncpg_dsn())
+    conn = await _connect()
     try:
         row = await conn.fetchrow(
             "INSERT INTO ingest_runs (pipeline, started_at, status) VALUES ($1, NOW(), 'running') RETURNING id",
@@ -100,7 +140,7 @@ async def _db_start_run(pipeline: str) -> int:
 
 
 async def _db_finish_run(run_id: int, status: str, failed_script: str | None, results: dict) -> None:
-    conn = await asyncpg.connect(_asyncpg_dsn())
+    conn = await _connect()
     try:
         await conn.execute(
             """UPDATE ingest_runs
@@ -117,7 +157,7 @@ async def _db_finish_run(run_id: int, status: str, failed_script: str | None, re
 
 async def _has_today_dow_release(today_et: date) -> bool:
     """Return True if we already have a DoW release for today's ET date."""
-    conn = await asyncpg.connect(_asyncpg_dsn())
+    conn = await _connect()
     try:
         row = await conn.fetchrow(
             "SELECT id FROM dow_contract_releases WHERE release_date = $1 LIMIT 1",
@@ -138,7 +178,13 @@ def poll_dow() -> None:
     now_et = datetime.now(ET)
     today_et = now_et.date()
 
-    if asyncio.run(_has_today_dow_release(today_et)):
+    logger.info("DoW poll: checking DB for %s release", today_et)
+    try:
+        have = _run_db(_has_today_dow_release(today_et), f"check DoW release {today_et}")
+    except Exception:
+        logger.warning("DoW poll: DB check failed — will retry next cycle")
+        return
+    if have:
         logger.debug("DoW poll: already have today's release (%s)", today_et)
         return
 
@@ -151,7 +197,13 @@ def poll_dow() -> None:
         logger.error("DoW incremental ingest failed (exit %d)", result.returncode)
         return
 
-    if asyncio.run(_has_today_dow_release(today_et)):
+    logger.info("DoW poll: ingest done, re-checking DB for %s", today_et)
+    try:
+        have = _run_db(_has_today_dow_release(today_et), f"re-check DoW release {today_et}")
+    except Exception:
+        logger.warning("DoW poll: post-ingest DB check failed")
+        return
+    if have:
         logger.info("DoW poll: detected and stored today's release (%s) — first_seen_at stamped", today_et)
     else:
         logger.info("DoW poll: ingest ran, no release for %s yet (not posted)", today_et)
@@ -159,7 +211,11 @@ def poll_dow() -> None:
 
 def run_pipeline() -> None:
     logger.info("Pipeline '%s' starting", PIPELINE_NAME)
-    run_id = asyncio.run(_db_start_run(PIPELINE_NAME))
+    try:
+        run_id = _run_db(_db_start_run(PIPELINE_NAME), "start ingest_run")
+    except Exception:
+        logger.error("Pipeline: could not record run start — aborting this run")
+        return
     results: dict[str, int] = {}
     failed_script = None
 
@@ -168,14 +224,18 @@ def run_pipeline() -> None:
         cmd = [sys.executable, str(script_path)] + extra_args
         logger.info("Running %s", script_name)
         result = subprocess.run(cmd, check=False)
-        results[script_name] = result.returncode
-        if result.returncode != 0:
-            logger.error("FAILED %s (exit %d) — stopping pipeline", script_name, result.returncode)
+        rc = result.returncode
+        results[script_name] = rc
+        if rc != 0:
+            logger.error("FAILED %s (exit %d) — stopping pipeline", script_name, rc)
             failed_script = script_name
             break
 
     status = "failed" if failed_script else "completed"
-    asyncio.run(_db_finish_run(run_id, status, failed_script, results))
+    try:
+        _run_db(_db_finish_run(run_id, status, failed_script, results), "finish ingest_run")
+    except Exception:
+        logger.warning("Pipeline: could not record run finish (status=%s)", status)
     logger.info("Pipeline '%s' %s. Results: %s", PIPELINE_NAME, status, results)
 
 
@@ -186,7 +246,12 @@ def maybe_run_missed() -> None:
     scheduled_today = now_utc.replace(hour=run_hour, minute=run_minute, second=0, microsecond=0)
     if now_utc < scheduled_today:
         return
-    if asyncio.run(_db_today_completed(PIPELINE_NAME)):
+    try:
+        completed = _run_db(_db_today_completed(PIPELINE_NAME), "check today's completed run")
+    except Exception:
+        logger.warning("catch-up check failed — skipping catch-up this startup")
+        return
+    if completed:
         logger.info("Today's '%s' run already completed, skipping catch-up", PIPELINE_NAME)
         return
     logger.info("Past %s UTC with no completed '%s' run — running now (catch-up)", RUN_AT, PIPELINE_NAME)
@@ -195,30 +260,48 @@ def maybe_run_missed() -> None:
 
 if __name__ == "__main__":
     logger.info("Scheduler starting, pipeline='%s', daily run at %s UTC", PIPELINE_NAME, RUN_AT)
-    maybe_run_missed()
+    try:
+        maybe_run_missed()
+    except Exception:
+        logger.exception("startup catch-up failed — continuing to main loop")
     schedule.every().day.at(RUN_AT).do(run_pipeline)
 
     _last_dow_poll: datetime | None = None
     _dow_evening_done: date | None = None
+    _last_heartbeat: datetime | None = None
 
+    # The loop body is fully guarded: NO transient error (DB blip, network, hung
+    # subprocess) may ever kill or freeze this loop. A break logs and continues;
+    # the heartbeat means silence => the process is truly dead, not idle.
     while True:
-        schedule.run_pending()
+        try:
+            schedule.run_pending()
 
-        now_utc = datetime.now(timezone.utc)
-        now_et = now_utc.astimezone(ET)
+            now_utc = datetime.now(timezone.utc)
+            now_et = now_utc.astimezone(ET)
 
-        # DoW window polling (weekdays, 4:55–6:30 PM ET)
-        cadence = _dow_poll_cadence(now_et)
-        if cadence is not None:
-            if _last_dow_poll is None or (now_utc - _last_dow_poll).total_seconds() >= cadence:
+            # Liveness heartbeat — proves the loop is alive even when idle
+            if _last_heartbeat is None or (now_utc - _last_heartbeat).total_seconds() >= HEARTBEAT_EVERY:
+                cad = _dow_poll_cadence(now_et)
+                logger.info("scheduler alive — %s ET, DoW window %s",
+                            now_et.strftime("%a %H:%M"), "OPEN" if cad else "closed")
+                _last_heartbeat = now_utc
+
+            # DoW window polling (weekdays, 4:55–6:30 PM ET)
+            cadence = _dow_poll_cadence(now_et)
+            if cadence is not None:
+                if _last_dow_poll is None or (now_utc - _last_dow_poll).total_seconds() >= cadence:
+                    poll_dow()
+                    _last_dow_poll = now_utc
+
+            # DoW 8pm ET evening sweep — one final check per day
+            if (dtime(20, 0) <= now_et.time() < dtime(20, 30)
+                    and _dow_evening_done != now_et.date()):
+                logger.info("DoW evening sweep (8pm ET)")
                 poll_dow()
-                _last_dow_poll = now_utc
+                _dow_evening_done = now_et.date()
 
-        # DoW 8pm ET evening sweep — one final check per day
-        if (dtime(20, 0) <= now_et.time() < dtime(20, 30)
-                and _dow_evening_done != now_et.date()):
-            logger.info("DoW evening sweep (8pm ET)")
-            poll_dow()
-            _dow_evening_done = now_et.date()
+        except Exception:
+            logger.exception("Scheduler loop iteration failed — continuing")
 
         time.sleep(60)
