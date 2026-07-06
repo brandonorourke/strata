@@ -218,8 +218,10 @@ Tested against our 679-PIID DB (30 releases, Jul 2014 and Jun-Jul 2026):
 | Vintage | Resolution |
 |---------|-----------|
 | Pre-FY2026 | ~100% for non-F types |
-| FY2026 | ~5% same-day (data lag ~1-2 weeks) |
+| FY2026 | ~5% within 1 week (data lag observed: at least 7 calendar days) |
 | F-type (any year) | ~0% without parent PIID |
+
+**Observed lag**: Contracts announced June 29-30 and July 1-2, 2026 (tested July 5) were not yet indexed — 4-5 business days with a July 4 holiday in between. The lag appears to be at least 1 week, possibly longer. The press release is the only same-day source; USASpending enrichment should be treated as async/deferred.
 
 PIID type distribution in DoW press releases: D=69%, C=22%, F=6%, other=3%.
 
