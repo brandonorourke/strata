@@ -40,6 +40,31 @@ candidates for a drop migration.
 - After full run: SAM/USASpending enrichment keyed on PIID, then `dow_canonical_entities`
 - **DoW UI next**: award-level table — columns: Date, Awardee (raw), PIID, Amount, Purpose, Activity, Confidence
 
+## DoW multi-award IDIQ ceiling mis-attribution (BUG — investor-facing, priority)
+
+The extractor stamps a **shared program ceiling** onto each awardee individually, massively
+overstating award value on the `/dow` screen. When one DoD announcement lists multiple
+awardees sharing a single IDIQ ceiling, that ceiling is NOT per-awardee — the real value is
+the small **obligated-at-award** figure. `docs/findings.md` already notes "ceiling ≠
+obligated," but the extractor doesn't act on it. Same trap exists in SAM data (e.g. NSNS
+$4.8B shared across 5+ awardees).
+
+**Fixture — the Andromeda award (announced April 7, 2026):** 14 companies (Anduril
+`FA881926DB0011`, Astranis `DB013`, BAE `DB006`, General Atomics `DB008`, Intuitive Machines
+`DB014`, L3Harris `DB003`, Lockheed `DB004`, Millennium `DB005`, Northrop `DB001`, Quantum
+`DB002`, Redwire `DB012`, Sierra Space `DB007`, True Anomaly `DB009`, Turion `DB010`) share
+ONE `ceiling $1,843,000,000` FFP IDIQ; only **$1,400,000 obligated at award** — total, across
+all 14 (~$100K each). Strata's DoW screen showed `Intuitive Machines · FA881926DB014 ·
+$1,843,000,000 · award` — overstating IM's real obligation by ~4 orders of magnitude, which
+is exactly why the stock didn't move (it wasn't a $1.8B win). This mis-attribution is what
+derailed a whole tradability analysis — the "material award" was a phantom ceiling.
+
+**Fix:** detect multi-awardee shared-ceiling announcements. Signals in the DoD text: multiple
+awardees + sequential PIIDs in one announcement, "were awarded a **ceiling** $X," "**$Y are
+being obligated at time of award**," "N offers were received." Capture the obligated amount as
+the awardee's amount; keep the ceiling separately; flag the row "1 of M · shared $X IDIQ
+ceiling." This is a credibility fix for the screen investors actually see.
+
 ## Next (priority order)
 
 - **Pleadings document text + LLM summary.** Pleadings show on entity timeline with type + file_number only; no content fetched or summarized yet. Need a `fetch_icfs_pleading_documents.py` + LLM pass analogous to the notice pipeline.
