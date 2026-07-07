@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>SAM.gov — Award Notices</h2>
+  <div class="meta" style="margin-bottom: 12px;">
+    {{ total }} total · captured by <code>ingest_sam_awards.py</code> ·
+    <span title="precise publish time from the unkeyed detail endpoint">Published</span> is the exact SAM go-live instant
+  </div>
+
+  <form method="get" action="/admin/sam" style="margin-bottom: 12px;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search awardee, PIID, or UEI…" style="padding: 6px 8px; width: 320px;">
+    <button type="submit">Search</button>
+    {% if q %}<a href="/admin/sam" style="margin-left: 8px;">Clear</a>{% endif %}
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Posted</th>
+        <th>Published (ET)</th>
+        <th>Awardee</th>
+        <th>PIID</th>
+        <th>Amount</th>
+        <th>Agency</th>
+        <th>Title</th>
+        <th>SAM</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for n in notices %}
+      <tr>
+        <td style="white-space: nowrap;">{{ n.posted_date.strftime("%Y-%m-%d") if n.posted_date else "—" }}</td>
+        <td style="white-space: nowrap;">
+          {% if n.published_at %}
+            {{ n.published_at.strftime("%Y-%m-%d %H:%M") }}
+          {% else %}
+            <span class="meta" title="not detail-enriched yet">—</span>
+          {% endif %}
+        </td>
+        <td>
+          <div>{{ n.awardee_name or "—" }}</div>
+          {% if n.awardee_uei %}<div class="meta">UEI {{ n.awardee_uei }}</div>{% endif %}
+        </td>
+        <td style="white-space: nowrap;">{{ n.piid or "—" }}</td>
+        <td style="white-space: nowrap; text-align: right;">
+          {% if n.amount is not none %}${{ "{:,.0f}".format(n.amount) }}{% else %}—{% endif %}
+        </td>
+        <td class="meta">{{ n.agency_path or "—" }}</td>
+        <td>{{ n.title or "—" }}</td>
+        <td class="actions">
+          {% if n.sam_url %}<a href="{{ n.sam_url }}" target="_blank" rel="noopener">↗</a>{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if total_pages and total_pages > 1 %}
+    <div class="meta" style="margin-top: 12px;">
+      {% if page > 1 %}
+        <a href="/admin/sam?page={{ page - 1 }}&page_size={{ page_size }}&q={{ q }}">Prev</a>
+      {% endif %}
+      <span>Page {{ page }} of {{ total_pages }}</span>
+      {% if page < total_pages %}
+        <a href="/admin/sam?page={{ page + 1 }}&page_size={{ page_size }}&q={{ q }}">Next</a>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request, HTTPException, Form
 from fastapi.responses import RedirectResponse
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import select, func, and_, cast, text, bindparam, String, Integer, Text
+from sqlalchemy import select, func, and_, or_, cast, text, bindparam, String, Integer, Text
 from sqlalchemy.orm import selectinload
 
 from strata_core.db import AsyncSessionLocal
@@ -27,6 +27,7 @@ from strata_core.models import (
     IcfsFilingActionHistory,
     DowContractRelease,
     DowAward,
+    SamAwardNotice,
 )
 
 app = FastAPI(title="Strata UI")
@@ -310,6 +311,51 @@ async def dow_contracts(request: Request, page: int = 1, page_size: int = 50):
         "page": page,
         "page_size": page_size,
         "total_pages": total_pages,
+    })
+
+
+@app.get("/admin/sam")
+async def list_sam_notices(request: Request, page: int = 1, page_size: int = 50, q: str = ""):
+    """Raw SAM award-notice table (paged, awardee search). See ingest_sam_awards.py."""
+    if page < 1:
+        page = 1
+    if page_size < 1:
+        page_size = 50
+    if page_size > 200:
+        page_size = 200
+    offset = (page - 1) * page_size
+
+    async with AsyncSessionLocal() as session:
+        filters = []
+        if q:
+            filters.append(or_(
+                SamAwardNotice.awardee_name.ilike(f"%{q}%"),
+                SamAwardNotice.piid.ilike(f"%{q}%"),
+                SamAwardNotice.awardee_uei.ilike(f"%{q}%"),
+            ))
+
+        total = int((await session.execute(
+            select(func.count()).select_from(SamAwardNotice).where(*filters)
+        )).scalar() or 0)
+
+        notices = list((await session.execute(
+            select(SamAwardNotice)
+            .where(*filters)
+            .order_by(SamAwardNotice.posted_date.desc().nullslast(), SamAwardNotice.id.desc())
+            .offset(offset)
+            .limit(page_size)
+        )).scalars().all())
+
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    return templates.TemplateResponse("sam_notices.html", {
+        "request": request,
+        "title": "Strata - SAM Award Notices",
+        "notices": notices,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages,
+        "q": q,
     })
 
 
