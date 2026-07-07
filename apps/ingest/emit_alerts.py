@@ -8,6 +8,12 @@
 #                found" confirmation (proves the pipeline ran + covered those releases).
 #   icfs_match — a new ICFS filing by a watchlist applicant (Viasat/Intelsat).
 #                v1: any new filing. v2 will filter to contested (>= N pleadings).
+#   icfs_action— a new ACTION on an existing filing (grant, withdrawal, consummation,
+#                action-taken change) from icfs_filing_action_history. Catches events on
+#                filings already in the DB that icfs_match (new-filing-only) would miss.
+#                Wider freshness window (ALERT_ACTION_MAX_AGE_DAYS) since actions lag.
+#
+# FUTURE (noted): alert on new PLEADINGS for *contested* filings specifically.
 #
 # Watermarks in alert_state make "new" detection cheap and prevent re-alerting.
 # Delivery: one digest email per run via Resend (reads RESEND_API_KEY from env;
@@ -24,7 +30,10 @@ import os
 from datetime import datetime, timezone, date, timedelta
 
 import httpx
+from zoneinfo import ZoneInfo
 from sqlalchemy import text, select
+
+ET = ZoneInfo("America/New_York")   # FCC action dates are Eastern; convert before display
 
 from strata_core.db import AsyncSessionLocal
 from strata_core.models import Alert, AlertState
@@ -46,6 +55,8 @@ ALERT_ALL = True
 # down and the watermark is far behind, only genuinely-recent items alert.
 # The watermark still handles "don't repeat"; this handles "don't dump backlog".
 ALERT_MAX_AGE_DAYS = int(os.environ.get("ALERT_MAX_AGE_DAYS", "3"))
+# Actions lag more than filings (FCC posts the action after it happens), so a wider window.
+ALERT_ACTION_MAX_AGE_DAYS = int(os.environ.get("ALERT_ACTION_MAX_AGE_DAYS", "14"))
 
 def _fresh_cutoff() -> date:
     return date.today() - timedelta(days=ALERT_MAX_AGE_DAYS)
@@ -203,6 +214,56 @@ async def detect_icfs(session, dry_run) -> int:
     return n
 
 
+# ── ICFS: alert on new ACTIONS on existing filings (not just new filings) ────
+# A modification / action-taken change on a filing already in the DB does NOT create
+# a new icfs_filings row, so detect_icfs misses it. icfs_filing_action_history gets a
+# row each time the incremental ingest detects an action change — that's the signal.
+# Separate watermark (by detected_at) so it can't miss or double-fire; freshness guard
+# on the action's own date so the first run can't dump the backlog.
+
+async def detect_icfs_actions(session, dry_run) -> int:
+    last_ts_str = await _get_state(session, "last_icfs_action_at", "1970-01-01T00:00:00+00:00")
+    last_ts = datetime.fromisoformat(last_ts_str)
+    # Actions post with more lag than filings (FCC records the action days after it
+    # happens), so use a wider freshness window than the filing default.
+    action_fresh = date.today() - timedelta(days=ALERT_ACTION_MAX_AGE_DAYS)
+    applicant_filter = "" if ALERT_ALL else \
+        "AND (f.applicant_name ILIKE '%viasat%' OR f.applicant_name ILIKE '%intelsat%')"
+    new_actions = (await session.execute(text(f"""
+        SELECT ah.action, ah.action_taken_date, f.file_number, f.applicant_name, f.brief_description
+        FROM icfs_filing_action_history ah
+        JOIN icfs_filings f ON f.id = ah.filing_id
+        WHERE ah.detected_at > :ts
+          AND COALESCE(ah.action_taken_date, ah.detected_at) >= :fresh   -- freshness guard (wider for actions)
+          {applicant_filter}
+        ORDER BY ah.detected_at
+    """), {"ts": last_ts, "fresh": action_fresh})).mappings().all()
+
+    # advance watermark past everything detected so far (not just matches)
+    maxts = (await session.execute(
+        text("SELECT MAX(detected_at) FROM icfs_filing_action_history")
+    )).scalar()
+
+    n = 0
+    for a in new_actions:
+        company = _matches_watchlist(a["applicant_name"])
+        taken = a["action_taken_date"].astimezone(ET).date().isoformat() if a["action_taken_date"] else "pending"
+        await _add_alert(
+            session, "icfs_action", company,
+            f"ICFS action — {a['applicant_name']} · {a['file_number']}",
+            f"{a['action'] or 'action'} ({taken}) · {a['brief_description'] or ''}".strip(),
+            {"file_number": a["file_number"], "applicant": a["applicant_name"],
+             "action": a["action"], "action_taken_date": taken},
+            dry_run,
+        )
+        n += 1
+
+    if not dry_run and maxts:
+        await _set_state(session, "last_icfs_action_at", str(maxts))
+    logger.info("ICFS: %d new action(s) alerted", n)
+    return n
+
+
 # ── sender: one digest email per run via Resend (console fallback) ───────────
 
 async def _send_email(subject: str, body: str) -> bool:
@@ -264,12 +325,13 @@ async def run(dry_run: bool) -> None:
     async with AsyncSessionLocal() as session:
         n_dow = await detect_dow(session, dry_run)
         n_icfs = await detect_icfs(session, dry_run)
+        n_act = await detect_icfs_actions(session, dry_run)
         if not dry_run:
             await session.commit()
         n_sent = await send_pending(session, dry_run)
         if not dry_run:
             await session.commit()
-        logger.info("done: DoW alerts=%d, ICFS alerts=%d, sent=%d", n_dow, n_icfs, n_sent)
+        logger.info("done: DoW=%d, ICFS filings=%d, ICFS actions=%d, sent=%d", n_dow, n_icfs, n_act, n_sent)
 
 
 if __name__ == "__main__":
