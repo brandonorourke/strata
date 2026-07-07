@@ -216,17 +216,17 @@ async def enrich_details(limit: int, min_amount: Decimal, dry_run: bool) -> int:
         if not pending:
             logger.info("detail: nothing to enrich")
             return 0
-        logger.info("detail: enriching %d notice(s) (unkeyed, throttled %.1fs)", len(pending), DETAIL_THROTTLE_S)
+        total = len(pending)
+        logger.info("detail: enriching %d notice(s) (unkeyed, throttled %.1fs)", total, DETAIL_THROTTLE_S)
         n = 0
-        for row in pending:
+        for i, row in enumerate(pending, 1):
             pub, created = fetch_detail_timestamps(row.notice_id)
             if pub or created:
-                if dry_run:
-                    logger.info("[dry] %s published_at=%s created=%s", row.piid, pub, created)
-                else:
+                if not dry_run:
                     row.published_at = pub
                     row.sam_created_at = created
                 n += 1
+            logger.info("detail: %d/%d %s → %s", i, total, row.piid, pub or "no timestamp")
             await asyncio.sleep(DETAIL_THROTTLE_S)
         if not dry_run:
             await s.commit()
