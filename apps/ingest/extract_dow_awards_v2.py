@@ -370,6 +370,7 @@ async def _llm_call(body: str, client: AsyncOpenAI) -> dict:
     model, finish_reason, usage, and the model's parsed JSON content. `finish_reason
     == "length"` flags a truncated (max-tokens) response — diagnostic for enumeration.
     """
+    logger.info("  → calling OpenAI (%s, %d chars)…", LLM_MODEL, len(body))
     try:
         resp = await client.chat.completions.create(
             model=LLM_MODEL,
@@ -521,6 +522,7 @@ async def process_release(
     if not release.raw_text:
         return 0
 
+    logger.info("release %d (%s): extracting…", release.id, release.release_date)
     body = _release_body(release.raw_text)
     rg = _regex_groups(body)                       # regex is authoritative for the award list
     llm = await _llm_call(body, client)            # LLM enumerates independently (no hint)
