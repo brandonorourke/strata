@@ -129,3 +129,40 @@ Source for parent PIID: SAM.gov award notice for the base IDIQ (bulk CSV or live
 FPDS has permanently migrated public contract award searching to SAM.gov. The legacy FPDS Atom feed (`fpds.gov/ezsearch/FEEDS/ATOM`) is being retired. SAM Contract Data API is the replacement. USASpending ingests from SAM/FPDS and lags by days to weeks.
 
 Confirmed: FPDS Atom feed search for `FA880726FB004` returned empty — not a data lag issue, the feed is effectively dead for new records.
+
+---
+
+## Daily award-notice capture (`ingest_sam_awards.py`) — latency research
+
+Built to test the thesis: **does SAM publish an award before DoW announces it?**
+Two endpoints, two rate profiles:
+
+| Endpoint | Auth | Rate | Gives |
+|---|---|---|---|
+| `/opportunities/v2/search?ptype=a` | **api_key** | **10 req/DAY** (non-federal) | daily list; `postedDate` **date-only** |
+| `/api/prod/opps/v2/opportunities/{noticeId}` (`Accept: application/hal+json`) | **none** | unkeyed (throttle anyway) | **precise** `postedDate`/`createdDate` timestamps — the same data the sam.gov web page shows |
+
+The precise timestamp is what the website displays (e.g. SMIT `N0002426D4308` →
+`postedDate: 2026-07-06T13:13:06Z` = 8:13 AM EST). Use the detail endpoint (not HTML
+scraping) for research-grade timing. Because it's unkeyed, `--detail` is throttled
+(1s) and capped (`--detail-limit`, biggest-dollar first) so we stay polite.
+
+**Incremental model — overlapping window + idempotent upsert (no watermark):**
+Each run requests `postedFrom = today − --days`, `postedTo = today`, and upserts
+`ON CONFLICT (notice_id) DO NOTHING`. `fetched_at` (our first-seen) is therefore
+preserved across re-pulls, so:
+- re-running is safe/idempotent (no cursor to corrupt);
+- a small overlap (default `--days 2`) catches notices posted *late* on a prior day
+  (postedDate is date-only, notices post throughout the day) that weren't up when the
+  previous run fired — dedup makes the overlap free.
+One search request/day covers it (a day rarely exceeds 1000 award notices; paginate
+only if so, bounded by `--max-pages`). Raw search responses are saved to
+`data/sam_raw/` (gitignored) for audit/replay.
+
+**Comparison (`compare_sam_dow.py`):** joins `sam_award_notices.piid_key` to the
+normalized PIID inside `dow_awards.awardees`, buckets each notice
+(`sam_earlier` / `same_day` / `dow_earlier` / `sam_only`), and — because DoW is
+**DoD-only** — splits `sam_only` into DoD (real discovery candidates) vs non-DoD
+(structurally out of DoW scope: GSA/VA/DOI/DHS/LoC). Run against **prod** DoW for a
+true read (local stops at its latest release_date; recent DoD `sam_only` is usually
+just the local/prod gap).

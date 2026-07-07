@@ -2,10 +2,10 @@
 -- PostgreSQL database dump
 --
 
-\restrict KFdJLZGyU6ruQoe5de8iVbA3KaLzfFUHsULq2jkdJGgKxFXesD6tJHfqWTczSed
+\restrict 3mFRZWQjvH9HkDKShlhtcdaUuhle2LbFibK1OPIzZlE6mKXde9HHSkN9bWTpsAL
 
--- Dumped from database version 17.6 (Postgres.app)
--- Dumped by pg_dump version 17.6 (Postgres.app)
+-- Dumped from database version 17.10 (Postgres.app)
+-- Dumped by pg_dump version 17.10 (Postgres.app)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -644,6 +644,49 @@ ALTER SEQUENCE public.news_articles_id_seq OWNED BY public.news_articles.id;
 
 
 --
+-- Name: sam_award_notices; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sam_award_notices (
+    id integer NOT NULL,
+    notice_id text NOT NULL,
+    piid text,
+    piid_key text,
+    awardee_name text,
+    awardee_uei text,
+    amount numeric,
+    agency_path text,
+    title text,
+    posted_date date,
+    published_at timestamp with time zone,
+    sam_created_at timestamp with time zone,
+    sam_url text,
+    fetched_at timestamp with time zone DEFAULT now() NOT NULL,
+    raw jsonb
+);
+
+
+--
+-- Name: sam_award_notices_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.sam_award_notices_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: sam_award_notices_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.sam_award_notices_id_seq OWNED BY public.sam_award_notices.id;
+
+
+--
 -- Name: alerts id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -746,6 +789,13 @@ ALTER TABLE ONLY public.ingest_runs ALTER COLUMN id SET DEFAULT nextval('public.
 --
 
 ALTER TABLE ONLY public.news_articles ALTER COLUMN id SET DEFAULT nextval('public.news_articles_id_seq'::regclass);
+
+
+--
+-- Name: sam_award_notices id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sam_award_notices ALTER COLUMN id SET DEFAULT nextval('public.sam_award_notices_id_seq'::regclass);
 
 
 --
@@ -941,6 +991,22 @@ ALTER TABLE ONLY public.news_articles
 
 
 --
+-- Name: sam_award_notices sam_award_notices_notice_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sam_award_notices
+    ADD CONSTRAINT sam_award_notices_notice_id_key UNIQUE (notice_id);
+
+
+--
+-- Name: sam_award_notices sam_award_notices_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sam_award_notices
+    ADD CONSTRAINT sam_award_notices_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: idx_alerts_created_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -952,6 +1018,34 @@ CREATE INDEX idx_alerts_created_at ON public.alerts USING btree (created_at DESC
 --
 
 CREATE INDEX idx_alerts_unsent ON public.alerts USING btree (created_at) WHERE (sent_at IS NULL);
+
+
+--
+-- Name: idx_sam_notices_needs_detail; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sam_notices_needs_detail ON public.sam_award_notices USING btree (id) WHERE (published_at IS NULL);
+
+
+--
+-- Name: idx_sam_notices_piid_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sam_notices_piid_key ON public.sam_award_notices USING btree (piid_key);
+
+
+--
+-- Name: idx_sam_notices_posted_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sam_notices_posted_date ON public.sam_award_notices USING btree (posted_date DESC);
+
+
+--
+-- Name: idx_sam_notices_uei; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sam_notices_uei ON public.sam_award_notices USING btree (awardee_uei);
 
 
 --
@@ -1161,5 +1255,5 @@ ALTER TABLE ONLY public.icfs_filing_action_history
 -- PostgreSQL database dump complete
 --
 
-\unrestrict KFdJLZGyU6ruQoe5de8iVbA3KaLzfFUHsULq2jkdJGgKxFXesD6tJHfqWTczSed
+\unrestrict 3mFRZWQjvH9HkDKShlhtcdaUuhle2LbFibK1OPIzZlE6mKXde9HHSkN9bWTpsAL
 

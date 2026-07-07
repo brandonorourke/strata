@@ -16,6 +16,7 @@ from sqlalchemy import (
     Boolean,
     ForeignKey,
     Enum,
+    Numeric,
     and_,
     func,
 )
@@ -373,3 +374,26 @@ class AlertState(Base):
     key         = Column(Text, primary_key=True)               # e.g. last_dow_award_id, last_icfs_ingested_at
     value       = Column(Text, nullable=True)
     updated_at  = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class SamAwardNotice(Base):
+    """A SAM.gov award notice (ptype=a). Captured daily pre-market to test whether
+    SAM publishes an award before DoW announces it. posted_date is date-only (search
+    API); published_at/sam_created_at are precise (unkeyed detail endpoint)."""
+    __tablename__ = "sam_award_notices"
+
+    id             = Column(Integer, primary_key=True)
+    notice_id      = Column(Text, nullable=False, unique=True)   # SAM noticeId (uiLink slug)
+    piid           = Column(Text, nullable=True)                 # award.number
+    piid_key       = Column(Text, nullable=True)                 # normalized join key (matches dow_awards)
+    awardee_name   = Column(Text, nullable=True)
+    awardee_uei    = Column(Text, nullable=True)                 # award.awardee.ueiSAM
+    amount         = Column(Numeric, nullable=True)              # award.amount
+    agency_path    = Column(Text, nullable=True)                 # fullParentPathName
+    title          = Column(Text, nullable=True)
+    posted_date    = Column(Date, nullable=True)                 # search API postedDate (date-only)
+    published_at   = Column(DateTime(timezone=True), nullable=True)  # detail postedDate (precise); NULL until enriched
+    sam_created_at = Column(DateTime(timezone=True), nullable=True)  # detail createdDate (precise)
+    sam_url        = Column(Text, nullable=True)                 # uiLink
+    fetched_at     = Column(DateTime(timezone=True), nullable=False, server_default=func.now())  # our first-seen
+    raw            = Column(JSONB, nullable=True)                # full search-API record
