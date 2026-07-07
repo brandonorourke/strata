@@ -123,8 +123,16 @@ def _piid_key(s: str) -> str:
 
 # ── Body extraction ───────────────────────────────────────────────────────────
 
+def _norm_dashes(s: str) -> str:
+    """Normalize Unicode dash variants to ASCII hyphen so PIID regexes (which
+    match '-') catch PIIDs written with figure-dashes/en-dashes etc.
+    (e.g. 'SPE603‐26‐C‐5013' with U+2010 was slipping through as llm_only)."""
+    return re.sub(r'[‐‑‒–—―−]', '-', s)
+
+
 def _release_body(text: str) -> str:
     """Strip nav/share boilerplate; return from first service-branch heading."""
+    text = _norm_dashes(text)   # normalize dashes once, before any downstream parsing
     date_matches = list(_CONTRACTS_DATE_RE.finditer(text))
     search_from = date_matches[-1].end() if date_matches else 0
     m = _SECTION_HEADER_RE.search(text, search_from)
