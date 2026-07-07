@@ -20,8 +20,14 @@ Usage:
 import argparse
 import asyncio
 import logging
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import text
+
+# SAM detail timestamps are stored UTC (timestamptz). Convert to true Eastern for
+# display. NB: SAM.gov's own web page mislabels times as "EST" year-round (fixed
+# UTC-5); real Eastern is EDT in summer, so we convert properly here.
+ET = ZoneInfo("America/New_York")
 
 from strata_core.db import AsyncSessionLocal
 
@@ -83,7 +89,7 @@ async def run(min_amount: float, show: int) -> None:
 
     def fmt(r):
         amt = f"${r['amount']:,.0f}" if r["amount"] is not None else "$?"
-        pub = r["published_at"].strftime("%Y-%m-%d %H:%M ET") if r["published_at"] else str(r["posted_date"])
+        pub = r["published_at"].astimezone(ET).strftime("%Y-%m-%d %H:%M ET") if r["published_at"] else str(r["posted_date"])
         dd = f" ({r['day_delta']:+d}d)" if r["day_delta"] is not None else ""
         return (f"  {amt:>16} | SAM {pub} | DoW {r['dow_release_date'] or '—'}{dd} | "
                 f"{(r['awardee_name'] or '')[:28]:28} | {r['piid']}")

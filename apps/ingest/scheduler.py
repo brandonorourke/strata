@@ -3,7 +3,9 @@ Ingest scheduler. Run as a long-lived worker process (e.g. Railway worker servic
 
 Runs the full ICFS incremental pipeline every PIPELINE_EVERY_MINUTES (default 60 —
 hourly, so contested-filing alerts stay fresh) plus once at startup. DoW releases
-are polled separately in their evening window (see _dow_poll_cadence).
+are polled separately in their evening window (see _dow_poll_cadence). SAM.gov award
+notices are pulled at two fixed ET windows (7 AM, 2 PM — see SAM_FIRE_WINDOWS) to
+test whether SAM publishes an award before DoW announces it.
 
 Writes each run to ingest_runs (pipeline='icfs'): started_at, finished_at, status,
 failed_script, per-script return codes in script_results JSONB.
@@ -54,6 +56,19 @@ ET = ZoneInfo("America/New_York")
 DOW_SCRIPT = INGEST_DIR / "ingest_dow_contracts.py"
 EXTRACT_SCRIPT = INGEST_DIR / "extract_dow_awards_v2.py"
 ALERTS_SCRIPT = INGEST_DIR / "emit_alerts.py"
+
+# ── SAM.gov award-notice pull (latency research: does SAM beat DoW?) ──────────
+# Fires at fixed ET times (not the hourly pipeline): 7 AM pre-market, 2 PM
+# afternoon. Each is one keyed search request (2-day window) — well inside the
+# 10/day cap. --detail enriches PRECISE publish timestamps, capped to big-dollar
+# notices (unkeyed detail endpoint, so kept modest). Needs SAM_API_KEY in env.
+SAM_SCRIPT = INGEST_DIR / "ingest_sam_awards.py"
+SAM_COMPARE_SCRIPT = INGEST_DIR / "compare_sam_dow.py"
+SAM_DETAIL_MIN_AMOUNT = os.getenv("SAM_DETAIL_MIN_AMOUNT", "10000000")  # only detail-enrich >= $10M
+SAM_FIRE_WINDOWS = [        # (start, end) ET; fires once per window per day
+    (dtime(7, 0),  dtime(7, 30)),    # pre-market
+    (dtime(14, 0), dtime(14, 30)),   # afternoon (validation / intraday check)
+]
 
 # Only extract releases from the last N days — a rolling cutoff that catches new
 # releases (+ a straggler buffer, misses hurt more than dupes which are impossible)
@@ -221,6 +236,26 @@ def poll_dow() -> None:
         logger.info("DoW poll: ingest ran, no release for %s yet (not posted)", today_et)
 
 
+def poll_sam() -> None:
+    """Pull recent SAM award notices (+ precise timestamps for big-dollar), then log
+    the SAM-vs-DoW comparison. One keyed search request; unkeyed detail enrichment
+    is capped by --detail-min-amount. Safe to re-run (idempotent upsert)."""
+    logger.info("SAM pull: ingest_sam_awards --days 2 --detail (min $%s)", SAM_DETAIL_MIN_AMOUNT)
+    rc = subprocess.run(
+        [sys.executable, str(SAM_SCRIPT), "--days", "2", "--detail",
+         "--detail-min-amount", SAM_DETAIL_MIN_AMOUNT],
+        check=False,
+    ).returncode
+    if rc != 0:
+        logger.error("SAM ingest failed (exit %d)", rc)
+        return
+    logger.info("SAM pull: compare_sam_dow (min $%s)", SAM_DETAIL_MIN_AMOUNT)
+    subprocess.run(
+        [sys.executable, str(SAM_COMPARE_SCRIPT), "--min-amount", SAM_DETAIL_MIN_AMOUNT],
+        check=False,
+    )
+
+
 def run_pipeline() -> None:
     logger.info("Pipeline '%s' starting", PIPELINE_NAME)
     try:
@@ -266,6 +301,7 @@ if __name__ == "__main__":
     _last_dow_poll: datetime | None = None
     _dow_evening_done: date | None = None
     _last_heartbeat: datetime | None = None
+    _sam_fired: dict[dtime, date] = {}   # window-start -> date last fired (once/window/day)
 
     # The loop body is fully guarded: NO transient error (DB blip, network, hung
     # subprocess) may ever kill or freeze this loop. A break logs and continues;
@@ -297,6 +333,14 @@ if __name__ == "__main__":
                 logger.info("DoW evening sweep (8pm ET)")
                 poll_dow()
                 _dow_evening_done = now_et.date()
+
+            # SAM pulls at fixed ET windows (7 AM pre-market, 2 PM afternoon),
+            # once per window per day.
+            for w_start, w_end in SAM_FIRE_WINDOWS:
+                if w_start <= now_et.time() < w_end and _sam_fired.get(w_start) != now_et.date():
+                    logger.info("SAM scheduled pull (%s ET)", w_start.strftime("%H:%M"))
+                    poll_sam()
+                    _sam_fired[w_start] = now_et.date()
 
         except Exception:
             logger.exception("Scheduler loop iteration failed — continuing")

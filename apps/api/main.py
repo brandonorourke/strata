@@ -1,7 +1,10 @@
 # apps/api/main.py
 
 from datetime import datetime, timedelta, timezone, date
+from zoneinfo import ZoneInfo
 import json
+
+ET = ZoneInfo("America/New_York")   # SAM/DoW timestamps display in true Eastern (EDT/EST)
 
 import httpx
 
@@ -356,6 +359,7 @@ async def list_sam_notices(request: Request, page: int = 1, page_size: int = 50,
         "total": total,
         "total_pages": total_pages,
         "q": q,
+        "et": ET,
     })
 
 

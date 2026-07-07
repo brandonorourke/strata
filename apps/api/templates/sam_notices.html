@@ -31,7 +31,7 @@
         <td style="white-space: nowrap;">{{ n.posted_date.strftime("%Y-%m-%d") if n.posted_date else "—" }}</td>
         <td style="white-space: nowrap;">
           {% if n.published_at %}
-            {{ n.published_at.strftime("%Y-%m-%d %H:%M") }}
+            {{ n.published_at.astimezone(et).strftime("%Y-%m-%d %H:%M") }}
           {% else %}
             <span class="meta" title="not detail-enriched yet">—</span>
           {% endif %}
