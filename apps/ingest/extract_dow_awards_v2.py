@@ -582,6 +582,7 @@ async def run(
     limit: int | None,
     reprocess: bool,
     dry_run: bool,
+    since: date | None = None,
 ) -> None:
     client = AsyncOpenAI()
 
@@ -591,6 +592,8 @@ async def run(
             q = q.where(DowContractRelease.id == release_id)
         elif not reprocess:
             q = q.where(DowContractRelease.llm_extracted_at.is_(None))
+        if since:  # only releases on/after the cutoff — leaves older backlog untouched
+            q = q.where(DowContractRelease.release_date >= since)
         q = q.order_by(DowContractRelease.release_date.desc())
         if limit:
             q = q.limit(limit)
@@ -614,10 +617,13 @@ if __name__ == "__main__":
     ap.add_argument("--limit",      type=int)
     ap.add_argument("--reprocess",  action="store_true")
     ap.add_argument("--dry-run",    action="store_true")
+    ap.add_argument("--since",      type=lambda s: date.fromisoformat(s),
+                    help="only extract releases with release_date >= this (YYYY-MM-DD)")
     args = ap.parse_args()
     asyncio.run(run(
         release_id=args.release_id,
         limit=args.limit,
         reprocess=args.reprocess,
         dry_run=args.dry_run,
+        since=args.since,
     ))

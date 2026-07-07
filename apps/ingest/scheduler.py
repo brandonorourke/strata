@@ -15,7 +15,7 @@ import logging
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone, date, time as dtime
+from datetime import datetime, timezone, date, timedelta, time as dtime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -45,10 +45,24 @@ PIPELINE = [
     (INGEST_DIR / "extract_icfs_notice_summaries.py", []),
     # DoW backstop — window poller is the primary path; this catches anything missed
     (INGEST_DIR / "ingest_dow_contracts.py", ["--mode", "incremental"]),
+    # Extract awards from any new DoW releases, then fire alerts (DoW + ICFS).
+    (INGEST_DIR / "extract_dow_awards_v2.py", []),
+    (INGEST_DIR / "emit_alerts.py", []),
 ]
 
 ET = ZoneInfo("America/New_York")
 DOW_SCRIPT = INGEST_DIR / "ingest_dow_contracts.py"
+EXTRACT_SCRIPT = INGEST_DIR / "extract_dow_awards_v2.py"
+ALERTS_SCRIPT = INGEST_DIR / "emit_alerts.py"
+
+# Only extract releases from the last N days — a rolling cutoff that catches new
+# releases (+ a straggler buffer, misses hurt more than dupes which are impossible)
+# while never touching the large historical backlog. Computed fresh each run so it
+# rolls forward. Backfill history separately with `extract_dow_awards_v2 --since <old>`.
+EXTRACT_SINCE_DAYS = int(os.getenv("DOW_EXTRACT_SINCE_DAYS", "7"))
+
+def _extract_since() -> str:
+    return (date.today() - timedelta(days=EXTRACT_SINCE_DAYS)).isoformat()
 
 # ── Robustness knobs (why: a single hung DB/subprocess call used to freeze the
 #    whole single-threaded loop silently — no timeout, no log, no recovery) ──
@@ -190,7 +204,19 @@ def poll_dow() -> None:
         logger.warning("DoW poll: post-ingest DB check failed")
         return
     if have:
-        logger.info("DoW poll: detected and stored today's release (%s) — first_seen_at stamped", today_et)
+        logger.info("DoW poll: detected today's release (%s) — extracting awards + alerting", today_et)
+        # Latency path: extract the new release's awards, then fire alerts immediately.
+        logger.info("Running extract_dow_awards_v2 --since %s", _extract_since())
+        rc = subprocess.run(
+            [sys.executable, str(EXTRACT_SCRIPT), "--since", _extract_since()],
+            check=False,
+        ).returncode
+        if rc != 0:
+            logger.error("extract_dow_awards_v2 failed (exit %d)", rc)
+        logger.info("Running emit_alerts")
+        rc = subprocess.run([sys.executable, str(ALERTS_SCRIPT)], check=False).returncode
+        if rc != 0:
+            logger.error("emit_alerts failed (exit %d)", rc)
     else:
         logger.info("DoW poll: ingest ran, no release for %s yet (not posted)", today_et)
 
@@ -207,6 +233,8 @@ def run_pipeline() -> None:
 
     for script_path, extra_args in PIPELINE:
         script_name = script_path.name
+        if script_path == EXTRACT_SCRIPT:  # rolling date cutoff, computed fresh each run
+            extra_args = extra_args + ["--since", _extract_since()]
         cmd = [sys.executable, str(script_path)] + extra_args
         logger.info("Running %s", script_name)
         result = subprocess.run(cmd, check=False)

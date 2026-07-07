@@ -6,22 +6,25 @@
 #   dow_scan   — heartbeat: fires whenever new DoW releases are scanned; lists them
 #                and the match count. With 0 matches it's the "scanned these, nothing
 #                found" confirmation (proves the pipeline ran + covered those releases).
-#   icfs_match — a new watchlist ICFS filing whose applicant currently has contested
-#                filings (pending, >= CONTESTED_MIN pleadings)
+#   icfs_match — a new ICFS filing by a watchlist applicant (Viasat/Intelsat).
+#                v1: any new filing. v2 will filter to contested (>= N pleadings).
 #
 # Watermarks in alert_state make "new" detection cheap and prevent re-alerting.
-# Sender is a console stub for now (sets sent_at); swap in SendGrid later.
+# Delivery: one digest email per run via Resend (reads RESEND_API_KEY from env;
+# never hard-coded). Falls back to console printing if the key isn't set.
 #
 # Usage:
-#   python emit_alerts.py            # detect, record, send (console)
+#   python emit_alerts.py            # detect, record, send (email if RESEND_API_KEY set)
 #   python emit_alerts.py --dry-run  # detect + print only, no writes
 
 import argparse
 import asyncio
 import logging
-from datetime import datetime, timezone
+import os
+from datetime import datetime, timezone, date, timedelta
 
-from sqlalchemy import text, select, update
+import httpx
+from sqlalchemy import text, select
 
 from strata_core.db import AsyncSessionLocal
 from strata_core.models import Alert, AlertState
@@ -33,7 +36,21 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 WATCHLIST = ["Viasat", "Intelsat"]          # hardcoded for v1
-CONTESTED_MIN = 3                            # pleadings threshold for "contested"
+
+# Freshness guard: only alert on items dated within the last N days. Protects
+# against dumping a backlog — on the first run, or after the scheduler has been
+# down and the watermark is far behind, only genuinely-recent items alert.
+# The watermark still handles "don't repeat"; this handles "don't dump backlog".
+ALERT_MAX_AGE_DAYS = int(os.environ.get("ALERT_MAX_AGE_DAYS", "3"))
+
+def _fresh_cutoff() -> date:
+    return date.today() - timedelta(days=ALERT_MAX_AGE_DAYS)
+
+# ── Email delivery (Resend) ──────────────────────────────────────────────────
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")           # set in .env / Railway
+ALERT_FROM = os.environ.get("ALERT_FROM", "Strata Alerts <onboarding@resend.dev>")
+# Just me for now; add Stas later via ALERT_TO env var (comma-separated).
+ALERT_TO = [e.strip() for e in os.environ.get("ALERT_TO", "bcorourke@gmail.com").split(",") if e.strip()]
 
 
 def _matches_watchlist(name: str | None) -> str | None:
@@ -85,8 +102,9 @@ async def detect_dow(session, dry_run) -> int:
         FROM dow_awards da
         JOIN dow_contract_releases r ON r.id = da.release_id
         WHERE da.id > :last_id
+          AND r.release_date >= :fresh          -- freshness guard: no backlog dumps
         ORDER BY da.id
-    """), {"last_id": last_id})).mappings().all()
+    """), {"last_id": last_id, "fresh": _fresh_cutoff()})).mappings().all()
 
     if not rows:
         logger.info("DoW: no new awards since award id %d", last_id)
@@ -136,73 +154,65 @@ async def detect_dow(session, dry_run) -> int:
     return len(matches) + 1
 
 
-# ── ICFS: new watchlist filing -> alert on currently-contested filings ────────
+# ── ICFS: alert on each NEW watchlist filing (v1) ────────────────────────────
+# v1 is deliberately simple: any new filing by Viasat/Intelsat → one alert.
+# v2 will add a "contested" filter (>= N pleadings) on top of this.
 
 async def detect_icfs(session, dry_run) -> int:
     last_ts_str = await _get_state(session, "last_icfs_ingested_at", "1970-01-01T00:00:00+00:00")
     last_ts = datetime.fromisoformat(last_ts_str)
     new_filings = (await session.execute(text("""
-        SELECT id, file_number, applicant_name, ingested_at
+        SELECT file_number, applicant_name, brief_description, action, submission_date
         FROM icfs_filings
         WHERE ingested_at > :ts
+          AND submission_date >= :fresh          -- freshness guard: no backlog dumps
           AND (applicant_name ILIKE '%viasat%' OR applicant_name ILIKE '%intelsat%')
         ORDER BY ingested_at
-    """), {"ts": last_ts})).mappings().all()
+    """), {"ts": last_ts, "fresh": _fresh_cutoff()})).mappings().all()
 
     # advance watermark past everything ingested so far (not just matches)
     maxts = (await session.execute(
         text("SELECT MAX(ingested_at) FROM icfs_filings")
     )).scalar()
 
-    if not new_filings:
-        logger.info("ICFS: no new watchlist filings since %s", last_ts)
-        if not dry_run and maxts:
-            await _set_state(session, "last_icfs_ingested_at", str(maxts))
-        return 0
-
-    # applicants that just had new activity
-    applicants = sorted({f["applicant_name"] for f in new_filings})
-    alerted = set()
     n = 0
-    for applicant in applicants:
-        company = _matches_watchlist(applicant)
-        contested = (await session.execute(text("""
-            SELECT f.file_number, f.brief_description, f.submission_date,
-                   COUNT(p.id) AS pleadings,
-                   STRING_AGG(DISTINCT p.filer_name, ' · ')
-                     FILTER (WHERE p.filer_name IS NOT NULL AND p.filer_name != f.applicant_name)
-                     AS contestants
-            FROM icfs_filings f
-            LEFT JOIN icfs_pleadings_and_comments p
-              ON p.file_number ILIKE '%' || f.file_number || '%'
-            WHERE f.action IS NULL AND f.file_number IS NOT NULL
-              AND f.applicant_name = :applicant
-            GROUP BY f.file_number, f.brief_description, f.submission_date
-            HAVING COUNT(p.id) >= :minp
-            ORDER BY pleadings DESC
-        """), {"applicant": applicant, "minp": CONTESTED_MIN})).mappings().all()
-
-        for c in contested:
-            if c["file_number"] in alerted:
-                continue
-            alerted.add(c["file_number"])
-            await _add_alert(
-                session, "icfs_match", company,
-                f"ICFS contested — {applicant} · {c['file_number']} ({c['pleadings']} pleadings)",
-                f"{c['brief_description'] or ''} — contested by: {c['contestants'] or 'n/a'}".strip(" —"),
-                {"file_number": c["file_number"], "applicant": applicant,
-                 "pleadings": c["pleadings"], "trigger": "new watchlist filing"},
-                dry_run,
-            )
-            n += 1
+    for f in new_filings:
+        company = _matches_watchlist(f["applicant_name"])
+        await _add_alert(
+            session, "icfs_match", company,
+            f"New ICFS filing — {f['applicant_name']} · {f['file_number']}",
+            f"{f['brief_description'] or ''} ({f['action'] or 'pending'})".strip(),
+            {"file_number": f["file_number"], "applicant": f["applicant_name"],
+             "action": f["action"]},
+            dry_run,
+        )
+        n += 1
 
     if not dry_run and maxts:
         await _set_state(session, "last_icfs_ingested_at", str(maxts))
-    logger.info("ICFS: %d new watchlist filing(s), %d contested alert(s)", len(new_filings), n)
+    logger.info("ICFS: %d new watchlist filing(s) alerted", n)
     return n
 
 
-# ── sender (console stub; swap in SendGrid later) ────────────────────────────
+# ── sender: one digest email per run via Resend (console fallback) ───────────
+
+async def _send_email(subject: str, body: str) -> bool:
+    """Send one email via Resend. Returns True on success."""
+    try:
+        async with httpx.AsyncClient(timeout=20) as c:
+            r = await c.post(
+                "https://api.resend.com/emails",
+                headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+                json={"from": ALERT_FROM, "to": ALERT_TO, "subject": subject, "text": body},
+            )
+        if r.status_code in (200, 201):
+            return True
+        logger.error("Resend send failed: HTTP %d %s", r.status_code, r.text[:300])
+        return False
+    except Exception as e:
+        logger.error("Resend send error: %s", e)
+        return False
+
 
 async def send_pending(session, dry_run) -> int:
     if dry_run:
@@ -210,12 +220,34 @@ async def send_pending(session, dry_run) -> int:
     pending = (await session.execute(
         select(Alert).where(Alert.sent_at.is_(None)).order_by(Alert.created_at)
     )).scalars().all()
+    if not pending:
+        return 0
+
+    # One digest email per run — avoid blasting N separate emails (e.g. the ICFS backlog)
+    lines = []
+    for a in pending:
+        lines.append(f"[{a.kind}] {a.title}")
+        if a.body:
+            lines.append(f"    {a.body}")
+    body = "\n".join(lines)
+    subject = (f"Strata alert: {pending[0].title}" if len(pending) == 1
+               else f"Strata: {len(pending)} new alerts")
+
+    titles = " | ".join(a.title for a in pending)
+    if RESEND_API_KEY:
+        ok = await _send_email(subject, body)
+        if not ok:
+            logger.warning("email send failed — leaving %d alert(s) unsent for retry: %s", len(pending), titles)
+            return 0  # don't mark sent; retry next run
+        logger.info("emailed %d alert(s) to %s: %s", len(pending), ", ".join(ALERT_TO), titles)
+    else:
+        logger.info("no RESEND_API_KEY — console fallback (%d alert(s))", len(pending))
+        for line in lines:
+            print("  " + line)
+
     now = datetime.now(timezone.utc)
     for a in pending:
-        print(f"  [SEND:{a.kind}] {a.title}")
-        if a.body:
-            print(f"            {a.body}")
-        a.sent_at = now   # console stub "delivers" it
+        a.sent_at = now
     return len(pending)
 
 
