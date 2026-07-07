@@ -72,10 +72,62 @@ at-award amount ($150M) is the real near-term number, stated in the prose.
 Extracting obligated-vs-ceiling is a core product differentiator (per Stas:
 "you would have known the contract was smaller than the ceiling").
 
+**Worse for multi-award IDIQs: one ceiling is shared across ALL awardees.**
+The Andromeda IDIQ (Space Domain Awareness, awarded April 7 2026) lists **14**
+companies — `FA8819-26-DB-001..014` (Anduril, Astranis, BAE, General Atomics,
+Intuitive Machines, L3Harris, Lockheed, Millennium, Northrop, Quantum, Redwire,
+Sierra Space, True Anomaly, Turion) — sharing ONE **$1,843,000,000** ceiling, with
+only **$1,400,000 obligated at award** (total, ~$100K each). Our extractor stamps
+the full $1.843B on every awardee line, overstating per-company value by ~4 orders
+of magnitude (BUG — see `docs/to_build.md`). Detect via: multiple awardees +
+sequential PIIDs in one announcement, "were awarded a **ceiling** $X", "**$Y
+obligated at time of award**", "N offers received". Store obligated as the amount,
+flag "1 of M · shared ceiling". This is precisely why the apparent "$1.8B Intuitive
+Machines award" was a non-event for LUNR — it wasn't a real $1.8B win.
+
 **Disclosure latency is real and documented.**
 Viasat PTSG award: public on war.gov May 22, disclosed at earnings June 10
 (~19 days). Fast intermediaries (Seeking Alpha → Bloomberg) caught it same-day
 with unclear lag from source. Speed-to-primary-source is a tradeable edge.
+
+## SAM.gov (opportunities)
+
+**SAM's differentiated signal is the solicitation PIPELINE, not awards.**
+For the Andromeda IDIQ, SAM carries the full pre-award trail under solicitation
+`FA8819-26-RB-001` — Draft RFP (Oct 21–23 2025, "define, design, build… Space
+Domain Awareness"), formal Solicitation (Jan 13 2026), Amendment 1 (Jan 27) — but
+**no award notice at all**. The 14 awards (`…-DB-001..014`) appear only in DoW.
+So the program was visible in SAM ~6 months before award, then SAM went silent for
+the award itself. Implication: build screens on SAM's **forward pipeline**
+(who's soliciting what, months ahead) — that's earlier and more differentiated than
+award notices, which SAM often lacks and which are stale/misvalued when present.
+Division of labor: **SAM = pipeline/solicitations; DoW (DoD daily digest) = awards.**
+
+**PIID structure encodes the lifecycle: R = solicitation, D = IDIQ award.**
+`FA8819-26-**R**B-001` (solicitation) → `FA8819-26-**D**B-0xx` (the awards). Same
+office + FY (`FA8819`, 26); only the 9th type-code char flips R→D. Lets you link a
+solicitation to its resulting awards by shared PIID base — the join key between
+SAM's pipeline side and DoW's award side.
+
+**Bidders are never disclosed — only winners, and sometimes a count.**
+No bidder/offeror/vendor field exists in SAM data. Offeror identities are
+source-selection confidential by rule; the public learns only who *won* (the
+awardee, and for multi-award IDIQs the full winner list — Andromeda's 14 = the
+field SF picked for SDA) and occasionally *how many* bid (offer count, present in
+~0.1% of SAM award notices as free text; more reliable in the DoW digest — "32
+offers received" for Andromeda). SAM's opt-in "Interested Vendors List" is a live
+per-page feature, not in the bulk CSVs, usually empty — unreliable. Implication:
+competitive intelligence = **winner history + pipeline** (derived from outcomes),
+never a bidder roster; infer the likely competitive field from who historically
+wins similar NAICS/programs.
+
+**Bulk-CSV `PostedDate` is a full timestamp; the live-API `postedDate` is date-only.**
+The FY20xx archived-opportunities CSVs carry precise posted timestamps
+(`2026-07-02 22:30:52-04`); the Opportunities *search* API returns date only — the
+precise instant is only on the notice page / unkeyed detail endpoint
+(`/api/prod/opps/v2/opportunities/{id}`, hal+json). Matters for any timing analysis.
+Reusable asset: `~/Downloads/sam_awards_FY20-26.parquet` — 485k award notices
+(FY2020–2026) extracted from the bulk CSVs, DuckDB-queryable in seconds.
 
 ## Entity resolution
 
