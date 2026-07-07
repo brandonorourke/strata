@@ -45,6 +45,9 @@ load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+# SECURITY: httpx logs the full request URL at INFO, and the SAM search key is a
+# query param (?api_key=...) — that would leak the key into logs. Quiet httpx.
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 SEARCH_URL = "https://api.sam.gov/opportunities/v2/search"
 DETAIL_URL = "https://sam.gov/api/prod/opps/v2/opportunities/{notice_id}"
@@ -181,13 +184,24 @@ async def upsert(rows: list[dict], dry_run: bool) -> int:
                         (r["awardee_name"] or "")[:30], r["amount"], (r["title"] or "")[:40])
         logger.info("[dry] %d notice(s) parsed (not written)", len(rows))
         return 0
+    # One row per statement + commit. A single bad row is logged and skipped
+    # instead of aborting the whole pull (its own commit means no poisoned
+    # transaction). Idempotent (ON CONFLICT DO NOTHING) so re-running is safe, and
+    # row-at-a-time is plenty fast for a twice-daily background job.
+    written = skipped = 0
     async with AsyncSessionLocal() as s:
-        stmt = pg_insert(SamAwardNotice).values(rows)
-        stmt = stmt.on_conflict_do_nothing(index_elements=["notice_id"])
-        await s.execute(stmt)
-        await s.commit()
-    logger.info("upserted %d notice(s) (existing notice_ids preserved)", len(rows))
-    return len(rows)
+        for r in rows:
+            try:
+                stmt = pg_insert(SamAwardNotice).values(r).on_conflict_do_nothing(index_elements=["notice_id"])
+                await s.execute(stmt)
+                await s.commit()
+                written += 1
+            except Exception as e:
+                await s.rollback()
+                skipped += 1
+                logger.warning("skipped notice %s: %s", r.get("notice_id"), e)
+    logger.info("upserted %d notice(s), skipped %d (existing notice_ids preserved)", written, skipped)
+    return written
 
 
 async def enrich_details(limit: int, min_amount: Decimal, dry_run: bool) -> int:
