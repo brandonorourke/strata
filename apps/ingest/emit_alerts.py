@@ -36,6 +36,10 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 WATCHLIST = ["Viasat", "Intelsat"]          # hardcoded for v1
+# TEMPORARY (test): alert on EVERYTHING, ignoring the watchlist, for a few days to
+# verify the whole pipeline end-to-end. Flip back to False to return to
+# watchlist-only (Viasat/Intelsat). ~30 alerts/day here, delivered as digests.
+ALERT_ALL = True
 
 # Freshness guard: only alert on items dated within the last N days. Protects
 # against dumping a backlog — on the first run, or after the scheduler has been
@@ -56,6 +60,8 @@ ALERT_TO = [e.strip() for e in os.environ.get("ALERT_TO", "bcorourke@gmail.com")
 def _matches_watchlist(name: str | None) -> str | None:
     if not name:
         return None
+    if ALERT_ALL:            # test mode: everything matches; label with the name itself
+        return name
     low = name.lower()
     for w in WATCHLIST:
         if w.lower() in low:
@@ -161,12 +167,15 @@ async def detect_dow(session, dry_run) -> int:
 async def detect_icfs(session, dry_run) -> int:
     last_ts_str = await _get_state(session, "last_icfs_ingested_at", "1970-01-01T00:00:00+00:00")
     last_ts = datetime.fromisoformat(last_ts_str)
-    new_filings = (await session.execute(text("""
+    # Watchlist filter is in SQL; ALERT_ALL drops it (test mode = every applicant).
+    applicant_filter = "" if ALERT_ALL else \
+        "AND (applicant_name ILIKE '%viasat%' OR applicant_name ILIKE '%intelsat%')"
+    new_filings = (await session.execute(text(f"""
         SELECT file_number, applicant_name, brief_description, action, submission_date
         FROM icfs_filings
         WHERE ingested_at > :ts
           AND submission_date >= :fresh          -- freshness guard: no backlog dumps
-          AND (applicant_name ILIKE '%viasat%' OR applicant_name ILIKE '%intelsat%')
+          {applicant_filter}
         ORDER BY ingested_at
     """), {"ts": last_ts, "fresh": _fresh_cutoff()})).mappings().all()
 
