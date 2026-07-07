@@ -1,5 +1,38 @@
 # To Build
 
+## Build order (Brandon, 2026-07-07) — current priority
+
+1. **Alerts for Stas: Viasat + Intelsat on new ICFS filings + DoW awards.**
+   Mostly BUILT — `apps/ingest/emit_alerts.py` already has `WATCHLIST=["Viasat","Intelsat"]`,
+   `detect_dow` (watchlist DoW awards) and `detect_icfs` (watchlist ICFS filings), Resend
+   delivery, freshness guard, and `alert_state` watermarks. Remaining work:
+   (a) flip `ALERT_ALL = True` → `False` (it's in end-to-end test mode, alerting on everything);
+   (b) add Stas to `ALERT_TO` (currently just bcorourke@gmail.com — need his email);
+   (c) verify end-to-end on a real watchlist hit.
+2. **Fix DoW obligated-vs-ceiling extraction.** THE data-quality fix (see the ceiling
+   mis-attribution bug below). Extract the obligated amount from the DoW prose
+   ("$X are being obligated at time of award") instead of stamping the ceiling; flag
+   shared multi-award IDIQs ("1 of M"). Fixtures: Andromeda ($1.843B ceiling / $1.4M
+   obligated / 14 awardees) and PTS-G ($437.7M / $150M / Viasat+Intelsat). Delivers the
+   obligated-vs-ceiling differentiator in real time — no USASpending needed (the number is
+   in the announcement text). USASpending deferred: it's the deterministic-but-lagged
+   backfill/confirmation layer, not a near-term build (progressive lag: ~15–20% at
+   award-day → ~71% over months; the real-time obligated $ comes from DoW prose).
+3. **Confirm alerts cover ACTIONS, not just filings.** GAP: `detect_icfs` currently fires
+   only on new `icfs_filings` rows. A new *action* on an existing watchlist filing
+   (modification / `action_taken_date` change in `icfs_filing_action_history`, or a new
+   pleading) would NOT alert. Add detection over action history + pleadings for watchlist
+   entities. (Same subsystem as #1 — bundle them.)
+4. **Program fuzzy-match for DoW contracts → possible parent program.** Heuristic linkage
+   of a bare delivery order to its parent vehicle/program, real-time. Candidate generation:
+   office (PIID[:6]) + type=D (IDIQ vehicles only — the real reducer) + awardee name;
+   disambiguate multi-vehicle primes with program-title + NAICS/PSC + timing (NOT amount —
+   amount doesn't identify the parent). Frame as **"possible parent program"** with a
+   confidence tier (confirmed/likely/possible/unresolved) + the matching basis; gate the
+   ambiguous tail (big primes, e.g. Lockheed 8 vehicles in one office). Deterministic cases
+   handled separately and already partly done: modifications (strip `-P00xxx` suffix, already
+   in `_piid_key`) and slash-pairs (`parent/order`). USASpending confirms the heuristic later.
+
 ## Next (immediate, in order)
 
 1. **Apply pending migrations to prod** (0031–0035 not yet on Railway; 0030 and below already applied):
