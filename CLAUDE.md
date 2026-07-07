@@ -54,3 +54,5 @@ git tag -a vX.Y.Z -m "vX.Y.Z"
 git push origin main --tags   # pushing main deploys to Railway — land DB migrations first, and keep them backwards compatible
 ```
 Commit messages are short and often prefixed by area, e.g. `Docs: ...`, `Schema: ...`, `Linker: ...`, `Ingest: ...`, `UI: ...`.
+
+**Claude Code must never run git write commands** — no `git commit`, `git push`, `git reset`, `git rebase`, etc. The human owns all git writes. Claude may edit/stage files and suggest the exact command to run, but must not execute it. This holds even when asked "are we ready to push?" — that's a readiness question, not authorization.
