@@ -140,6 +140,15 @@ def _parse_glide_date(value: str | None) -> date | None:
     return dt.date() if dt else None
 
 
+def _as_date(value):
+    """Coerce a date-or-datetime to a date. order_by columns are now a mix: date-typed
+    (action_taken_date, public_notice_release_date) return date; others return datetime.
+    Normalizing to date lets the incremental stop logic compare/log them uniformly."""
+    if value is None:
+        return None
+    return value.date() if isinstance(value, datetime) else value
+
+
 def _field(row: dict, name: str) -> str | None:
     """
     Most ServiceNow fields come back as {"display_value": ..., "value": ..., ...},
@@ -218,7 +227,7 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
         if start_page > 1:
             logger.info("%s: resuming backfill from page %d.", table, start_page)
         if stop_before:
-            logger.info("%s: backfill will stop before %s.", table, stop_before.date())
+            logger.info("%s: backfill will stop before %s.", table, _as_date(stop_before))
     else:
         start_page = 1
         result = await session.execute(select(func.max(getattr(model, order_by))))
@@ -228,7 +237,7 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
             stop_before = None
         else:
             stop_before = max_date - timedelta(days=1)
-            logger.info("%s: incremental stop_before=%s.", table, stop_before.date())
+            logger.info("%s: incremental stop_before=%s.", table, _as_date(stop_before))
 
     page = start_page
 
@@ -245,7 +254,7 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
             for row in rows:
                 if stop_before is not None:
                     row_date = _parse_glide_datetime(_field(row, order_by))
-                    if row_date is not None and row_date < stop_before:
+                    if row_date is not None and _as_date(row_date) < _as_date(stop_before):
                         stop_table = True
                         break
 
@@ -289,7 +298,7 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
             )
 
             if stop_table:
-                logger.info("%s: reached stop_before=%s, done.", table, stop_before.date())
+                logger.info("%s: reached stop_before=%s, done.", table, _as_date(stop_before))
                 if mode == "backfill":
                     await _save_backfill_state(session, table, page, complete=True)
                 break
