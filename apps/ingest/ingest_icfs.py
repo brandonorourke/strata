@@ -13,7 +13,7 @@ import asyncio
 import logging
 import os
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, date
 
 import httpx
 from sqlalchemy import func, select
@@ -132,6 +132,14 @@ def _parse_glide_datetime(value: str | None) -> datetime | None:
     return dt.replace(tzinfo=timezone.utc)
 
 
+def _parse_glide_date(value: str | None) -> date | None:
+    """action_taken_date is a ServiceNow glide_date (date-only). Return a Python date —
+    the UTC date of the parsed value — so it lands in a DATE column with no tz shift.
+    (Storing it as a timestamptz previously caused off-by-one bugs; see migration 0040.)"""
+    dt = _parse_glide_datetime(value)
+    return dt.date() if dt else None
+
+
 def _field(row: dict, name: str) -> str | None:
     """
     Most ServiceNow fields come back as {"display_value": ..., "value": ..., ...},
@@ -178,7 +186,7 @@ def _row_to_model_kwargs(table: str, row: dict) -> dict:
         "applicant_name": _field(row, "applicant_name"),
         "submission_date": _parse_glide_datetime(_field(row, "submission_date")),
         "action": _field(row, "action"),
-        "action_taken_date": _parse_glide_datetime(_field(row, "action_taken_date")),
+        "action_taken_date": _parse_glide_date(_field(row, "action_taken_date")),
         "target_table": row.get("targetTable"),
     }
 
@@ -251,7 +259,7 @@ async def ingest_table(session, table: str, fields: str, order_by: str, model, m
                     # For filings: if a previously actionless row now has an action, update it.
                     if table == "x_fmc_ibfs_base_table":
                         incoming_action = _field(row, "action")
-                        incoming_action_date = _parse_glide_datetime(_field(row, "action_taken_date"))
+                        incoming_action_date = _parse_glide_date(_field(row, "action_taken_date"))
                         if incoming_action != existing_obj.action or incoming_action_date != existing_obj.action_taken_date:
                             session.add(IcfsFilingActionHistory(
                                 filing_id=existing_obj.id,

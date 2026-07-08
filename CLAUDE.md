@@ -19,7 +19,7 @@ Local DB is Postgres, named `strata`, using the async driver string `postgresql+
 - Canonical schema lives at `strata_core/schema.local.sql` (the README's `db/schema.local.sql` reference is stale — that directory doesn't exist).
 - DB + migrations are the source of truth, not the snapshot file. After any schema change, regenerate the snapshot: `pg_dump strata --schema-only --no-owner > strata_core/schema.local.sql`.
 - When adding ORM/table columns, always append at the end — never reorder existing fields (keeps diffs and pg_dump output stable).
-- Migrations are hand-written numbered SQL files under `migrations/`, applied manually and in order (`psql strata -f migrations/000N_*.sql`). There is no migration framework (no Alembic).
+- Migrations are hand-written numbered SQL files under `migrations/`, applied manually and in order (`psql strata -f migrations/000N_*.sql`). There is no migration framework (no Alembic). Convenience wrapper: `./migrate.sh <local|prod> <number>` (shows the SQL, confirms before prod, runs via psql with `ON_ERROR_STOP`); `--show` previews without running. Prod uses `PROD_DATABASE_URL` (Railway public URL) from `.env`. Non-backwards-compatible migrations (e.g. a column type change): deploy the forward-compatible code first, then run the migration.
 - `api/.env.example.prod`, referenced in the README for Railway production config, does not exist in the repo.
 
 ## Ingest pipeline

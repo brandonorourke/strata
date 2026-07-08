@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 3mFRZWQjvH9HkDKShlhtcdaUuhle2LbFibK1OPIzZlE6mKXde9HHSkN9bWTpsAL
+\restrict emDFlqLXyJY37qHaZq9a2k937Uygr6PU5IwyYtPsIc86XEIpj6I6zUImhuhiLPp
 
 -- Dumped from database version 17.10 (Postgres.app)
 -- Dumped by pg_dump version 17.10 (Postgres.app)
@@ -403,7 +403,7 @@ CREATE TABLE public.icfs_filing_action_history (
     id integer NOT NULL,
     filing_id integer NOT NULL,
     action text,
-    action_taken_date timestamp with time zone,
+    action_taken_date date,
     detected_at timestamp with time zone DEFAULT now() NOT NULL
 );
 
@@ -440,7 +440,7 @@ CREATE TABLE public.icfs_filings (
     applicant_name text,
     submission_date timestamp with time zone,
     action text,
-    action_taken_date timestamp with time zone,
+    action_taken_date date,
     target_table text,
     ingested_at timestamp with time zone DEFAULT now() NOT NULL,
     entities_extracted_at timestamp with time zone,
@@ -1255,5 +1255,5 @@ ALTER TABLE ONLY public.icfs_filing_action_history
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 3mFRZWQjvH9HkDKShlhtcdaUuhle2LbFibK1OPIzZlE6mKXde9HHSkN9bWTpsAL
+\unrestrict emDFlqLXyJY37qHaZq9a2k937Uygr6PU5IwyYtPsIc86XEIpj6I6zUImhuhiLPp
 

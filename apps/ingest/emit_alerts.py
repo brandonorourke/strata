@@ -244,9 +244,10 @@ async def detect_icfs_actions(session, dry_run) -> int:
     n = 0
     for a in new_actions:
         company = _matches_watchlist(a["applicant_name"])
-        # action_taken_date is a pure date stored at UTC midnight (e.g. 2026-06-30
-        # 00:00+00). Take .date() directly — do NOT convert to ET (that rolls it back a day).
-        taken = a["action_taken_date"].date().isoformat() if a["action_taken_date"] else "pending"
+        # action_taken_date is a DATE (migration 0040). Handle both date and (pre-migration)
+        # datetime so this is safe across the deploy window.
+        atd = a["action_taken_date"]
+        taken = (atd.date() if isinstance(atd, datetime) else atd).isoformat() if atd else "pending"
         await _add_alert(
             session, "icfs_action", company,
             f"ICFS action — {a['applicant_name']} · {a['file_number']}",

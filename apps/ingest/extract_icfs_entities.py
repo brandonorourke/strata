@@ -13,7 +13,7 @@
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date, time
 
 from sqlalchemy import select, and_
 from sqlalchemy.exc import SQLAlchemyError
@@ -58,6 +58,9 @@ async def _get_or_create_entity(session, filing: IcfsFiling, canonical_name: str
         return None
 
     event_time = filing.submission_date or filing.action_taken_date
+    # action_taken_date is now a pure date; first_seen_at columns are timestamptz.
+    if event_time is not None and not isinstance(event_time, datetime):
+        event_time = datetime.combine(event_time, time.min, tzinfo=timezone.utc)
     icfs_canonical = await _get_or_create_icfs_canonical(session, canonical_name, legal_name, event_time)
 
     stmt = (
@@ -129,7 +132,7 @@ async def process_filing(session, filing: IcfsFiling) -> int:
         extracted_name=applicant_name,
         is_primary_entity=True,
         event_type="regulatory",
-        event_date=event_date.date() if event_date else None,
+        event_date=(event_date.date() if isinstance(event_date, datetime) else event_date) if event_date else None,
         event_description=description,
         confidence=1.0,
     )

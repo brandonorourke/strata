@@ -26,8 +26,9 @@ pg_dump strata --schema-only --no-owner > strata_core/schema.local.sql
 
 - The canonical schema lives in `strata_core/schema.local.sql`. Load it into a fresh database with `psql "$DATABASE_URL" -f strata_core/schema.local.sql`.
 - Ad-hoc SQL migrations (if needed) live under `migrations/` and should be applied manually in order.
-- To run locally: `psql strata -f migrations/0001_drop_processed_by_llm_at.sql`
+- Apply one with the wrapper: `./migrate.sh local 0040` (or `./migrate.sh prod 0040` — confirms first, uses `PROD_DATABASE_URL` from `.env`). Add `--show` to preview the SQL without running it. Under the hood it's just `psql -v ON_ERROR_STOP=1 -f`, so `psql strata -f migrations/000N_*.sql` still works too.
 - After changing the schema, rerun `pg_dump --schema-only --no-owner > strata_core/schema.local.sql` so the snapshot stays current.
+- Deploy note: a **non**-backwards-compatible migration (e.g. a column type change) must deploy the forward-compatible code **first**, then run the migration.
 - When adding ORM columns, append at the end for readability (do not reorder existing fields).
 
 ### Production environment

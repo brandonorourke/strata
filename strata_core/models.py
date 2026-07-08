@@ -186,7 +186,7 @@ class IcfsFiling(Base):
     applicant_name = Column(Text, nullable=True)
     submission_date = Column(DateTime(timezone=True), nullable=True)
     action = Column(Text, nullable=True)
-    action_taken_date = Column(DateTime(timezone=True), nullable=True)
+    action_taken_date = Column(Date, nullable=True)   # date-only (ServiceNow glide_date); see migration 0040
     target_table = Column(Text, nullable=True)
     ingested_at = Column(DateTime(timezone=True), server_default=func.now())
     entities_extracted_at = Column(DateTime(timezone=True), nullable=True)
@@ -298,7 +298,7 @@ class IcfsFilingActionHistory(Base):
     id = Column(Integer, primary_key=True, index=True)
     filing_id = Column(Integer, ForeignKey("icfs_filings.id"), nullable=False)
     action = Column(Text, nullable=True)
-    action_taken_date = Column(DateTime(timezone=True), nullable=True)
+    action_taken_date = Column(Date, nullable=True)   # date-only (ServiceNow glide_date); see migration 0040
     detected_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
 
