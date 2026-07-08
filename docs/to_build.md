@@ -32,6 +32,17 @@
    ambiguous tail (big primes, e.g. Lockheed 8 vehicles in one office). Deterministic cases
    handled separately and already partly done: modifications (strip `-P00xxx` suffix, already
    in `_piid_key`) and slash-pairs (`parent/order`). USASpending confirms the heuristic later.
+5. **Retire `extracted_events`/`extracted_entities` for ICFS? — scope first, do LAST.** The
+   **polymorphism** is the vestige: built as an any-source layer (news first), but news is dead and DoW
+   uses its own `dow_awards` tables, so **ICFS is the only consumer left**. NOT a clean delete, though —
+   those tables also (a) hold the LLM enrichment (`signal_tier`, `summary`, `signal_reason`,
+   `source_excerpt` on notice events — not in source tables), (b) power the entity timeline
+   (`/admin/icfs/entity`) + signals feed (`/admin/icfs/signals`), (c) carry entity resolution
+   (`extracted_entities` → `icfs_canonical_entities`). Removing = relocate the enrichment (→ source tables
+   or a dedicated `icfs_notice_analysis` table) + rewrite timeline/signals to read source tables directly
+   (dated by live columns — migration 0040/0041 direction) + keep canonical-entity resolution. Multi-day
+   refactor; map every consumer first. Motivating symptom (`event_date` stale copy) is already worked
+   around by reading live dates, so nothing's on fire. Slot after #2/#4/email.
 
 ## Next (immediate, in order)
 
