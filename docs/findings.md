@@ -59,6 +59,17 @@ report number — likely closes the ~122-notice non-DA fetch gap without
 fighting Akamai. NOT yet verified for full ICFS/satellite coverage — confirm
 before building on it. ECFS also has RSS (Stas uses it).
 
+**ServiceNow glide_date fields are date-only — store them as DATE, not timestamptz.**
+`action_taken_date` and `public_notice_release_date` return as `"YYYY-MM-DD"` (no time;
+verified: 100% at midnight UTC). Stored as `timestamptz` they read correctly via Python
+`.date()` but shift a day via SQL `::date` in a non-UTC session (ours is `America/New_York`)
+— a split that caused several off-by-one bugs. Migrations 0040/0041 make them `DATE`. Rule:
+a calendar-date field is `DATE`; only fields with real times stay `timestamptz`
+(`submission_date`, `sys_created_on`). Note also: a filing's `extracted_events.event_date`
+is a *copy* made at first extraction and goes stale when a grant/action lands later — date
+filings by their live dates (`COALESCE(action_taken_date, grant_date, submission_date)`),
+not the copy.
+
 ## DoW contracts (war.gov)
 
 **Daily award announcements back to July 2014; 2,957 releases ingested.**
@@ -89,6 +100,18 @@ Machines award" was a non-event for LUNR — it wasn't a real $1.8B win.
 Viasat PTSG award: public on war.gov May 22, disclosed at earnings June 10
 (~19 days). Fast intermediaries (Seeking Alpha → Bloomberg) caught it same-day
 with unclear lag from source. Speed-to-primary-source is a tradeable edge.
+
+**But for public names, contract awards are NOT a tradable stock catalyst (tested).**
+Event study over 6yr of SAM awards to a 20-name defense small/mid-cap universe: the
+market-adjusted reaction *at the feed posting* is ~0; the only drift is *before* it
+(+2.3% over [−5,−1]), and a placebo (random dates, same tickers) can't distinguish it from
+these high-beta names' momentum (p=0.055). Mechanism: public companies self-disclose
+material wins (8-K/PR) days before DoW's ~5pm digest and weeks before SAM — **IR front-runs
+every feed.** So the "speed-to-source edge" above holds only where the company *doesn't*
+self-disclose: private/distressed names (the litigation-finance/special-situations wedge),
+or awards deemed immaterial. Also: what looks like a huge award is often a shared IDIQ
+ceiling, not company value (see the multi-award ceiling finding). The data's real value is
+fundamentals/backlog + competitive intel, not event-trading.
 
 ## SAM.gov (opportunities)
 
@@ -128,6 +151,28 @@ precise instant is only on the notice page / unkeyed detail endpoint
 (`/api/prod/opps/v2/opportunities/{id}`, hal+json). Matters for any timing analysis.
 Reusable asset: `~/Downloads/sam_awards_FY20-26.parquet` — 485k award notices
 (FY2020–2026) extracted from the bulk CSVs, DuckDB-queryable in seconds.
+
+**The pipeline signal is real but SPARSE — Andromeda's clean trail is not typical.**
+Across the full FY20–26 corpus (2.1M lifecycle rows): only ~10% of material (≥$10M) DoD
+*award notices* trace back to a SAM solicitation, and the solicitation feed is dominated by
+tiny fast buys (median award ~$100K, RFP→award ~1 month; draft RFPs exist for only ~9% and
+lead the RFP by a median ~2 weeks). Where a real trail *does* exist the lead is genuinely
+long (~6–10 mo median), but it's a needle-in-haystack — high-value early signal on a
+minority of big programs, buried in mostly-routine solicitations that carry no `$` amount
+(so you can't pre-filter to "the big ones"). Don't sell SAM as broad pipeline coverage.
+
+**Linking a draw to its parent: PIID for some actions, USASpending for the rest.**
+Modifications encode their base contract (strip the trailing `-P00xxx` mod token — already
+what `_piid_key` does) and some announcements pair `parent/order` on a slash — both
+deterministic. But a **bare delivery order** (`FA…-FB-004`) gets its own PIID that does NOT
+encode the parent IDIQ (its serial doesn't match the parent's — proven on PTS-G). Resolve
+it via: **USASpending `parent_award_id`** — deterministic but *fiscal-year-lagged* (~15–20%
+of awards present at award-day → ~71% over months → prior FYs ~complete; the obligated-$ and
+parent link live here); or a **real-time heuristic** — office `PIID[:6]` + `type=D` (IDIQ
+vehicles only — the real reducer) + awardee *name* (no UEI on DoW/bulk-SAM) + program/NAICS/
+timing. That's ~92% single-candidate overall (worse for big primes — Lockheed had 8 vehicles
+in one office), so present it as a confidence-tiered **"possible parent program"** and gate
+the ambiguous tail; USASpending confirms it later. Amount does NOT help identify the parent.
 
 ## Entity resolution
 
