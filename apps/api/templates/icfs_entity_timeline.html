@@ -86,7 +86,7 @@
            data-signal="{{ 'true' if ev.signal_tier == 'signal' else 'false' }}"
            style="display: flex; gap: 16px; margin-bottom: 12px;">
         <div style="min-width: 90px; color: var(--muted); font-size: 0.85em; padding-top: 3px; text-align: right;">
-          {{ ev.event_date.strftime("%Y-%m-%d") if ev.event_date else "—" }}
+          {{ row.display_date.strftime("%Y-%m-%d") if row.display_date else "—" }}
         </div>
         <div style="flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 14px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">

@@ -909,6 +909,9 @@ async def icfs_entity_timeline(request: Request, canonical_id: int, tab: str = "
         )
         rows = list((await session.execute(event_stmt)).all())
 
+        def _as_date(d):
+            return d.date() if isinstance(d, datetime) else d   # timestamptz→date; date stays
+
         timeline = []
         for ev, e, notice, filing, pleading in rows:
             if ev.source_type == "icfs_filing":
@@ -926,6 +929,15 @@ async def icfs_entity_timeline(request: Request, canonical_id: int, tab: str = "
             elif pleading:
                 doc_url = _icfs_pleading_citation_url(pleading)
 
+            # Date filings by their LIVE dates (most-recent-action first), not the
+            # copied-once event_date which goes stale when a grant/action lands later.
+            # Immutable sources (notices/pleadings) keep using event_date.
+            if ev.source_type == "icfs_filing" and filing is not None:
+                live = filing.action_taken_date or filing.grant_date or filing.submission_date
+                display_date = _as_date(live) if live else ev.event_date
+            else:
+                display_date = ev.event_date
+
             timeline.append({
                 "event": ev,
                 "entity": e,
@@ -935,7 +947,11 @@ async def icfs_entity_timeline(request: Request, canonical_id: int, tab: str = "
                 "card_type": card_type,
                 "action_label": action_label,
                 "doc_url": doc_url,
+                "display_date": display_date,
             })
+
+        # Sort by the live display_date (desc), undated rows last.
+        timeline.sort(key=lambda r: r["display_date"] or date.min, reverse=True)
 
         counts = {
             "notice": sum(1 for r in timeline if r["card_type"] == "notice"),
