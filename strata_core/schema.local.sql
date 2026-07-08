@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict emDFlqLXyJY37qHaZq9a2k937Uygr6PU5IwyYtPsIc86XEIpj6I6zUImhuhiLPp
+\restrict s9fQq464NNbLy4S7l4KnLC8Ni4guYiYbQu16JiVfCY0K5H2YBMeolr1fKmpyNEF
 
 -- Dumped from database version 17.10 (Postgres.app)
 -- Dumped by pg_dump version 17.10 (Postgres.app)
@@ -538,7 +538,7 @@ CREATE TABLE public.icfs_public_notices (
     number text,
     subsystem text,
     type_of_document text,
-    public_notice_release_date timestamp with time zone,
+    public_notice_release_date date,
     ingested_at timestamp with time zone DEFAULT now() NOT NULL,
     url text,
     da_number text,
@@ -1255,5 +1255,5 @@ ALTER TABLE ONLY public.icfs_filing_action_history
 -- PostgreSQL database dump complete
 --
 
-\unrestrict emDFlqLXyJY37qHaZq9a2k937Uygr6PU5IwyYtPsIc86XEIpj6I6zUImhuhiLPp
+\unrestrict s9fQq464NNbLy4S7l4KnLC8Ni4guYiYbQu16JiVfCY0K5H2YBMeolr1fKmpyNEF
 

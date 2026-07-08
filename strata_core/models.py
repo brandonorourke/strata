@@ -250,7 +250,7 @@ class IcfsPublicNotice(Base):
     number = Column(Text, nullable=True)
     subsystem = Column(Text, nullable=True)
     type_of_document = Column(Text, nullable=True)
-    public_notice_release_date = Column(DateTime(timezone=True), nullable=True)
+    public_notice_release_date = Column(Date, nullable=True)   # date-only (glide_date); see migration 0041
     ingested_at = Column(DateTime(timezone=True), server_default=func.now())
     url = Column(Text, nullable=True)
     da_number = Column(Text, nullable=True)

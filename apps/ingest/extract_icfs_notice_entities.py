@@ -12,7 +12,7 @@
 import asyncio
 import logging
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, time
 
 from sqlalchemy import select, and_
 from sqlalchemy.exc import SQLAlchemyError
@@ -74,7 +74,10 @@ async def process_notice(session, notice: IcfsPublicNotice) -> int:
         if already.scalar_one_or_none() is not None:
             continue
 
-        event_time = notice.public_notice_release_date
+        event_time = notice.public_notice_release_date   # pure date (glide_date), see migration 0041
+        # first_seen_at columns are timestamptz; promote the date to a datetime.
+        event_dt = (datetime.combine(event_time, time.min, tzinfo=timezone.utc)
+                    if event_time and not isinstance(event_time, datetime) else event_time)
         entity = ExtractedEntity(
             source_type=SOURCE_TYPE,
             source_id=notice.id,
@@ -83,8 +86,8 @@ async def process_notice(session, notice: IcfsPublicNotice) -> int:
             created_from="icfs",
             legal_name_normalized=filing_entity.legal_name_normalized,
             loose_name_normalized=filing_entity.loose_name_normalized,
-            first_seen_at=event_time,
-            last_seen_at=event_time,
+            first_seen_at=event_dt,
+            last_seen_at=event_dt,
             icfs_canonical_entity_id=filing_entity.icfs_canonical_entity_id,
         )
         session.add(entity)
@@ -97,7 +100,7 @@ async def process_notice(session, notice: IcfsPublicNotice) -> int:
             extracted_name=filing.applicant_name,
             is_primary_entity=True,
             event_type="regulatory",
-            event_date=event_time.date() if event_time else None,
+            event_date=(event_time.date() if isinstance(event_time, datetime) else event_time) if event_time else None,
             event_description=(
                 f"Mentioned in Public Notice {notice.number} (DA {notice.da_number or '—'}), "
                 f"referencing filing {file_number} ({filing.applicant_name})."

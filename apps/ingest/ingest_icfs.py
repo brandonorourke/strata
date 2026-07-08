@@ -173,7 +173,7 @@ def _row_to_model_kwargs(table: str, row: dict) -> dict:
             "number": _field(row, "number"),
             "subsystem": _field(row, "subsystem"),
             "type_of_document": _field(row, "type_of_document"),
-            "public_notice_release_date": _parse_glide_datetime(_field(row, "public_notice_release_date")),
+            "public_notice_release_date": _parse_glide_date(_field(row, "public_notice_release_date")),
             "url": _field(row, "url"),
             "da_number": _field(row, "da_number"),
         }
