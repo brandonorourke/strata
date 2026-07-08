@@ -153,9 +153,9 @@
                 {% if loop.first %}
                   {# group-level cells span all awardees in this contract action #}
                   <td class="grp amt" rowspan="{{ n }}">
-                    {% if award.amounts and award.amounts[0].raw %}
-                      {{ award.amounts[0].raw }}
-                      {% if award.amounts | length > 1 %}<span class="amt-more" title="{{ award.amounts | length }} figures in source"> +{{ award.amounts|length - 1 }}</span>{% endif %}
+                    {% set amt_list = (award.amounts or []) | selectattr('raw') | map(attribute='raw') | list %}
+                    {% if amt_list %}
+                      {% for raw in amt_list %}<div>{{ raw }}</div>{% endfor %}
                     {% else %}—{% endif %}
                   </td>
                   <td class="grp" rowspan="{{ n }}">
