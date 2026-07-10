@@ -108,8 +108,8 @@
       {% for x in exclusive_veh if x.active or show_expired %}
         <tr class="{{ 'expired' if not x.active }}">
           <td>
-            {% if x.program %}<span class="pill prog">{{ x.program }}</span> {% endif %}
             <a class="mono" href="https://www.usaspending.gov/award/{{ x.gid }}" target="_blank" rel="noopener" title="View on USASpending">{{ x.award_id }}</a>
+            {% if x.program %}<span class="pill prog">{{ x.program }}</span>{% endif %}
             {% if not x.active %}<span class="pill expired">expired</span>{% endif %}
             <div class="desc">{{ (x.desc or "")[:90] }}</div>
           </td>
@@ -139,8 +139,8 @@
       {% for x in shared_veh if x.active or show_expired %}
         <tr class="{{ 'expired' if not x.active }}">
           <td>
-            {% if x.program %}<span class="pill prog">{{ x.program }}</span> {% endif %}
             <a class="mono" href="https://www.usaspending.gov/award/{{ x.gid }}" target="_blank" rel="noopener" title="View on USASpending">{{ x.award_id }}</a>
+            {% if x.program %}<span class="pill prog">{{ x.program }}</span>{% endif %}
             <span class="pill multi" title="multiple-award — pool ceiling shared across primes, do not sum">multi-award</span>
             {% if not x.active %}<span class="pill expired">expired</span>{% endif %}
             <div class="desc">{{ (x.desc or "")[:90] }}</div>
@@ -178,8 +178,8 @@
       {% for x in definitive if x.active or show_expired %}
         <tr class="{{ 'expired' if not x.active }}">
           <td>
-            {% if x.program %}<span class="pill prog">{{ x.program }}</span> {% endif %}
             <a class="mono" href="https://www.usaspending.gov/award/{{ x.gid }}" target="_blank" rel="noopener" title="View on USASpending">{{ x.award_id }}</a>
+            {% if x.program %}<span class="pill prog">{{ x.program }}</span>{% endif %}
             {% if not x.active %}<span class="pill expired">expired</span>{% endif %}
             <div class="desc">{{ (x.desc or "")[:90] }}</div>
           </td>
