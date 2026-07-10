@@ -247,7 +247,7 @@ async def run(args) -> None:
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--days", type=int, default=2, help="overlapping window size (postedFrom = today - N)")
+    ap.add_argument("--days", type=int, default=3, help="overlapping window: postedFrom = today - N; N=3 recovers up to a 2-day missed run")
     ap.add_argument("--max-pages", type=int, default=DEFAULT_MAX_PAGES, help="keyed-search page ceiling (protects 10/day quota)")
     ap.add_argument("--detail", action="store_true", help="also fetch precise timestamps (unkeyed detail endpoint)")
     ap.add_argument("--detail-limit", type=int, default=50, help="max notices to detail-enrich per run")
