@@ -69,7 +69,7 @@ PAGE_LIMIT = 100
 BACKOFF_SCHEDULE = [30, 60, 120, 300]     # seconds before each retry; server drops (RemoteProtocolError) need long pauses
 MAX_RETRIES = len(BACKOFF_SCHEDULE) + 1   # total attempts = initial + len(BACKOFF_SCHEDULE) retries
 RETRY_STATUS = {429, 500, 502, 503, 504}  # USASpending blips transiently under load
-REQUEST_DELAY_S = 0.5                      # politeness pause after each successful request
+REQUEST_DELAY_S = 1.0                      # politeness pause after each successful request
 
 _PARENT_RE = re.compile(r"^CONT_AWD_[^_]+_[^_]+_([^_]+)_([^_]+)$")
 
