@@ -55,8 +55,7 @@ FIELDS = ["Award ID", "Recipient Name", "Recipient UEI", "recipient_id",
           "Awarding Agency", "Awarding Sub Agency", "Description", "Start Date",
           "End Date", "Award Amount", "Total Outlays", "Contract Award Type",
           "NAICS", "PSC", "Last Modified Date", "Base Obligation Date",
-          "generated_internal_id"]
-IDV_FIELDS = FIELDS + ["Last Date to Order"]  # IDV-only extra: vehicle order-expiry
+          "Last Date to Order", "generated_internal_id"]  # Last Date to Order is IDV-only → null on contracts
 PAGE_LIMIT = 100
 MAX_RETRIES = 4                           # per-page transient-error retries
 BACKOFF_BASE = 2.0                        # exponential backoff seconds: 2, 4, 8…
@@ -168,11 +167,10 @@ def fetch_children(client: httpx.Client, uei: str) -> list[str]:
 def _post_search(client: httpx.Client, uei: str, type_codes: list[str], page: int) -> dict | None:
     """One spending_by_award page, with retry+backoff on transient errors (429/5xx,
     timeouts). Returns the parsed JSON, or None if it ultimately failed (caller skips)."""
-    is_idv = type_codes[0].startswith("IDV")
-    group = "IDV" if is_idv else "A-D"
+    group = "IDV" if type_codes[0].startswith("IDV") else "A-D"
     payload = {
         "filters": {"recipient_search_text": [uei], "award_type_codes": type_codes},
-        "fields": IDV_FIELDS if is_idv else FIELDS, "sort": "Award Amount", "order": "desc",
+        "fields": FIELDS, "sort": "Award Amount", "order": "desc",
         "limit": PAGE_LIMIT, "page": page,
     }
     logger.info("→ POST spending_by_award uei=%s group=%s page=%d", uei, group, page)
