@@ -62,6 +62,7 @@
         <td class="meta">{{ a.awarding_sub_agency or a.awarding_agency or "—" }}</td>
         <td class="meta" style="white-space: nowrap;">
           {{ a.start_date.strftime("%Y-%m-%d") if a.start_date else "?" }}{% if a.end_date %} → {{ a.end_date.strftime("%Y-%m-%d") }}{% endif %}
+          {% if a.last_order_date %}<div title="last date to order (vehicle expiry)">orders close {{ a.last_order_date.strftime("%Y-%m-%d") }}</div>{% endif %}
         </td>
         <td class="meta" style="white-space: nowrap;">{{ a.naics_code or "—" }} / {{ a.psc_code or "—" }}</td>
         <td>{{ (a.description or "—")[:120] }}</td>

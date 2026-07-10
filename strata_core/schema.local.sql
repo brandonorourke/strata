@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ukyWyB19t4W7BT4qlm3Y3VRTmNUVdZRi5nraH8FvZbLx8fJBCtK53OC1LORpzy2
+\restrict nAWILgXHiRjJFLIh54DWA4VfbfetF8YshvaaAAo7wxyubnZGSeBZJiCll8HZAzj
 
 -- Dumped from database version 17.10 (Postgres.app)
 -- Dumped by pg_dump version 17.10 (Postgres.app)
@@ -716,7 +716,10 @@ CREATE TABLE public.usaspending_awards (
     last_modified text,
     base_obligation_date date,
     fetched_at timestamp with time zone DEFAULT now() NOT NULL,
-    raw jsonb
+    raw jsonb,
+    ceiling numeric,
+    total_obligation numeric,
+    last_order_date date
 );
 
 
@@ -1374,5 +1377,5 @@ ALTER TABLE ONLY public.icfs_filing_action_history
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ukyWyB19t4W7BT4qlm3Y3VRTmNUVdZRi5nraH8FvZbLx8fJBCtK53OC1LORpzy2
+\unrestrict nAWILgXHiRjJFLIh54DWA4VfbfetF8YshvaaAAo7wxyubnZGSeBZJiCll8HZAzj
 

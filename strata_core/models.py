@@ -433,3 +433,9 @@ class UsaspendingAward(Base):
     base_obligation_date  = Column(Date, nullable=True)
     fetched_at            = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     raw                   = Column(JSONB, nullable=True)
+    # appended (migration 0043): ceiling/obligation come from the award DETAIL endpoint
+    # (base_and_all_options — not in spending_by_award; populated by a later pass, NULL
+    # for now); last_order_date is the IDV "Last Date to Order", set from the search.
+    ceiling               = Column(Numeric, nullable=True)  # base_and_all_options (detail endpoint)
+    total_obligation      = Column(Numeric, nullable=True)  # total_obligation (detail endpoint)
+    last_order_date       = Column(Date, nullable=True)     # IDV "Last Date to Order"
