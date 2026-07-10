@@ -66,8 +66,8 @@ FIELDS = ["Award ID", "Recipient Name", "Recipient UEI", "recipient_id",
           "NAICS", "PSC", "Last Modified Date", "Base Obligation Date",
           "Last Date to Order", "generated_internal_id"]  # Last Date to Order is IDV-only → null on contracts
 PAGE_LIMIT = 100
-MAX_RETRIES = 4                           # per-page transient-error retries
-BACKOFF_BASE = 2.0                        # exponential backoff seconds: 2, 4, 8…
+BACKOFF_SCHEDULE = [30, 60, 120, 300]     # seconds before each retry; server drops (RemoteProtocolError) need long pauses
+MAX_RETRIES = len(BACKOFF_SCHEDULE) + 1   # total attempts = initial + len(BACKOFF_SCHEDULE) retries
 RETRY_STATUS = {429, 500, 502, 503, 504}  # USASpending blips transiently under load
 REQUEST_DELAY_S = 0.5                      # politeness pause after each successful request
 
@@ -203,7 +203,7 @@ def _post_search(client: httpx.Client, uei: str, type_codes: list[str], page: in
                 logger.error("  giving up uei=%s group=%s page=%d after %d tries (last HTTP %s / %s) — skipping",
                              uei, group, page, MAX_RETRIES, sc, type(e).__name__)
                 return None
-            wait = BACKOFF_BASE ** attempt
+            wait = BACKOFF_SCHEDULE[attempt - 1]
             logger.warning("  transient uei=%s group=%s page=%d (HTTP %s / %s) — retry %d/%d in %.0fs",
                            uei, group, page, sc, type(e).__name__, attempt, MAX_RETRIES - 1, wait)
             time.sleep(wait)
@@ -251,7 +251,7 @@ def _get_detail(client: httpx.Client, gid: str) -> dict | None:
                 logger.error("  giving up detail %s after %d tries (last HTTP %s / %s) — skipping",
                              gid, MAX_RETRIES, sc, type(e).__name__)
                 return None
-            wait = BACKOFF_BASE ** attempt
+            wait = BACKOFF_SCHEDULE[attempt - 1]
             logger.warning("  transient detail %s (HTTP %s / %s) — retry %d/%d in %.0fs",
                            gid, sc, type(e).__name__, attempt, MAX_RETRIES - 1, wait)
             time.sleep(wait)
