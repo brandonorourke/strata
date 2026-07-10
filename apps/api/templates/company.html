@@ -92,13 +92,12 @@
   <!-- LIVE CAPACITY -->
   <section>
     <div class="sec-head">
-      <h2>Live capacity <span class="hint">— vehicles still orderable, most undrawn first</span></h2>
+      <h2>Exclusive capacity <span class="hint">— single-award vehicles ({{ name }}'s alone), most undrawn first</span></h2>
       <span class="toggle">
         {% if show_expired %}<a href="/company/{{ ticker }}">hide expired</a>
         {% else %}<a href="/company/{{ ticker }}?show_expired=true">show expired</a>{% endif %}
       </span>
     </div>
-    <div class="sub-head">Exclusive — single-award ({{ name }}'s capacity alone)</div>
     <table>
       <thead><tr>
         <th>Program / Vehicle</th><th class="num">Ceiling</th><th class="num">Drawn</th>
@@ -128,8 +127,13 @@
       </tbody>
     </table>
 
-    {% if shared_veh %}
-    <div class="sub-head">Shared — multi-award (seats you compete on; the ceiling is the whole program pool, not {{ name }}'s)</div>
+  </section>
+
+  {% if shared_veh %}
+  <section>
+    <div class="sec-head">
+      <h2>Shared capacity <span class="hint">— multi-award seats; ceiling is the whole program pool, not {{ name }}'s</span></h2>
+    </div>
     <table>
       <thead><tr>
         <th>Program / Vehicle</th><th class="num">Pool ceiling</th><th class="num">Drawn</th>
@@ -158,8 +162,8 @@
       {% endfor %}
       </tbody>
     </table>
-    {% endif %}
   </section>
+  {% endif %}
 
   <!-- DEFINITIVE CONTRACTS -->
   {% if definitive %}
