@@ -53,6 +53,8 @@
           {% if a.is_idv %}<span title="{{ a.award_type }}">vehicle</span>
           {% elif a.parent_award_id %}<span title="{{ a.award_type }}">draw</span>
           {% else %}<span class="meta" title="{{ a.award_type }}">standalone</span>{% endif %}
+          {% if a.is_multi_award %}<div class="meta" title="multiple-award — ceiling is shared, do NOT sum">multi-award</div>{% endif %}
+          {% if a.program_acronym %}<div class="meta"><b>{{ a.program_acronym }}</b></div>{% endif %}
         </td>
         <td style="white-space: nowrap;">{{ a.award_id or "—" }}</td>
         <td style="white-space: nowrap;">
@@ -70,7 +72,10 @@
           <div>{{ a.recipient_name or "—" }}</div>
           {% if a.recipient_uei %}<div class="meta">UEI {{ a.recipient_uei }}{% if a.recipient_uei != a.seed_uei %} · via {{ a.seed_uei }}{% endif %}</div>{% endif %}
         </td>
-        <td class="meta">{{ a.awarding_sub_agency or a.awarding_agency or "—" }}</td>
+        <td class="meta">
+          {{ a.awarding_sub_agency or a.awarding_agency or "—" }}
+          {% if a.funding_sub_agency and a.funding_sub_agency != a.awarding_sub_agency %}<div title="funding agency (end customer)">↳ {{ a.funding_sub_agency }}</div>{% endif %}
+        </td>
         <td class="meta" style="white-space: nowrap;">
           {{ a.start_date.strftime("%Y-%m-%d") if a.start_date else "?" }}{% if a.end_date %} → {{ a.end_date.strftime("%Y-%m-%d") }}{% endif %}
           {% if a.last_order_date %}<div title="last date to order (vehicle expiry)">orders close {{ a.last_order_date.strftime("%Y-%m-%d") }}</div>{% endif %}

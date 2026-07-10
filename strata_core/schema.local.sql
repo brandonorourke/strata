@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict uOy8B2zSdtDSeY8vyLQtagV7hF6ctY71zUSgaafoKZPaxZ3ho9BMNNXwZDl5Ppu
+\restrict RVPcp7IVNhfIF8v3lyEaOGeaKA4aOEZlQS9COgaU0eczlSwj9CIwmVn7d0Zhflh
 
 -- Dumped from database version 17.10 (Postgres.app)
 -- Dumped by pg_dump version 17.10 (Postgres.app)
@@ -721,7 +721,14 @@ CREATE TABLE public.usaspending_awards (
     total_obligation numeric,
     last_order_date date,
     base_exercised_options numeric,
-    enriched_at timestamp with time zone
+    enriched_at timestamp with time zone,
+    date_signed date,
+    funding_sub_agency text,
+    program_acronym text,
+    is_multi_award boolean,
+    solicitation_id text,
+    set_aside text,
+    pricing_type text
 );
 
 
@@ -1166,6 +1173,13 @@ CREATE INDEX idx_usa_awards_parent_award_id ON public.usaspending_awards USING b
 
 
 --
+-- Name: idx_usa_awards_program_acronym; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_usa_awards_program_acronym ON public.usaspending_awards USING btree (program_acronym) WHERE (program_acronym IS NOT NULL);
+
+
+--
 -- Name: idx_usa_awards_recipient_uei; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1386,5 +1400,5 @@ ALTER TABLE ONLY public.icfs_filing_action_history
 -- PostgreSQL database dump complete
 --
 
-\unrestrict uOy8B2zSdtDSeY8vyLQtagV7hF6ctY71zUSgaafoKZPaxZ3ho9BMNNXwZDl5Ppu
+\unrestrict RVPcp7IVNhfIF8v3lyEaOGeaKA4aOEZlQS9COgaU0eczlSwj9CIwmVn7d0Zhflh
 

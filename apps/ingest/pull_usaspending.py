@@ -374,10 +374,21 @@ async def enrich(anchor: str, limit: int, dry_run: bool) -> int:
                 d = _get_detail(client, gid)
                 if d is None:
                     continue  # skipped after retries; enriched_at stays NULL → retried next run
+                ltcd = d.get("latest_transaction_contract_data") or {}
+                fund = (d.get("funding_agency") or {}).get("subtier_agency") or {}
+                msa = ltcd.get("multiple_or_single_award_description")
+                pa = (ltcd.get("program_acronym") or "").strip()
                 vals = {
                     "ceiling": _to_decimal(d.get("base_and_all_options")),
                     "base_exercised_options": _to_decimal(d.get("base_exercised_options")),
                     "total_obligation": _to_decimal(d.get("total_obligation")),
+                    "date_signed": _to_date(d.get("date_signed")),
+                    "funding_sub_agency": fund.get("name"),
+                    "program_acronym": None if pa.upper() in ("", "N/A", "NONE") else pa,
+                    "is_multi_award": ("MULTIPLE" in msa.upper()) if msa else None,
+                    "solicitation_id": ltcd.get("solicitation_identifier"),
+                    "set_aside": ltcd.get("type_set_aside_description"),
+                    "pricing_type": ltcd.get("type_of_contract_pricing_description"),
                     "enriched_at": func.now(),
                 }
                 parent = d.get("parent_award") or {}

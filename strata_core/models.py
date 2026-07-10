@@ -442,3 +442,11 @@ class UsaspendingAward(Base):
     # appended (migration 0044): detail-endpoint enrichment
     base_exercised_options = Column(Numeric, nullable=True)  # base + exercised options (detail)
     enriched_at            = Column(DateTime(timezone=True), nullable=True)  # NULL until detail-fetched
+    # appended (migration 0045): FPDS metadata from the detail endpoint (via enrich)
+    date_signed        = Column(Date, nullable=True)     # [top] action-signed date
+    funding_sub_agency = Column(Text, nullable=True)     # [top] funding subtier (end customer)
+    program_acronym    = Column(Text, nullable=True)     # [LTCD] program key, e.g. "PTS-G"
+    is_multi_award     = Column(Boolean, nullable=True)  # [LTCD] MULTIPLE AWARD → the de-noiser
+    solicitation_id    = Column(Text, nullable=True)     # [LTCD] solicitation_identifier
+    set_aside          = Column(Text, nullable=True)     # [LTCD] type_set_aside_description
+    pricing_type       = Column(Text, nullable=True)     # [LTCD] type_of_contract_pricing_description
