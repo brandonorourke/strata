@@ -546,6 +546,28 @@ async def company_page(request: Request, ticker: str = "VSAT", show_expired: boo
         p["ceiling"] += x["ceiling"]; p["drawn"] += x["drawn"]; p["n"] += 1; p["multi"] = p["multi"] or x["is_multi"]
     programs = sorted([{"name": k, **v} for k, v in prog.items()], key=lambda x: x["ceiling"], reverse=True)
 
+    # standalone definitive contracts (not a vehicle, no parent) — undrawn = unexercised options
+    definitive = []
+    for r in rows:
+        if r.is_idv or r.parent_generated_id:
+            continue
+        if (r.award_type or "").upper() != "DEFINITIVE CONTRACT":
+            continue  # this section = only true definitive contracts (FPDS type D)
+        ceiling   = f(r.ceiling)
+        obligated = f(r.total_obligation if r.total_obligation is not None else r.amount)
+        expiry    = r.end_date
+        definitive.append({
+            "award_id": r.award_id, "program": r.program_acronym, "desc": r.description,
+            "ceiling": ceiling, "obligated": obligated, "undrawn": max(ceiling - obligated, 0.0),
+            "pct": (obligated / ceiling) if ceiling > 0 else None,
+            "expiry": expiry, "active": (expiry is None) or (expiry >= today),
+            "funding": r.funding_sub_agency, "agency": r.awarding_sub_agency,
+        })
+    definitive.sort(key=lambda x: (x["active"], x["ceiling"]), reverse=True)
+    n_definitive = len(definitive)
+    def_options_total = sum(x["undrawn"] for x in definitive if x["active"] and x["ceiling"] > 0)
+    definitive = definitive[:60]  # cap for display; big/active first
+
     return templates.TemplateResponse("company.html", {
         "request": request, "ticker": ticker, "name": display_name,
         "title": f"{display_name} ({ticker}) — Position",
@@ -553,6 +575,7 @@ async def company_page(request: Request, ticker: str = "VSAT", show_expired: boo
         "total_drawn": total_drawn, "n_rows": len(rows), "n_enriched": n_enriched,
         "n_vehicles": len(veh), "exclusive_veh": exclusive_veh, "shared_veh": shared_veh,
         "show_expired": show_expired, "draws": draws, "programs": programs, "today": today,
+        "definitive": definitive, "n_definitive": n_definitive, "def_options_total": def_options_total,
     })
 
 

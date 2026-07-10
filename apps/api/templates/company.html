@@ -162,6 +162,44 @@
     {% endif %}
   </section>
 
+  <!-- DEFINITIVE CONTRACTS -->
+  {% if definitive %}
+  <section>
+    <div class="sec-head">
+      <h2>Definitive contracts <span class="hint">— standalone awards (not IDIQ vehicles); undrawn = unexercised options</span></h2>
+      <span class="hint">{{ n_definitive }} total{% if n_definitive > definitive|length %}, top {{ definitive|length }} by size{% endif %} · Σ unexercised {{ def_options_total | fmt_usd }}</span>
+    </div>
+    <table>
+      <thead><tr>
+        <th>Program / Contract</th><th class="num">Ceiling</th><th class="num">Obligated</th>
+        <th class="num">Unexercised</th><th>% obligated</th><th class="num">Ends</th><th>End customer</th>
+      </tr></thead>
+      <tbody>
+      {% for x in definitive if x.active or show_expired %}
+        <tr class="{{ 'expired' if not x.active }}">
+          <td>
+            {% if x.program %}<span class="pill prog">{{ x.program }}</span> {% endif %}
+            <span class="mono">{{ x.award_id }}</span>
+            {% if not x.active %}<span class="pill expired">expired</span>{% endif %}
+            <div class="desc">{{ (x.desc or "")[:90] }}</div>
+          </td>
+          <td class="num">{{ x.ceiling | fmt_usd }}</td>
+          <td class="num">{{ x.obligated | fmt_usd }}</td>
+          <td class="num"><b>{{ x.undrawn | fmt_usd }}</b></td>
+          <td>
+            {% if x.pct is not none %}
+              <span class="bar"><span class="fill" style="width:{{ (x.pct*100)|round|int }}%"></span></span>{{ (x.pct*100)|round|int }}%
+            {% else %}<span class="muted small">—</span>{% endif %}
+          </td>
+          <td class="num">{{ x.expiry.strftime("%Y-%m-%d") if x.expiry else "—" }}</td>
+          <td class="small">{{ x.funding or x.agency or "—" }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
   <!-- RECENT DRAWS -->
   <section>
     <div class="sec-head">
