@@ -60,6 +60,7 @@ PAGE_LIMIT = 100
 MAX_RETRIES = 4                           # per-page transient-error retries
 BACKOFF_BASE = 2.0                        # exponential backoff seconds: 2, 4, 8…
 RETRY_STATUS = {429, 500, 502, 503, 504}  # USASpending blips transiently under load
+REQUEST_DELAY_S = 0.5                      # politeness pause after each successful request
 
 _PARENT_RE = re.compile(r"^CONT_AWD_[^_]+_[^_]+_([^_]+)_([^_]+)$")
 
@@ -185,6 +186,7 @@ def _post_search(client: httpx.Client, uei: str, type_codes: list[str], page: in
                 raise httpx.HTTPStatusError(f"HTTP {r.status_code}", request=r.request, response=r)
             r.raise_for_status()
             logger.debug("  response body: %s", r.text[:2000])
+            time.sleep(REQUEST_DELAY_S)  # politeness — don't hammer USASpending
             return r.json()
         except (httpx.HTTPStatusError, httpx.TransportError) as e:
             sc = getattr(getattr(e, "response", None), "status_code", "—")
