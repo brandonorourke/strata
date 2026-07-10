@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict nAWILgXHiRjJFLIh54DWA4VfbfetF8YshvaaAAo7wxyubnZGSeBZJiCll8HZAzj
+\restrict uOy8B2zSdtDSeY8vyLQtagV7hF6ctY71zUSgaafoKZPaxZ3ho9BMNNXwZDl5Ppu
 
 -- Dumped from database version 17.10 (Postgres.app)
 -- Dumped by pg_dump version 17.10 (Postgres.app)
@@ -719,7 +719,9 @@ CREATE TABLE public.usaspending_awards (
     raw jsonb,
     ceiling numeric,
     total_obligation numeric,
-    last_order_date date
+    last_order_date date,
+    base_exercised_options numeric,
+    enriched_at timestamp with time zone
 );
 
 
@@ -1150,6 +1152,13 @@ CREATE INDEX idx_usa_awards_is_idv ON public.usaspending_awards USING btree (is_
 
 
 --
+-- Name: idx_usa_awards_needs_enrich; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_usa_awards_needs_enrich ON public.usaspending_awards USING btree (id) WHERE (enriched_at IS NULL);
+
+
+--
 -- Name: idx_usa_awards_parent_award_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1377,5 +1386,5 @@ ALTER TABLE ONLY public.icfs_filing_action_history
 -- PostgreSQL database dump complete
 --
 
-\unrestrict nAWILgXHiRjJFLIh54DWA4VfbfetF8YshvaaAAo7wxyubnZGSeBZJiCll8HZAzj
+\unrestrict uOy8B2zSdtDSeY8vyLQtagV7hF6ctY71zUSgaafoKZPaxZ3ho9BMNNXwZDl5Ppu
 

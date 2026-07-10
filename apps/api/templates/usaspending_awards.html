@@ -7,6 +7,10 @@
     pulled by <code>pull_usaspending.py</code> ·
     <b>vehicle</b> = IDV base · <b>draw</b> = order against a parent vehicle · <b>standalone</b> = definitive contract (no parent)
   </div>
+  <div class="meta" style="margin-bottom: 12px;">
+    Σ ceiling <b>{{ sum_ceiling | fmt_usd }}</b> · obligated <b>{{ sum_obligated | fmt_usd }}</b> ·
+    undrawn <b>{{ sum_undrawn | fmt_usd }}</b> · {{ n_enriched }}/{{ total }} detail-enriched{% if n_enriched < total %} — <span title="ceilings come from the detail-endpoint enrichment pass">run enrich to complete</span>{% endif %}
+  </div>
 
   <form method="get" action="/usaspending" style="margin-bottom: 12px;">
     <input type="text" name="q" value="{{ q }}" placeholder="Search awardee, PIID, parent, description…" style="padding: 6px 8px; width: 300px;">
@@ -32,7 +36,9 @@
         <th>Type</th>
         <th>Award ID</th>
         <th>Parent</th>
-        <th>Amount</th>
+        <th>Ceiling</th>
+        <th>Obligated</th>
+        <th>Undrawn</th>
         <th>Recipient</th>
         <th>Agency</th>
         <th>Period</th>
@@ -52,8 +58,13 @@
         <td style="white-space: nowrap;">
           {% if a.parent_award_id %}<a href="/usaspending?q={{ a.parent_award_id }}" class="meta">{{ a.parent_award_id }}</a>{% else %}—{% endif %}
         </td>
+        {% set oblig = a.total_obligation if a.total_obligation is not none else a.amount %}
+        <td style="white-space: nowrap; text-align: right;" title="base + all options{% if a.base_exercised_options is not none %} · exercised {{ a.base_exercised_options | fmt_usd }}{% endif %}">
+          {{ a.ceiling | fmt_usd }}
+        </td>
+        <td style="white-space: nowrap; text-align: right;">{{ oblig | fmt_usd }}</td>
         <td style="white-space: nowrap; text-align: right;">
-          {% if a.amount is not none %}${{ "{:,.0f}".format(a.amount) }}{% else %}—{% endif %}
+          {% if a.ceiling is not none and oblig is not none %}{{ [a.ceiling - oblig, 0]|max | fmt_usd }}{% else %}—{% endif %}
         </td>
         <td>
           <div>{{ a.recipient_name or "—" }}</div>

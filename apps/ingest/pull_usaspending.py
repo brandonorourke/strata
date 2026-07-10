@@ -18,10 +18,17 @@ is the corpus spine. Given a seed UEI (or several), we:
 
 NOT part of the daily pipeline. You run it; it makes only free USASpending calls.
 
+A run does TWO passes: (1) the fast search pull, then (2) a per-award DETAIL fetch
+(enrichment) for every award — ceiling/exercised/obligation + canonical parent. Pass 2
+is one call per award (~0.5s each), so a few thousand awards takes ~20-30 min; it's
+resumable (only un-enriched rows are fetched) and can be skipped or run standalone.
+
 Usage:
-  python apps/ingest/pull_usaspending.py --uei L9Z1ASN3B8E7 --ticker VSAT
-  python apps/ingest/pull_usaspending.py --uei L9Z1ASN3B8E7 --dry-run   # no writes
-  python apps/ingest/pull_usaspending.py --uei L9Z1ASN3B8E7 --no-children
+  python apps/ingest/pull_usaspending.py --uei L9Z1ASN3B8E7 --ticker VSAT   # pull + enrich
+  python apps/ingest/pull_usaspending.py --uei L9Z1ASN3B8E7 --no-enrich     # fast pull only
+  python apps/ingest/pull_usaspending.py --uei L9Z1ASN3B8E7 --enrich-only   # enrich existing rows
+  python apps/ingest/pull_usaspending.py --uei L9Z1ASN3B8E7 --enrich-only --enrich-limit 5  # test
+  python apps/ingest/pull_usaspending.py --uei L9Z1ASN3B8E7 --dry-run       # no writes
 """
 
 import argparse
@@ -34,6 +41,7 @@ from datetime import date
 from decimal import Decimal, InvalidOperation
 
 import httpx
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from strata_core.db import AsyncSessionLocal
@@ -49,6 +57,7 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)  # its per-frame DEBUG t
 
 SEARCH_URL   = "https://api.usaspending.gov/api/v2/search/spending_by_award/"
 CHILDREN_URL = "https://api.usaspending.gov/api/v2/recipient/children/{uei}/"
+AWARD_URL    = "https://api.usaspending.gov/api/v2/awards/{gid}/"  # detail endpoint (ceiling etc.)
 IDV_TYPES    = ["IDV_A", "IDV_B", "IDV_B_A", "IDV_B_B", "IDV_B_C", "IDV_C", "IDV_D", "IDV_E"]
 ORDER_TYPES  = ["A", "B", "C", "D"]
 FIELDS = ["Award ID", "Recipient Name", "Recipient UEI", "recipient_id",
@@ -221,6 +230,34 @@ def search_awards(client: httpx.Client, uei: str, type_codes: list[str], max_pag
     return out
 
 
+def _get_detail(client: httpx.Client, gid: str) -> dict | None:
+    """One award DETAIL fetch, with retry+backoff on transient errors. Returns the
+    parsed JSON, or None if it ultimately failed (caller skips, retries next run)."""
+    logger.info("→ GET  award detail %s", gid)
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            r = client.get(AWARD_URL.format(gid=gid), timeout=120)
+            logger.info("← HTTP %d  detail %s (%dms)", r.status_code, gid,
+                        int(r.elapsed.total_seconds() * 1000))
+            if r.status_code in RETRY_STATUS:
+                raise httpx.HTTPStatusError(f"HTTP {r.status_code}", request=r.request, response=r)
+            r.raise_for_status()
+            logger.debug("  detail body: %s", r.text[:1500])
+            time.sleep(REQUEST_DELAY_S)
+            return r.json()
+        except (httpx.HTTPStatusError, httpx.TransportError) as e:
+            sc = getattr(getattr(e, "response", None), "status_code", "—")
+            if attempt == MAX_RETRIES:
+                logger.error("  giving up detail %s after %d tries (last HTTP %s / %s) — skipping",
+                             gid, MAX_RETRIES, sc, type(e).__name__)
+                return None
+            wait = BACKOFF_BASE ** attempt
+            logger.warning("  transient detail %s (HTTP %s / %s) — retry %d/%d in %.0fs",
+                           gid, sc, type(e).__name__, attempt, MAX_RETRIES - 1, wait)
+            time.sleep(wait)
+    return None
+
+
 def collect(seeds: list[str], ticker: str | None, use_children: bool,
             discover: bool, max_pages: int) -> list[dict]:
     """Resolve the UEI family, then pull every family UEI's IDVs + orders. Family =
@@ -313,9 +350,57 @@ async def upsert(rows: list[dict], dry_run: bool) -> int:
     return n
 
 
+async def enrich(anchor: str, limit: int, dry_run: bool) -> int:
+    """Fetch the award DETAIL endpoint for every un-enriched award under this family
+    anchor (biggest-first) and write ceiling / base_exercised_options / total_obligation
+    + the canonical parent link. Resumable: only rows with enriched_at IS NULL are
+    fetched, so a re-run continues where an interrupted one left off. This is the slow
+    pass (one call per award) — the 0.5s politeness delay dominates the runtime."""
+    async with AsyncSessionLocal() as s:
+        q = (select(UsaspendingAward.generated_internal_id)
+             .where(UsaspendingAward.seed_uei == anchor,
+                    UsaspendingAward.enriched_at.is_(None))
+             .order_by(UsaspendingAward.amount.desc().nullslast()))
+        if limit > 0:
+            q = q.limit(limit)
+        gids = list((await s.execute(q)).scalars().all())
+        logger.info("enrich: %d award(s) need detail (seed=%s)%s",
+                    len(gids), anchor, f" [limit {limit}]" if limit else "")
+        if dry_run or not gids:
+            return 0
+        n = 0
+        with httpx.Client() as client:
+            for gid in gids:
+                d = _get_detail(client, gid)
+                if d is None:
+                    continue  # skipped after retries; enriched_at stays NULL → retried next run
+                vals = {
+                    "ceiling": _to_decimal(d.get("base_and_all_options")),
+                    "base_exercised_options": _to_decimal(d.get("base_exercised_options")),
+                    "total_obligation": _to_decimal(d.get("total_obligation")),
+                    "enriched_at": func.now(),
+                }
+                parent = d.get("parent_award") or {}
+                if parent.get("piid"):  # canonical F→D link (orders); leave as-is otherwise
+                    vals["parent_award_id"] = parent.get("piid")
+                    vals["parent_generated_id"] = parent.get("generated_unique_award_id")
+                await s.execute(update(UsaspendingAward)
+                                .where(UsaspendingAward.generated_internal_id == gid)
+                                .values(**vals))
+                await s.commit()
+                n += 1
+                if n % 50 == 0:
+                    logger.info("enrich: %d/%d done", n, len(gids))
+        logger.info("enrich: updated %d award(s)", n)
+        return n
+
+
 async def run(args) -> None:
-    rows = collect(args.uei, args.ticker, not args.no_children, args.discover_siblings, args.max_pages)
-    await upsert(rows, args.dry_run)
+    if not args.enrich_only:
+        rows = collect(args.uei, args.ticker, not args.no_children, args.discover_siblings, args.max_pages)
+        await upsert(rows, args.dry_run)
+    if not args.no_enrich:
+        await enrich(args.uei[0], args.enrich_limit, args.dry_run)
 
 
 if __name__ == "__main__":
@@ -326,6 +411,9 @@ if __name__ == "__main__":
     ap.add_argument("--no-children", action="store_true", help="skip the recipient children-endpoint expansion")
     ap.add_argument("--discover-siblings", action="store_true", help="also pull fuzzy-surfaced same-name UEIs not in the children family (off by default)")
     ap.add_argument("--dry-run", action="store_true", help="parse + summarize, write nothing")
+    ap.add_argument("--no-enrich", action="store_true", help="skip detail-endpoint enrichment (pull only)")
+    ap.add_argument("--enrich-only", action="store_true", help="skip the pull; only enrich existing rows")
+    ap.add_argument("--enrich-limit", type=int, default=0, help="enrich at most N rows (0 = all; for testing)")
     ap.add_argument("-v", "--verbose", action="store_true", help="DEBUG: log full request payloads + response bodies")
     args = ap.parse_args()
     if args.verbose:

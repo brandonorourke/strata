@@ -439,3 +439,6 @@ class UsaspendingAward(Base):
     ceiling               = Column(Numeric, nullable=True)  # base_and_all_options (detail endpoint)
     total_obligation      = Column(Numeric, nullable=True)  # total_obligation (detail endpoint)
     last_order_date       = Column(Date, nullable=True)     # IDV "Last Date to Order"
+    # appended (migration 0044): detail-endpoint enrichment
+    base_exercised_options = Column(Numeric, nullable=True)  # base + exercised options (detail)
+    enriched_at            = Column(DateTime(timezone=True), nullable=True)  # NULL until detail-fetched

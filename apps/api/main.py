@@ -58,6 +58,21 @@ def _fmt_dollars(cents):
 
 templates.env.filters["fmt_dollars"] = _fmt_dollars
 
+def _fmt_usd(d):
+    # like _fmt_dollars but for values already in DOLLARS (not cents) — usaspending_awards
+    if d is None:
+        return "—"
+    d = float(d)
+    if abs(d) >= 1e9:
+        return f"${d/1e9:.2f}B"
+    if abs(d) >= 1e6:
+        return f"${d/1e6:.1f}M"
+    if abs(d) >= 1e3:
+        return f"${d/1e3:.0f}K"
+    return f"${d:,.0f}"
+
+templates.env.filters["fmt_usd"] = _fmt_usd
+
 _EVENT_TYPE_WEIGHTS = {
     "bankruptcy": 6,
     "legal_action": 5,
@@ -402,6 +417,17 @@ async def list_usaspending_awards(request: Request, page: int = 1, page_size: in
             select(func.count()).select_from(UsaspendingAward).where(*filters)
         )).scalar() or 0)
 
+        # money roll-up over the filtered set (undrawn = ceiling − obligated, floored at 0)
+        oblig = func.coalesce(UsaspendingAward.total_obligation, UsaspendingAward.amount)
+        sum_ceiling, sum_obligated, sum_undrawn, n_enriched = (await session.execute(
+            select(
+                func.coalesce(func.sum(UsaspendingAward.ceiling), 0),
+                func.coalesce(func.sum(oblig), 0),
+                func.coalesce(func.sum(func.greatest(UsaspendingAward.ceiling - oblig, 0)), 0),
+                func.count().filter(UsaspendingAward.enriched_at.isnot(None)),
+            ).where(*filters)
+        )).one()
+
         awards = list((await session.execute(
             select(UsaspendingAward)
             .where(*filters)
@@ -431,6 +457,10 @@ async def list_usaspending_awards(request: Request, page: int = 1, page_size: in
         "uei": uei,
         "kind": kind,
         "ueis": ueis,
+        "sum_ceiling": sum_ceiling,
+        "sum_obligated": sum_obligated,
+        "sum_undrawn": sum_undrawn,
+        "n_enriched": n_enriched,
     })
 
 
