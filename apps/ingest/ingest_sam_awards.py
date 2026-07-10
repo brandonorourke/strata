@@ -110,6 +110,8 @@ def _search_page(client: httpx.Client, key: str, pf: str, pt: str, offset: int) 
     params = {"api_key": key, "ptype": "a", "postedFrom": pf, "postedTo": pt,
               "limit": PAGE_SIZE, "offset": offset}
     r = client.get(SEARCH_URL, params=params, timeout=120)
+    if r.status_code != 200:
+        logger.error("SAM search HTTP %d: %s", r.status_code, r.text)
     r.raise_for_status()
     return r.json()
 
