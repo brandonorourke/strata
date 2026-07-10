@@ -397,3 +397,39 @@ class SamAwardNotice(Base):
     sam_url        = Column(Text, nullable=True)                 # uiLink
     fetched_at     = Column(DateTime(timezone=True), nullable=False, server_default=func.now())  # our first-seen
     raw            = Column(JSONB, nullable=True)                # full search-API record
+
+
+class UsaspendingAward(Base):
+    """Raw USASpending award — one row per spending_by_award result (an IDV vehicle
+    or a contract/order), pulled by UEI. A manual pull-by-UEI viewer, NOT the daily
+    pipeline — see apps/ingest/pull_usaspending.py. parent_award_id is parsed from
+    generated_internal_id so a draw links to its vehicle; seed_uei records the family
+    anchor we pulled under (a company is a set of UEIs)."""
+    __tablename__ = "usaspending_awards"
+
+    id                    = Column(Integer, primary_key=True)
+    generated_internal_id = Column(Text, nullable=False, unique=True)  # USASpending stable id + upsert key
+    award_id              = Column(Text, nullable=True)   # "Award ID" (PIID / order number)
+    award_id_key          = Column(Text, nullable=True)   # normalized join key (matches dow/sam)
+    award_type            = Column(Text, nullable=True)   # "Contract Award Type"
+    is_idv                = Column(Boolean, nullable=False, server_default="false")  # vehicle vs contract/order
+    parent_award_id       = Column(Text, nullable=True)   # parent PIID (NULL = standalone -NONE-)
+    parent_generated_id   = Column(Text, nullable=True)   # CONT_IDV_{parent}_{ag} link
+    recipient_name        = Column(Text, nullable=True)
+    recipient_uei         = Column(Text, nullable=True)   # UEI on the award
+    recipient_id          = Column(Text, nullable=True)   # USASpending recipient hash
+    seed_uei              = Column(Text, nullable=True)   # family anchor pulled under
+    ticker                = Column(Text, nullable=True)
+    awarding_agency       = Column(Text, nullable=True)
+    awarding_sub_agency   = Column(Text, nullable=True)
+    description           = Column(Text, nullable=True)
+    start_date            = Column(Date, nullable=True)
+    end_date              = Column(Date, nullable=True)
+    amount                = Column(Numeric, nullable=True)  # "Award Amount"
+    total_outlays         = Column(Numeric, nullable=True)
+    naics_code            = Column(Text, nullable=True)
+    psc_code              = Column(Text, nullable=True)
+    last_modified         = Column(Text, nullable=True)     # raw "Last Modified Date"
+    base_obligation_date  = Column(Date, nullable=True)
+    fetched_at            = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    raw                   = Column(JSONB, nullable=True)

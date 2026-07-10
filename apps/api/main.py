@@ -31,6 +31,7 @@ from strata_core.models import (
     DowContractRelease,
     DowAward,
     SamAwardNotice,
+    UsaspendingAward,
 )
 
 app = FastAPI(title="Strata UI")
@@ -360,6 +361,76 @@ async def list_sam_notices(request: Request, page: int = 1, page_size: int = 50,
         "total_pages": total_pages,
         "q": q,
         "et": ET,
+    })
+
+
+@app.get("/usaspending")
+async def list_usaspending_awards(request: Request, page: int = 1, page_size: int = 100,
+                                  q: str = "", uei: str = "", kind: str = ""):
+    """Raw USASpending awards (manual pull-by-UEI). See apps/ingest/pull_usaspending.py.
+    kind ∈ {idv, orders, standalone} filters vehicles / draws / standalone contracts."""
+    if page < 1:
+        page = 1
+    if page_size < 1:
+        page_size = 100
+    if page_size > 500:
+        page_size = 500
+    offset = (page - 1) * page_size
+
+    async with AsyncSessionLocal() as session:
+        filters = []
+        if q:
+            filters.append(or_(
+                UsaspendingAward.recipient_name.ilike(f"%{q}%"),
+                UsaspendingAward.award_id.ilike(f"%{q}%"),
+                UsaspendingAward.recipient_uei.ilike(f"%{q}%"),
+                UsaspendingAward.parent_award_id.ilike(f"%{q}%"),
+                UsaspendingAward.description.ilike(f"%{q}%"),
+            ))
+        if uei:
+            filters.append(UsaspendingAward.recipient_uei == uei)
+        if kind == "idv":
+            filters.append(UsaspendingAward.is_idv.is_(True))
+        elif kind == "orders":
+            filters.append(and_(UsaspendingAward.is_idv.is_(False),
+                                UsaspendingAward.parent_award_id.isnot(None)))
+        elif kind == "standalone":
+            filters.append(and_(UsaspendingAward.is_idv.is_(False),
+                                UsaspendingAward.parent_award_id.is_(None)))
+
+        total = int((await session.execute(
+            select(func.count()).select_from(UsaspendingAward).where(*filters)
+        )).scalar() or 0)
+
+        awards = list((await session.execute(
+            select(UsaspendingAward)
+            .where(*filters)
+            .order_by(UsaspendingAward.amount.desc().nullslast(), UsaspendingAward.id.desc())
+            .offset(offset)
+            .limit(page_size)
+        )).scalars().all())
+
+        # UEI family present in the table, for the filter dropdown
+        ueis = list((await session.execute(
+            select(UsaspendingAward.recipient_uei, UsaspendingAward.recipient_name,
+                   func.count().label("n"))
+            .group_by(UsaspendingAward.recipient_uei, UsaspendingAward.recipient_name)
+            .order_by(func.count().desc())
+        )).all())
+
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    return templates.TemplateResponse("usaspending_awards.html", {
+        "request": request,
+        "title": "Strata - USASpending Awards",
+        "awards": awards,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages,
+        "q": q,
+        "uei": uei,
+        "kind": kind,
+        "ueis": ueis,
     })
 
 
