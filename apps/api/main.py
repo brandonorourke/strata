@@ -464,6 +464,98 @@ async def list_usaspending_awards(request: Request, page: int = 1, page_size: in
     })
 
 
+@app.get("/company/{ticker}")
+async def company_page(request: Request, ticker: str = "VSAT", show_expired: bool = False):
+    """Clean, customer-facing single-company view (v1: Viasat). Position & capacity
+    from usaspending_awards (USASpending, ~90-day lagged). Hero = exclusive undrawn
+    (single-award, active vehicles); shared multi-award shown separately as seats."""
+    ticker = (ticker or "VSAT").upper()
+    today = date.today()
+    display_name = {"VSAT": "Viasat"}.get(ticker, ticker)
+
+    async with AsyncSessionLocal() as session:
+        rows = list((await session.execute(
+            select(UsaspendingAward).where(UsaspendingAward.ticker == ticker)
+        )).scalars().all())
+
+    def f(x):
+        return float(x) if x is not None else 0.0
+
+    vehicles = [r for r in rows if r.is_idv]
+    orders   = [r for r in rows if (not r.is_idv) and r.parent_generated_id]
+
+    # drawn per vehicle = Σ of its child orders' amounts (search gives this; no enrich needed)
+    drawn = {}
+    for o in orders:
+        slot = drawn.setdefault(o.parent_generated_id, {"amt": 0.0, "n": 0, "last": None})
+        slot["amt"] += f(o.amount)
+        slot["n"]   += 1
+        od = o.date_signed or o.start_date
+        if od and (slot["last"] is None or od > slot["last"]):
+            slot["last"] = od
+
+    veh = []
+    for v in vehicles:
+        d = drawn.get(v.generated_internal_id, {"amt": 0.0, "n": 0, "last": None})
+        ceiling = f(v.ceiling)
+        vdrawn  = d["amt"]
+        undrawn = max(ceiling - vdrawn, 0.0)
+        expiry  = v.last_order_date or v.end_date
+        veh.append({
+            "gid": v.generated_internal_id, "award_id": v.award_id,
+            "program": v.program_acronym, "desc": v.description,
+            "ceiling": ceiling, "drawn": vdrawn, "undrawn": undrawn,
+            "pct": (vdrawn / ceiling) if ceiling > 0 else None,
+            "expiry": expiry, "active": (expiry is None) or (expiry >= today),
+            "is_multi": bool(v.is_multi_award), "n_orders": d["n"], "last_draw": d["last"],
+            "funding": v.funding_sub_agency, "agency": v.awarding_sub_agency,
+            "enriched": v.enriched_at is not None,
+        })
+
+    exclusive_veh = sorted([x for x in veh if not x["is_multi"]],
+                           key=lambda x: (x["active"], x["undrawn"]), reverse=True)
+    shared_veh    = sorted([x for x in veh if x["is_multi"]],
+                           key=lambda x: (x["active"], x["ceiling"]), reverse=True)
+
+    # hero
+    exclusive_latent = sum(x["undrawn"] for x in exclusive_veh if x["active"] and x["ceiling"] > 0)
+    n_active = sum(1 for x in veh if x["active"] and x["ceiling"] > 0)
+    total_drawn = sum(d["amt"] for d in drawn.values())
+    n_enriched = sum(1 for r in rows if r.enriched_at is not None)
+
+    # recent draws (the signal) — newest first, paired with the parent's remaining undrawn
+    veh_by_gid = {x["gid"]: x for x in veh}
+    dated = [o for o in orders if (o.date_signed or o.start_date)]
+    dated.sort(key=lambda o: (o.date_signed or o.start_date), reverse=True)
+    draws = []
+    for o in dated[:25]:
+        pv = veh_by_gid.get(o.parent_generated_id)
+        draws.append({
+            "date": o.date_signed or o.start_date, "order": o.award_id,
+            "program": pv["program"] if pv else None, "amount": f(o.amount),
+            "parent": o.parent_award_id, "parent_undrawn": pv["undrawn"] if pv else None,
+            "desc": o.description,
+        })
+
+    # by program
+    prog = {}
+    for x in veh:
+        if not x["program"]:
+            continue
+        p = prog.setdefault(x["program"], {"ceiling": 0.0, "drawn": 0.0, "n": 0, "multi": x["is_multi"]})
+        p["ceiling"] += x["ceiling"]; p["drawn"] += x["drawn"]; p["n"] += 1; p["multi"] = p["multi"] or x["is_multi"]
+    programs = sorted([{"name": k, **v} for k, v in prog.items()], key=lambda x: x["ceiling"], reverse=True)
+
+    return templates.TemplateResponse("company.html", {
+        "request": request, "ticker": ticker, "name": display_name,
+        "title": f"{display_name} ({ticker}) — Position",
+        "exclusive_latent": exclusive_latent, "n_active": n_active,
+        "total_drawn": total_drawn, "n_rows": len(rows), "n_enriched": n_enriched,
+        "n_vehicles": len(veh), "exclusive_veh": exclusive_veh, "shared_veh": shared_veh,
+        "show_expired": show_expired, "draws": draws, "programs": programs, "today": today,
+    })
+
+
 @app.get("/dow")
 async def dow_awards_screen(
     request: Request,
