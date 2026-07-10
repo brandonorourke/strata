@@ -141,7 +141,6 @@
           <td>
             <a class="mono" href="https://www.usaspending.gov/award/{{ x.gid }}" target="_blank" rel="noopener" title="View on USASpending">{{ x.award_id }}</a>
             {% if x.program %}<span class="pill prog">{{ x.program }}</span>{% endif %}
-            <span class="pill multi" title="multiple-award — pool ceiling shared across primes, do not sum">multi-award</span>
             {% if not x.active %}<span class="pill expired">expired</span>{% endif %}
             <div class="desc">{{ (x.desc or "")[:90] }}</div>
           </td>
