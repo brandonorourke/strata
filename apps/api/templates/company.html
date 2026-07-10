@@ -3,7 +3,7 @@
 <style>
   .co { --card:#fff; --border:#e5e7eb; --ink:#0f172a; --muted:#64748b;
         --accent:#2563eb; --track:#eef2f7; --fill:#3b82f6; --warn:#b45309;
-        max-width:1120px; color:var(--ink);
+        color:var(--ink);
         font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
   .co .num { font-variant-numeric:tabular-nums; text-align:right; white-space:nowrap; }
   .co .muted { color:var(--muted); }
@@ -51,7 +51,7 @@
     border-radius:4px; overflow:hidden; vertical-align:middle; margin-right:6px; }
   .co .bar .fill { display:block; height:100%; background:var(--fill); border-radius:4px; }
   .co .toggle { font-size:12px; }
-  .co .desc { max-width:340px; color:var(--muted); font-size:12px; }
+  .co .desc { max-width:200px; color:var(--muted); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 </style>
 
 <div class="co">
@@ -102,7 +102,7 @@
     <table>
       <thead><tr>
         <th>Program / Vehicle</th><th class="num">Ceiling</th><th class="num">Drawn</th>
-        <th class="num">Undrawn</th><th>% drawn</th><th class="num">Expires</th><th>End customer</th>
+        <th class="num">Undrawn</th><th>% drawn</th><th class="num">Expires</th><th>End customer</th><th>Description</th>
       </tr></thead>
       <tbody>
       {% for x in exclusive_veh if x.active or show_expired %}
@@ -111,7 +111,6 @@
             <a class="mono" href="https://www.usaspending.gov/award/{{ x.gid }}" target="_blank" rel="noopener" title="View on USASpending">{{ x.award_id }}</a>
             {% if x.program %}<span class="pill prog">{{ x.program }}</span>{% endif %}
             {% if not x.active %}<span class="pill expired">expired</span>{% endif %}
-            <div class="desc">{{ (x.desc or "")[:90] }}</div>
           </td>
           <td class="num">{{ x.ceiling | fmt_usd }}</td>
           <td class="num">{{ x.drawn | fmt_usd }}</td>
@@ -123,6 +122,7 @@
           </td>
           <td class="num">{{ x.expiry.strftime("%Y-%m-%d") if x.expiry else "—" }}</td>
           <td class="small">{{ x.funding or x.agency or "—" }}</td>
+          <td><div class="desc" title="{{ (x.desc or '')[:200] }}">{{ (x.desc or "")[:90] }}</div></td>
         </tr>
       {% endfor %}
       </tbody>
@@ -133,7 +133,7 @@
     <table>
       <thead><tr>
         <th>Program / Vehicle</th><th class="num">Pool ceiling</th><th class="num">Drawn</th>
-        <th class="num">Remaining</th><th>% drawn</th><th class="num">Expires</th><th>End customer</th>
+        <th class="num">Remaining</th><th>% drawn</th><th class="num">Expires</th><th>End customer</th><th>Description</th>
       </tr></thead>
       <tbody>
       {% for x in shared_veh if x.active or show_expired %}
@@ -142,7 +142,6 @@
             <a class="mono" href="https://www.usaspending.gov/award/{{ x.gid }}" target="_blank" rel="noopener" title="View on USASpending">{{ x.award_id }}</a>
             {% if x.program %}<span class="pill prog">{{ x.program }}</span>{% endif %}
             {% if not x.active %}<span class="pill expired">expired</span>{% endif %}
-            <div class="desc">{{ (x.desc or "")[:90] }}</div>
           </td>
           <td class="num">{{ x.ceiling | fmt_usd }}</td>
           <td class="num">{{ x.drawn | fmt_usd }}</td>
@@ -154,6 +153,7 @@
           </td>
           <td class="num">{{ x.expiry.strftime("%Y-%m-%d") if x.expiry else "—" }}</td>
           <td class="small">{{ x.funding or x.agency or "—" }}</td>
+          <td><div class="desc" title="{{ (x.desc or '')[:200] }}">{{ (x.desc or "")[:90] }}</div></td>
         </tr>
       {% endfor %}
       </tbody>
@@ -171,7 +171,7 @@
     <table>
       <thead><tr>
         <th>Program / Contract</th><th class="num">Ceiling</th><th class="num">Obligated</th>
-        <th class="num">Unexercised</th><th>% obligated</th><th class="num">Ends</th><th>End customer</th>
+        <th class="num">Unexercised</th><th>% obligated</th><th class="num">Ends</th><th>End customer</th><th>Description</th>
       </tr></thead>
       <tbody>
       {% for x in definitive if x.active or show_expired %}
@@ -180,7 +180,6 @@
             <a class="mono" href="https://www.usaspending.gov/award/{{ x.gid }}" target="_blank" rel="noopener" title="View on USASpending">{{ x.award_id }}</a>
             {% if x.program %}<span class="pill prog">{{ x.program }}</span>{% endif %}
             {% if not x.active %}<span class="pill expired">expired</span>{% endif %}
-            <div class="desc">{{ (x.desc or "")[:90] }}</div>
           </td>
           <td class="num">{{ x.ceiling | fmt_usd }}</td>
           <td class="num">{{ x.obligated | fmt_usd }}</td>
@@ -192,6 +191,7 @@
           </td>
           <td class="num">{{ x.expiry.strftime("%Y-%m-%d") if x.expiry else "—" }}</td>
           <td class="small">{{ x.funding or x.agency or "—" }}</td>
+          <td><div class="desc" title="{{ (x.desc or '')[:200] }}">{{ (x.desc or "")[:90] }}</div></td>
         </tr>
       {% endfor %}
       </tbody>
