@@ -534,7 +534,7 @@ async def company_page(request: Request, ticker: str = "VSAT", show_expired: boo
             "date": o.date_signed or o.start_date, "order": o.award_id,
             "program": pv["program"] if pv else None, "amount": f(o.amount),
             "parent": o.parent_award_id, "parent_undrawn": pv["undrawn"] if pv else None,
-            "desc": o.description,
+            "desc": o.description, "gid": o.generated_internal_id, "parent_gid": o.parent_generated_id,
         })
 
     # by program
@@ -562,6 +562,7 @@ async def company_page(request: Request, ticker: str = "VSAT", show_expired: boo
             "pct": (obligated / ceiling) if ceiling > 0 else None,
             "expiry": expiry, "active": (expiry is None) or (expiry >= today),
             "funding": r.funding_sub_agency, "agency": r.awarding_sub_agency,
+            "gid": r.generated_internal_id,
         })
     definitive.sort(key=lambda x: (x["active"], x["ceiling"]), reverse=True)
     n_definitive = len(definitive)

@@ -109,7 +109,7 @@
         <tr class="{{ 'expired' if not x.active }}">
           <td>
             {% if x.program %}<span class="pill prog">{{ x.program }}</span> {% endif %}
-            <span class="mono">{{ x.award_id }}</span>
+            <a class="mono" href="https://www.usaspending.gov/award/{{ x.gid }}" target="_blank" rel="noopener" title="View on USASpending">{{ x.award_id }}</a>
             {% if not x.active %}<span class="pill expired">expired</span>{% endif %}
             <div class="desc">{{ (x.desc or "")[:90] }}</div>
           </td>
@@ -140,7 +140,7 @@
         <tr class="{{ 'expired' if not x.active }}">
           <td>
             {% if x.program %}<span class="pill prog">{{ x.program }}</span> {% endif %}
-            <span class="mono">{{ x.award_id }}</span>
+            <a class="mono" href="https://www.usaspending.gov/award/{{ x.gid }}" target="_blank" rel="noopener" title="View on USASpending">{{ x.award_id }}</a>
             <span class="pill multi" title="multiple-award — pool ceiling shared across primes, do not sum">multi-award</span>
             {% if not x.active %}<span class="pill expired">expired</span>{% endif %}
             <div class="desc">{{ (x.desc or "")[:90] }}</div>
@@ -179,7 +179,7 @@
         <tr class="{{ 'expired' if not x.active }}">
           <td>
             {% if x.program %}<span class="pill prog">{{ x.program }}</span> {% endif %}
-            <span class="mono">{{ x.award_id }}</span>
+            <a class="mono" href="https://www.usaspending.gov/award/{{ x.gid }}" target="_blank" rel="noopener" title="View on USASpending">{{ x.award_id }}</a>
             {% if not x.active %}<span class="pill expired">expired</span>{% endif %}
             <div class="desc">{{ (x.desc or "")[:90] }}</div>
           </td>
@@ -215,10 +215,10 @@
       {% for d in draws %}
         <tr>
           <td class="num">{{ d.date.strftime("%Y-%m-%d") if d.date else "—" }}</td>
-          <td class="mono">{{ d.order }}</td>
+          <td><a class="mono" href="https://www.usaspending.gov/award/{{ d.gid }}" target="_blank" rel="noopener">{{ d.order }}</a></td>
           <td>{% if d.program %}<span class="pill prog">{{ d.program }}</span>{% else %}<span class="muted small">—</span>{% endif %}</td>
           <td class="num">{{ d.amount | fmt_usd }}</td>
-          <td class="mono small">{{ d.parent or "—" }}</td>
+          <td class="small">{% if d.parent %}<a class="mono" href="https://www.usaspending.gov/award/{{ d.parent_gid }}" target="_blank" rel="noopener">{{ d.parent }}</a>{% else %}—{% endif %}</td>
           <td class="num">{% if d.parent_undrawn is not none %}{{ d.parent_undrawn | fmt_usd }}{% else %}<span class="muted small">—</span>{% endif %}</td>
         </tr>
       {% endfor %}
