@@ -45,7 +45,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from strata_core.db import AsyncSessionLocal
-from strata_core.models import UsaspendingAward
+from strata_core.models import UsaspendingAward, IdiqRecipient
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -131,7 +131,6 @@ def _row(o: dict, seed_uei: str, ticker: str | None) -> dict:
         "recipient_uei": o.get("Recipient UEI"),
         "recipient_id": o.get("recipient_id"),
         "seed_uei": seed_uei,
-        "ticker": ticker,
         "awarding_agency": o.get("Awarding Agency"),
         "awarding_sub_agency": o.get("Awarding Sub Agency"),
         "description": o.get("Description"),
@@ -406,10 +405,38 @@ async def enrich(anchor: str, limit: int, dry_run: bool) -> int:
         return n
 
 
+async def seed_recipients(rows: list[dict], ticker: str | None) -> int:
+    """Register each distinct recipient UEI from the pull into idiq_recipients as a
+    'candidate' (ON CONFLICT DO NOTHING — never overrides a human's confirmed/excluded).
+    The uei→ticker mapping is curated there; the /company page trusts only 'confirmed'."""
+    if not ticker:
+        return 0
+    seen: dict[str, tuple] = {}
+    for r in rows:
+        u = r.get("recipient_uei")
+        if u and u not in seen:
+            seen[u] = (r.get("recipient_name"), r.get("seed_uei"))
+    if not seen:
+        return 0
+    async with AsyncSessionLocal() as s:
+        for uei, (name, seed) in seen.items():
+            stmt = pg_insert(IdiqRecipient).values(
+                uei=uei, recipient_name=name, ticker=ticker,
+                mapping_status="candidate", seed_uei=seed,
+            ).on_conflict_do_nothing(index_elements=["uei"])
+            await s.execute(stmt)
+        await s.commit()
+    logger.info("idiq_recipients: seeded %d UEI(s) as candidates for %s "
+                "(confirm them to surface on /company/%s)", len(seen), ticker, ticker)
+    return len(seen)
+
+
 async def run(args) -> None:
     if not args.enrich_only:
         rows = collect(args.uei, args.ticker, not args.no_children, args.discover_siblings, args.max_pages)
         await upsert(rows, args.dry_run)
+        if not args.dry_run:
+            await seed_recipients(rows, args.ticker)
     if not args.no_enrich:
         await enrich(args.uei[0], args.enrich_limit, args.dry_run)
 

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict RVPcp7IVNhfIF8v3lyEaOGeaKA4aOEZlQS9COgaU0eczlSwj9CIwmVn7d0Zhflh
+\restrict aqcYyzAcZgQbgjPzNgaZzmz2vDBQpTun07y44caLgWYBtquZ0OZaA08YXHDDGV6
 
 -- Dumped from database version 17.10 (Postgres.app)
 -- Dumped by pg_dump version 17.10 (Postgres.app)
@@ -570,6 +570,20 @@ ALTER SEQUENCE public.icfs_public_notices_id_seq OWNED BY public.icfs_public_not
 
 
 --
+-- Name: idiq_recipients; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.idiq_recipients (
+    uei text NOT NULL,
+    recipient_name text,
+    ticker text,
+    mapping_status text DEFAULT 'candidate'::text NOT NULL,
+    seed_uei text,
+    first_seen_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: ingest_runs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -703,7 +717,6 @@ CREATE TABLE public.usaspending_awards (
     recipient_uei text,
     recipient_id text,
     seed_uei text,
-    ticker text,
     awarding_agency text,
     awarding_sub_agency text,
     description text,
@@ -1040,6 +1053,14 @@ ALTER TABLE ONLY public.icfs_public_notices
 
 
 --
+-- Name: idiq_recipients idiq_recipients_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.idiq_recipients
+    ADD CONSTRAINT idiq_recipients_pkey PRIMARY KEY (uei);
+
+
+--
 -- Name: ingest_runs ingest_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1107,6 +1128,20 @@ CREATE INDEX idx_alerts_created_at ON public.alerts USING btree (created_at DESC
 --
 
 CREATE INDEX idx_alerts_unsent ON public.alerts USING btree (created_at) WHERE (sent_at IS NULL);
+
+
+--
+-- Name: idx_idiq_recipients_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_idiq_recipients_status ON public.idiq_recipients USING btree (mapping_status);
+
+
+--
+-- Name: idx_idiq_recipients_ticker; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_idiq_recipients_ticker ON public.idiq_recipients USING btree (ticker) WHERE (ticker IS NOT NULL);
 
 
 --
@@ -1400,5 +1435,5 @@ ALTER TABLE ONLY public.icfs_filing_action_history
 -- PostgreSQL database dump complete
 --
 
-\unrestrict RVPcp7IVNhfIF8v3lyEaOGeaKA4aOEZlQS9COgaU0eczlSwj9CIwmVn7d0Zhflh
+\unrestrict aqcYyzAcZgQbgjPzNgaZzmz2vDBQpTun07y44caLgWYBtquZ0OZaA08YXHDDGV6
 

@@ -32,6 +32,7 @@ from strata_core.models import (
     DowAward,
     SamAwardNotice,
     UsaspendingAward,
+    IdiqRecipient,
 )
 
 app = FastAPI(title="Strata UI")
@@ -474,9 +475,16 @@ async def company_page(request: Request, ticker: str = "VSAT", show_expired: boo
     display_name = {"VSAT": "Viasat"}.get(ticker, ticker)
 
     async with AsyncSessionLocal() as session:
-        rows = list((await session.execute(
-            select(UsaspendingAward).where(UsaspendingAward.ticker == ticker)
+        # resolve the ticker's CONFIRMED UEIs from the directory, then filter awards by UEI
+        ueis = list((await session.execute(
+            select(IdiqRecipient.uei).where(
+                IdiqRecipient.ticker == ticker,
+                IdiqRecipient.mapping_status == "confirmed",
+            )
         )).scalars().all())
+        rows = list((await session.execute(
+            select(UsaspendingAward).where(UsaspendingAward.recipient_uei.in_(ueis))
+        )).scalars().all()) if ueis else []
 
     def f(x):
         return float(x) if x is not None else 0.0

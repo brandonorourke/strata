@@ -419,7 +419,6 @@ class UsaspendingAward(Base):
     recipient_uei         = Column(Text, nullable=True)   # UEI on the award
     recipient_id          = Column(Text, nullable=True)   # USASpending recipient hash
     seed_uei              = Column(Text, nullable=True)   # family anchor pulled under
-    ticker                = Column(Text, nullable=True)
     awarding_agency       = Column(Text, nullable=True)
     awarding_sub_agency   = Column(Text, nullable=True)
     description           = Column(Text, nullable=True)
@@ -442,6 +441,7 @@ class UsaspendingAward(Base):
     # appended (migration 0044): detail-endpoint enrichment
     base_exercised_options = Column(Numeric, nullable=True)  # base + exercised options (detail)
     enriched_at            = Column(DateTime(timezone=True), nullable=True)  # NULL until detail-fetched
+    # NOTE: appended (migration 0045) FPDS metadata below; new IdiqRecipient class at EOF.
     # appended (migration 0045): FPDS metadata from the detail endpoint (via enrich)
     date_signed        = Column(Date, nullable=True)     # [top] action-signed date
     funding_sub_agency = Column(Text, nullable=True)     # [top] funding subtier (end customer)
@@ -450,3 +450,18 @@ class UsaspendingAward(Base):
     solicitation_id    = Column(Text, nullable=True)     # [LTCD] solicitation_identifier
     set_aside          = Column(Text, nullable=True)     # [LTCD] type_set_aside_description
     pricing_type       = Column(Text, nullable=True)     # [LTCD] type_of_contract_pricing_description
+
+
+class IdiqRecipient(Base):
+    """UEI → ticker directory (normalized recipient mapping). Seeded from the resolved
+    UEI family; the ticker mapping is human-curated via mapping_status (candidate →
+    confirmed/excluded). Awards roll up to a ticker through recipient_uei = uei, counting
+    only mapping_status='confirmed'. See migration 0046."""
+    __tablename__ = "idiq_recipients"
+
+    uei            = Column(Text, primary_key=True)
+    recipient_name = Column(Text, nullable=True)
+    ticker         = Column(Text, nullable=True)                     # NULL = unmapped / private
+    mapping_status = Column(Text, nullable=False, server_default="candidate")  # candidate|confirmed|excluded
+    seed_uei       = Column(Text, nullable=True)
+    first_seen_at  = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
