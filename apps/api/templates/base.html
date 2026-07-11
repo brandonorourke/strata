@@ -255,27 +255,24 @@
 
     <nav id="sidebar">
       {% set path = request.url.path %}
-      <div class="nav-section">FCC / ICFS</div>
-      <div class="nav-subsection">Analysis</div>
+      <div class="nav-section">Watchlist</div>
+      <a href="/company/VSAT"          class="nav-item {% if path.startswith('/company') %}active{% endif %}">Viasat (VSAT)</a>
+
+      <div class="nav-section" style="margin-top: 16px;">FCC / ICFS</div>
       <a href="/admin/icfs/canonicals" class="nav-item {% if path.startswith('/admin/icfs/canonicals') or path.startswith('/admin/icfs/entity') %}active{% endif %}">All Companies</a>
-      <a href="/admin/icfs/signals"    class="nav-item {% if path.startswith('/admin/icfs/signals') %}active{% endif %}">Signal Notices</a>
       <a href="/admin/icfs/contested"  class="nav-item {% if path.startswith('/admin/icfs/contested') %}active{% endif %}">Contested Filings</a>
-      <div class="nav-subsection">Source Data</div>
-      <a href="/admin/icfs/filings"    class="nav-item {% if path.startswith('/admin/icfs/filings') %}active{% endif %}">Filings &amp; Actions</a>
-      <a href="/admin/icfs/pleadings"  class="nav-item {% if path.startswith('/admin/icfs/pleadings') %}active{% endif %}">Pleadings</a>
-      <a href="/admin/icfs/notices"    class="nav-item {% if path.startswith('/admin/icfs/notices') %}active{% endif %}">Notices</a>
+
       <div class="nav-section" style="margin-top: 16px;">Dept. of War</div>
-      <a href="/dow"                 class="nav-item {% if path == '/dow' %}active{% endif %}">Awards</a>
-      <div class="nav-subsection">Admin</div>
-      <a href="/admin/dow/contracts" class="nav-item {% if path.startswith('/admin/dow') %}active{% endif %}">Releases</a>
-      <div class="nav-section" style="margin-top: 16px;">SAM.gov</div>
-      <div class="nav-subsection">Admin</div>
-      <a href="/admin/sam"           class="nav-item {% if path.startswith('/admin/sam') %}active{% endif %}">Award Notices</a>
-      <div class="nav-section" style="margin-top: 16px;">USASpending</div>
-      <div class="nav-subsection">Admin</div>
-      <a href="/usaspending"         class="nav-item {% if path.startswith('/usaspending') %}active{% endif %}">Raw Awards</a>
-      <div class="nav-subsection">Customer view</div>
-      <a href="/company/VSAT"        class="nav-item {% if path.startswith('/company') %}active{% endif %}">Viasat (VSAT)</a>
+      <a href="/dow"                   class="nav-item {% if path == '/dow' %}active{% endif %}">Awards</a>
+
+      <div class="nav-section" style="margin-top: 16px;">Admin</div>
+      <a href="/admin/icfs/signals"    class="nav-item {% if path.startswith('/admin/icfs/signals') %}active{% endif %}">ICFS · Signal Notices</a>
+      <a href="/admin/icfs/filings"    class="nav-item {% if path.startswith('/admin/icfs/filings') %}active{% endif %}">ICFS · Filings &amp; Actions</a>
+      <a href="/admin/icfs/pleadings"  class="nav-item {% if path.startswith('/admin/icfs/pleadings') %}active{% endif %}">ICFS · Pleadings</a>
+      <a href="/admin/icfs/notices"    class="nav-item {% if path.startswith('/admin/icfs/notices') %}active{% endif %}">ICFS · Notices</a>
+      <a href="/admin/dow/contracts"   class="nav-item {% if path.startswith('/admin/dow') %}active{% endif %}">DoW · Releases</a>
+      <a href="/admin/sam"             class="nav-item {% if path.startswith('/admin/sam') %}active{% endif %}">SAM · Award Notices</a>
+      <a href="/usaspending"           class="nav-item {% if path.startswith('/usaspending') %}active{% endif %}">USASpending · Raw Awards</a>
     </nav>
 
     <main id="main">
