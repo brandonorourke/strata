@@ -113,7 +113,7 @@ def _parse_parent(gid: str) -> tuple[str | None, str | None]:
     return (parent, ag)
 
 
-def _row(o: dict, seed_uei: str, ticker: str | None) -> dict:
+def _row(o: dict, seed_uei: str) -> dict:
     gid = o.get("generated_internal_id") or ""
     parent_piid, parent_ag = _parse_parent(gid)
     naics = o.get("NAICS") or {}
@@ -257,7 +257,7 @@ def _get_detail(client: httpx.Client, gid: str) -> dict | None:
     return None
 
 
-def collect(seeds: list[str], ticker: str | None, use_children: bool,
+def collect(seeds: list[str], use_children: bool,
             discover: bool, max_pages: int) -> list[dict]:
     """Resolve the UEI family, then pull every family UEI's IDVs + orders. Family =
     seeds + (unless --no-children) the recipient children endpoint's results. Keeps
@@ -288,7 +288,7 @@ def collect(seeds: list[str], ticker: str | None, use_children: bool,
                 for o in search_awards(client, uei, group, max_pages):
                     ruei = o.get("Recipient UEI")
                     if ruei == uei:
-                        rows[o.get("generated_internal_id") or ""] = _row(o, anchor, ticker)
+                        rows[o.get("generated_internal_id") or ""] = _row(o, anchor)
                         n_exact += 1
                     elif discover and ruei and ruei not in family:  # opt-in: fuzzy sibling
                         family.add(ruei)
@@ -433,7 +433,7 @@ async def seed_recipients(rows: list[dict], ticker: str | None) -> int:
 
 async def run(args) -> None:
     if not args.enrich_only:
-        rows = collect(args.uei, args.ticker, not args.no_children, args.discover_siblings, args.max_pages)
+        rows = collect(args.uei, not args.no_children, args.discover_siblings, args.max_pages)
         await upsert(rows, args.dry_run)
         if not args.dry_run:
             await seed_recipients(rows, args.ticker)
@@ -444,7 +444,7 @@ async def run(args) -> None:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--uei", action="append", required=True, help="seed UEI (repeatable); first is the family anchor")
-    ap.add_argument("--ticker", default=None, help="optional label stored on every row")
+    ap.add_argument("--ticker", default=None, help="ticker for the pulled UEIs; seeds idiq_recipients as candidates to confirm")
     ap.add_argument("--max-pages", type=int, default=20, help="page ceiling per (UEI, award-type group)")
     ap.add_argument("--no-children", action="store_true", help="skip the recipient children-endpoint expansion")
     ap.add_argument("--discover-siblings", action="store_true", help="also pull fuzzy-surfaced same-name UEIs not in the children family (off by default)")
