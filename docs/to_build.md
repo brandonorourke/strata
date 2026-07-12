@@ -1,5 +1,77 @@
 # To Build
 
+## IDIQ latent-capacity / live-competition watchlist (Brandon, 2026-07-11) — active workstream
+
+The product (#4): analyst's tickers → the IDIQ vehicles those companies compete on →
+competitive set + undrawn capacity (context) → live-monitor draws, resolved to who-won (signal).
+Undrawn = "competition left to run on this vehicle," NOT a revenue forecast (see the Andromeda
+phantom-ceiling trap below). Full design + the validated market-moving research: the plan doc
+`~/.claude/plans/ticklish-noodling-penguin.md`.
+
+**State as of 2026-07-11 (built):**
+- `/coverage` grid (route `coverage_index`, `coverage.html`) — one row per confirmed company;
+  exclusive latent (single-award active undrawn) · shared seats · recent draw; sortable + client
+  filter; drills into `/company/{ticker}`. Nav section "Federal Contracts" (Coverage · DoW Releases).
+- `/company/{ticker}` page — exclusive/shared split, draws, programs, definitive contracts.
+- Data model in place: `usaspending_awards` (raw + enriched: ceiling/obligation/program/multi-award),
+  `idiq_recipients` (UEI→ticker directory, human-curated via `mapping_status` candidate/confirmed/excluded).
+- 10 tickers confirmed & 100% enriched: VSAT, AVAV, KTOS, MRCY, CMTL, DRS, LUNR, RKLB, RDW, BKSY
+  (~11.6k awards). Pull: `apps/ingest/pull_usaspending.py --uei … --ticker XXX` (children-graph
+  family expansion; `--discover-siblings` OFF — it's name-only/leaky, children catches the
+  non-eponymous subs deterministically).
+- Excluded the two divested-and-still-active stale-parent units (web-verified): **CAES Mission
+  Systems** under KTOS (Kratos EPD → Ultra 2015 → CAES/Honeywell) and **Stellant PST** under CMTL
+  (Comtech PST sold to Stellant Nov 2023). Standing guard: a `children` member that's non-eponymous
+  + has awards since last year + is a known independent brand = divestiture-stale → verify/exclude.
+- Finding: USASpending freshness is **agency-dependent** — civilian (NASA/FAA/FRA) is near-real-time
+  (LUNR/RKLB show June draws); DoD hits the ~90-day wall (VSAT/KTOS/MRCY "recent draw" ~a quarter stale).
+
+**Build order (tomorrow onward):**
+1. **Company-table migration (`0048`)** — extend `canonical_entities` into the Strata-wide company
+   table (`slug`, `ticker` nullable, `is_prime`, `is_public`, `kind`); add `idiq_recipients.company_id`
+   FK; seed the 10 companies (fold `DISPLAY_NAMES` in `main.py` → rows); repoint `/coverage` + `/company`
+   at `company_id`; regen snapshot. Kills the `DISPLAY_NAMES` hack; privates (Intelsat: `ticker=NULL`)
+   and primes (`is_prime`, `kind='competitor'`) model cleanly. NOTE: `canonical_entities` (22 rows) is
+   the *general/news* company table — NOT the ICFS backbone (that's `icfs_canonical_entities`, 1,545
+   rows), so extending it is safe/additive. Do FIRST — everything downstream keys off a real company table.
+2. **Retire the dead news pipeline.** Frozen since 2026-02-13. Park the 7 news scripts
+   (`ingest_rss`→`fetch_html`→`clean_text`→`llm_raw`→`extract_domains`→`extract_entities`→`link_entities`),
+   drop/retag the 1,611 `news_article` rows in `extracted_events` + 329 `news_articles` + 22 news
+   `canonical_entities` rows, remove `articles`/`article_detail` templates + `NewsArticle` relationships.
+   `link_entities.py` is the news writer INTO `canonical_entities` — retiring it leaves the table purely
+   hand-curated companies. **Park-not-delete** where scripts import shared models (`link_entities`,
+   `extract_icfs_entities`) or ICFS breaks. Do AFTER #1. (Distinct from build-order #5 below, which is
+   the ICFS polymorphic-`extracted_events` refactor — different table, different consumer.)
+3. **Wire DoW real-time draws into the pages.** Join prod `dow_awards` → parent vehicle via the
+   `piid_key` columns (already present) → surface fresh draws ahead of USASpending's ~90-day DoD wall.
+   Fixes the correctness gap above (DoD "recent draw" is stale). This is what makes draws-are-the-signal
+   real for the core DoD names. Overlaps build-order #4 (program fuzzy-match → parent).
+4. **Competitive-field / vehicle view** — `/coverage/vehicle/{id}`: full co-awardee set (tickers +
+   privates) + draws timeline — the unique "live competition" screen. Co-awardee method validated
+   (description-keyword search); feed discovered co-awardee UEIs back as watchlist candidates.
+5. **Universe expansion** — seed the Viasat competitive set (GD/RTX/LHX/NOC/LMT + privates Intelsat/
+   Astranis; tactical-mesh privates Persistent/Silvus) and more tradable names via the proven pull →
+   confirm → stale-guard flow. Cheap; interleave anytime. Resolve parent UEIs via `/api/v2/recipient/`
+   (returns P/C level); feed ALL parents, confirm by flipping `mapping_status`.
+6. **Draws monitor + alerts** — endgame: a new draw on a watched vehicle → `Alert` (reuse `Alert`/
+   `AlertState`/`emit_alerts` pattern). This is the layer a trader actually pays for.
+- Later: materiality lens (capacity ÷ mktcap/revenue — separates "big number" from "moves the stock");
+  formal `idiq_vehicles`/`holdings`/`draws` tables only if deriving from `usaspending_awards` strains.
+
+**Commercialization (when it's paid).** The edge is proven but DISCRETIONARY (systematic version
+tested dead; discretionary edge real + tail-managed — the Viasat/PTS-G May-22 case). The gate to
+"paid" is a LIVE signal: today the data is ~90-day-stale for the DoD names that matter, so it's
+research, not a sellable edge. Sequence:
+- **Design partner (weeks)** — after #3–5 (real-time DoD draws + vehicle view + fuller universe): a
+  genuine daily tool for one trader (Stas). Handshake/friend-price.
+- **First paid seat (1–3 months)** — after #6 (alerts) + one live, attributable "surfaced → traded →
+  paid" win. Partly calendar-gated (draws happen at some frequency), not just code-gated.
+- **Small SaaS (several months)** — multi-user + self-serve coverage config + reliability + materiality.
+- Pricing = research/data subscription (NOT auto-signal — edge is discretionary), niche event-driven /
+  special-sits defense small-cap desks, low-thousands/seat. Selling point: 100% public data → no MNPI.
+  Moat = the resolution pipeline (F→D parent, UEI-family + stale-parent handling, real-time DoW) +
+  curated competitive graph. Real gate isn't a feature — it's accumulating live proof points.
+
 ## Build order (Brandon, 2026-07-07) — current priority
 
 1. **Alerts for Stas: Viasat + Intelsat on new ICFS filings + DoW awards.**
