@@ -397,3 +397,71 @@ class SamAwardNotice(Base):
     sam_url        = Column(Text, nullable=True)                 # uiLink
     fetched_at     = Column(DateTime(timezone=True), nullable=False, server_default=func.now())  # our first-seen
     raw            = Column(JSONB, nullable=True)                # full search-API record
+
+
+class UsaspendingAward(Base):
+    """Raw USASpending award — one row per spending_by_award result (an IDV vehicle
+    or a contract/order), pulled by UEI. A manual pull-by-UEI viewer, NOT the daily
+    pipeline — see apps/ingest/pull_usaspending.py. parent_award_id is parsed from
+    generated_internal_id so a draw links to its vehicle; seed_uei records the family
+    anchor we pulled under (a company is a set of UEIs)."""
+    __tablename__ = "usaspending_awards"
+
+    id                    = Column(Integer, primary_key=True)
+    generated_internal_id = Column(Text, nullable=False, unique=True)  # USASpending stable id + upsert key
+    award_id              = Column(Text, nullable=True)   # "Award ID" (PIID / order number)
+    award_id_key          = Column(Text, nullable=True)   # normalized join key (matches dow/sam)
+    award_type            = Column(Text, nullable=True)   # "Contract Award Type"
+    is_idv                = Column(Boolean, nullable=False, server_default="false")  # vehicle vs contract/order
+    parent_award_id       = Column(Text, nullable=True)   # parent PIID (NULL = standalone -NONE-)
+    parent_generated_id   = Column(Text, nullable=True)   # CONT_IDV_{parent}_{ag} link
+    recipient_name        = Column(Text, nullable=True)
+    recipient_uei         = Column(Text, nullable=True)   # UEI on the award
+    recipient_id          = Column(Text, nullable=True)   # USASpending recipient hash
+    seed_uei              = Column(Text, nullable=True)   # family anchor pulled under
+    awarding_agency       = Column(Text, nullable=True)
+    awarding_sub_agency   = Column(Text, nullable=True)
+    description           = Column(Text, nullable=True)
+    start_date            = Column(Date, nullable=True)
+    end_date              = Column(Date, nullable=True)
+    amount                = Column(Numeric, nullable=True)  # "Award Amount"
+    total_outlays         = Column(Numeric, nullable=True)
+    naics_code            = Column(Text, nullable=True)
+    psc_code              = Column(Text, nullable=True)
+    last_modified         = Column(Text, nullable=True)     # raw "Last Modified Date"
+    base_obligation_date  = Column(Date, nullable=True)
+    fetched_at            = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    raw                   = Column(JSONB, nullable=True)
+    # appended (migration 0043): ceiling/obligation come from the award DETAIL endpoint
+    # (base_and_all_options — not in spending_by_award; populated by a later pass, NULL
+    # for now); last_order_date is the IDV "Last Date to Order", set from the search.
+    ceiling               = Column(Numeric, nullable=True)  # base_and_all_options (detail endpoint)
+    total_obligation      = Column(Numeric, nullable=True)  # total_obligation (detail endpoint)
+    last_order_date       = Column(Date, nullable=True)     # IDV "Last Date to Order"
+    # appended (migration 0044): detail-endpoint enrichment
+    base_exercised_options = Column(Numeric, nullable=True)  # base + exercised options (detail)
+    enriched_at            = Column(DateTime(timezone=True), nullable=True)  # NULL until detail-fetched
+    # NOTE: appended (migration 0045) FPDS metadata below; new IdiqRecipient class at EOF.
+    # appended (migration 0045): FPDS metadata from the detail endpoint (via enrich)
+    date_signed        = Column(Date, nullable=True)     # [top] action-signed date
+    funding_sub_agency = Column(Text, nullable=True)     # [top] funding subtier (end customer)
+    program_acronym    = Column(Text, nullable=True)     # [LTCD] program key, e.g. "PTS-G"
+    is_multi_award     = Column(Boolean, nullable=True)  # [LTCD] MULTIPLE AWARD → the de-noiser
+    solicitation_id    = Column(Text, nullable=True)     # [LTCD] solicitation_identifier
+    set_aside          = Column(Text, nullable=True)     # [LTCD] type_set_aside_description
+    pricing_type       = Column(Text, nullable=True)     # [LTCD] type_of_contract_pricing_description
+
+
+class IdiqRecipient(Base):
+    """UEI → ticker directory (normalized recipient mapping). Seeded from the resolved
+    UEI family; the ticker mapping is human-curated via mapping_status (candidate →
+    confirmed/excluded). Awards roll up to a ticker through recipient_uei = uei, counting
+    only mapping_status='confirmed'. See migration 0046."""
+    __tablename__ = "idiq_recipients"
+
+    uei            = Column(Text, primary_key=True)
+    recipient_name = Column(Text, nullable=True)
+    ticker         = Column(Text, nullable=True)                     # NULL = unmapped / private
+    mapping_status = Column(Text, nullable=False, server_default="candidate")  # candidate|confirmed|excluded
+    seed_uei       = Column(Text, nullable=True)
+    first_seen_at  = Column(DateTime(timezone=True), nullable=False, server_default=func.now())

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict s9fQq464NNbLy4S7l4KnLC8Ni4guYiYbQu16JiVfCY0K5H2YBMeolr1fKmpyNEF
+\restrict aqcYyzAcZgQbgjPzNgaZzmz2vDBQpTun07y44caLgWYBtquZ0OZaA08YXHDDGV6
 
 -- Dumped from database version 17.10 (Postgres.app)
 -- Dumped by pg_dump version 17.10 (Postgres.app)
@@ -570,6 +570,20 @@ ALTER SEQUENCE public.icfs_public_notices_id_seq OWNED BY public.icfs_public_not
 
 
 --
+-- Name: idiq_recipients; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.idiq_recipients (
+    uei text NOT NULL,
+    recipient_name text,
+    ticker text,
+    mapping_status text DEFAULT 'candidate'::text NOT NULL,
+    seed_uei text,
+    first_seen_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: ingest_runs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -687,6 +701,71 @@ ALTER SEQUENCE public.sam_award_notices_id_seq OWNED BY public.sam_award_notices
 
 
 --
+-- Name: usaspending_awards; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usaspending_awards (
+    id integer NOT NULL,
+    generated_internal_id text NOT NULL,
+    award_id text,
+    award_id_key text,
+    award_type text,
+    is_idv boolean DEFAULT false NOT NULL,
+    parent_award_id text,
+    parent_generated_id text,
+    recipient_name text,
+    recipient_uei text,
+    recipient_id text,
+    seed_uei text,
+    awarding_agency text,
+    awarding_sub_agency text,
+    description text,
+    start_date date,
+    end_date date,
+    amount numeric,
+    total_outlays numeric,
+    naics_code text,
+    psc_code text,
+    last_modified text,
+    base_obligation_date date,
+    fetched_at timestamp with time zone DEFAULT now() NOT NULL,
+    raw jsonb,
+    ceiling numeric,
+    total_obligation numeric,
+    last_order_date date,
+    base_exercised_options numeric,
+    enriched_at timestamp with time zone,
+    date_signed date,
+    funding_sub_agency text,
+    program_acronym text,
+    is_multi_award boolean,
+    solicitation_id text,
+    set_aside text,
+    pricing_type text
+);
+
+
+--
+-- Name: usaspending_awards_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.usaspending_awards_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: usaspending_awards_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.usaspending_awards_id_seq OWNED BY public.usaspending_awards.id;
+
+
+--
 -- Name: alerts id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -796,6 +875,13 @@ ALTER TABLE ONLY public.news_articles ALTER COLUMN id SET DEFAULT nextval('publi
 --
 
 ALTER TABLE ONLY public.sam_award_notices ALTER COLUMN id SET DEFAULT nextval('public.sam_award_notices_id_seq'::regclass);
+
+
+--
+-- Name: usaspending_awards id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usaspending_awards ALTER COLUMN id SET DEFAULT nextval('public.usaspending_awards_id_seq'::regclass);
 
 
 --
@@ -967,6 +1053,14 @@ ALTER TABLE ONLY public.icfs_public_notices
 
 
 --
+-- Name: idiq_recipients idiq_recipients_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.idiq_recipients
+    ADD CONSTRAINT idiq_recipients_pkey PRIMARY KEY (uei);
+
+
+--
 -- Name: ingest_runs ingest_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1007,6 +1101,22 @@ ALTER TABLE ONLY public.sam_award_notices
 
 
 --
+-- Name: usaspending_awards usaspending_awards_generated_internal_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usaspending_awards
+    ADD CONSTRAINT usaspending_awards_generated_internal_id_key UNIQUE (generated_internal_id);
+
+
+--
+-- Name: usaspending_awards usaspending_awards_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usaspending_awards
+    ADD CONSTRAINT usaspending_awards_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: idx_alerts_created_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1018,6 +1128,20 @@ CREATE INDEX idx_alerts_created_at ON public.alerts USING btree (created_at DESC
 --
 
 CREATE INDEX idx_alerts_unsent ON public.alerts USING btree (created_at) WHERE (sent_at IS NULL);
+
+
+--
+-- Name: idx_idiq_recipients_status; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_idiq_recipients_status ON public.idiq_recipients USING btree (mapping_status);
+
+
+--
+-- Name: idx_idiq_recipients_ticker; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_idiq_recipients_ticker ON public.idiq_recipients USING btree (ticker) WHERE (ticker IS NOT NULL);
 
 
 --
@@ -1046,6 +1170,62 @@ CREATE INDEX idx_sam_notices_posted_date ON public.sam_award_notices USING btree
 --
 
 CREATE INDEX idx_sam_notices_uei ON public.sam_award_notices USING btree (awardee_uei);
+
+
+--
+-- Name: idx_usa_awards_amount; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_usa_awards_amount ON public.usaspending_awards USING btree (amount DESC NULLS LAST);
+
+
+--
+-- Name: idx_usa_awards_award_id_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_usa_awards_award_id_key ON public.usaspending_awards USING btree (award_id_key);
+
+
+--
+-- Name: idx_usa_awards_is_idv; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_usa_awards_is_idv ON public.usaspending_awards USING btree (is_idv);
+
+
+--
+-- Name: idx_usa_awards_needs_enrich; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_usa_awards_needs_enrich ON public.usaspending_awards USING btree (id) WHERE (enriched_at IS NULL);
+
+
+--
+-- Name: idx_usa_awards_parent_award_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_usa_awards_parent_award_id ON public.usaspending_awards USING btree (parent_award_id);
+
+
+--
+-- Name: idx_usa_awards_program_acronym; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_usa_awards_program_acronym ON public.usaspending_awards USING btree (program_acronym) WHERE (program_acronym IS NOT NULL);
+
+
+--
+-- Name: idx_usa_awards_recipient_uei; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_usa_awards_recipient_uei ON public.usaspending_awards USING btree (recipient_uei);
+
+
+--
+-- Name: idx_usa_awards_seed_uei; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_usa_awards_seed_uei ON public.usaspending_awards USING btree (seed_uei);
 
 
 --
@@ -1255,5 +1435,5 @@ ALTER TABLE ONLY public.icfs_filing_action_history
 -- PostgreSQL database dump complete
 --
 
-\unrestrict s9fQq464NNbLy4S7l4KnLC8Ni4guYiYbQu16JiVfCY0K5H2YBMeolr1fKmpyNEF
+\unrestrict aqcYyzAcZgQbgjPzNgaZzmz2vDBQpTun07y44caLgWYBtquZ0OZaA08YXHDDGV6
 

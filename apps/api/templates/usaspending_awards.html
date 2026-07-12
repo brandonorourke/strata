@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block content %}
+  {% set qs = "&q=" ~ q ~ "&uei=" ~ uei ~ "&kind=" ~ kind ~ "&page_size=" ~ page_size %}
+  <h2>USASpending — Raw Awards</h2>
+  <div class="meta" style="margin-bottom: 12px;">
+    {{ total }} award(s){% if uei %} for UEI <code>{{ uei }}</code>{% endif %} ·
+    pulled by <code>pull_usaspending.py</code> ·
+    <b>vehicle</b> = IDV base · <b>draw</b> = order against a parent vehicle · <b>standalone</b> = definitive contract (no parent)
+  </div>
+  <div class="meta" style="margin-bottom: 12px;">
+    Σ ceiling <b>{{ sum_ceiling | fmt_usd }}</b> · obligated <b>{{ sum_obligated | fmt_usd }}</b> ·
+    undrawn <b>{{ sum_undrawn | fmt_usd }}</b> · {{ n_enriched }}/{{ total }} detail-enriched{% if n_enriched < total %} — <span title="ceilings come from the detail-endpoint enrichment pass">run enrich to complete</span>{% endif %}
+  </div>
+
+  <form method="get" action="/usaspending" style="margin-bottom: 12px;">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search awardee, PIID, parent, description…" style="padding: 6px 8px; width: 300px;">
+    <select name="uei" style="padding: 6px 8px;">
+      <option value="">All UEIs ({{ ueis|length }})</option>
+      {% for u in ueis %}
+        {% if u[0] %}<option value="{{ u[0] }}" {% if u[0] == uei %}selected{% endif %}>{{ (u[1] or "?")[:26] }} · {{ u[0] }} ({{ u[2] }})</option>{% endif %}
+      {% endfor %}
+    </select>
+    <select name="kind" style="padding: 6px 8px;">
+      <option value="" {% if not kind %}selected{% endif %}>All types</option>
+      <option value="idv" {% if kind == 'idv' %}selected{% endif %}>Vehicles (IDV)</option>
+      <option value="orders" {% if kind == 'orders' %}selected{% endif %}>Draws (orders)</option>
+      <option value="standalone" {% if kind == 'standalone' %}selected{% endif %}>Standalone</option>
+    </select>
+    <button type="submit">Filter</button>
+    {% if q or uei or kind %}<a href="/usaspending" style="margin-left: 8px;">Clear</a>{% endif %}
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Award ID</th>
+        <th>Parent</th>
+        <th>Ceiling</th>
+        <th>Obligated</th>
+        <th>Undrawn</th>
+        <th>Recipient</th>
+        <th>Agency</th>
+        <th>Period</th>
+        <th>NAICS / PSC</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for a in awards %}
+      <tr>
+        <td style="white-space: nowrap;">
+          {% if a.is_idv %}<span title="{{ a.award_type }}">vehicle</span>
+          {% elif a.parent_award_id %}<span title="{{ a.award_type }}">draw</span>
+          {% else %}<span class="meta" title="{{ a.award_type }}">standalone</span>{% endif %}
+          {% if a.is_multi_award %}<div class="meta" title="multiple-award — ceiling is shared, do NOT sum">multi-award</div>{% endif %}
+          {% if a.program_acronym %}<div class="meta"><b>{{ a.program_acronym }}</b></div>{% endif %}
+        </td>
+        <td style="white-space: nowrap;">{{ a.award_id or "—" }}</td>
+        <td style="white-space: nowrap;">
+          {% if a.parent_award_id %}<a href="/usaspending?q={{ a.parent_award_id }}" class="meta">{{ a.parent_award_id }}</a>{% else %}—{% endif %}
+        </td>
+        {% set oblig = a.total_obligation if a.total_obligation is not none else a.amount %}
+        <td style="white-space: nowrap; text-align: right;" title="base + all options{% if a.base_exercised_options is not none %} · exercised {{ a.base_exercised_options | fmt_usd }}{% endif %}">
+          {{ a.ceiling | fmt_usd }}
+        </td>
+        <td style="white-space: nowrap; text-align: right;">{{ oblig | fmt_usd }}</td>
+        <td style="white-space: nowrap; text-align: right;">
+          {% if a.ceiling is not none and oblig is not none %}{{ [a.ceiling - oblig, 0]|max | fmt_usd }}{% else %}—{% endif %}
+        </td>
+        <td>
+          <div>{{ a.recipient_name or "—" }}</div>
+          {% if a.recipient_uei %}<div class="meta">UEI {{ a.recipient_uei }}{% if a.recipient_uei != a.seed_uei %} · via {{ a.seed_uei }}{% endif %}</div>{% endif %}
+        </td>
+        <td class="meta">
+          {{ a.awarding_sub_agency or a.awarding_agency or "—" }}
+          {% if a.funding_sub_agency and a.funding_sub_agency != a.awarding_sub_agency %}<div title="funding agency (end customer)">↳ {{ a.funding_sub_agency }}</div>{% endif %}
+        </td>
+        <td class="meta" style="white-space: nowrap;">
+          {{ a.start_date.strftime("%Y-%m-%d") if a.start_date else "?" }}{% if a.end_date %} → {{ a.end_date.strftime("%Y-%m-%d") }}{% endif %}
+          {% if a.last_order_date %}<div title="last date to order (vehicle expiry)">orders close {{ a.last_order_date.strftime("%Y-%m-%d") }}</div>{% endif %}
+        </td>
+        <td class="meta" style="white-space: nowrap;">{{ a.naics_code or "—" }} / {{ a.psc_code or "—" }}</td>
+        <td>{{ (a.description or "—")[:120] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if total_pages and total_pages > 1 %}
+    <div class="meta" style="margin-top: 12px;">
+      {% if page > 1 %}<a href="/usaspending?page={{ page - 1 }}{{ qs }}">Prev</a>{% endif %}
+      <span>Page {{ page }} of {{ total_pages }}</span>
+      {% if page < total_pages %}<a href="/usaspending?page={{ page + 1 }}{{ qs }}">Next</a>{% endif %}
+    </div>
+  {% endif %}
+{% endblock %}

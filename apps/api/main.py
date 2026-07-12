@@ -31,6 +31,8 @@ from strata_core.models import (
     DowContractRelease,
     DowAward,
     SamAwardNotice,
+    UsaspendingAward,
+    IdiqRecipient,
 )
 
 app = FastAPI(title="Strata UI")
@@ -56,6 +58,30 @@ def _fmt_dollars(cents):
     return f"${b:,.0f}"
 
 templates.env.filters["fmt_dollars"] = _fmt_dollars
+
+def _fmt_usd(d):
+    # like _fmt_dollars but for values already in DOLLARS (not cents) — usaspending_awards
+    if d is None:
+        return "—"
+    d = float(d)
+    if abs(d) >= 1e9:
+        return f"${d/1e9:.2f}B"
+    if abs(d) >= 1e6:
+        return f"${d/1e6:.1f}M"
+    if abs(d) >= 1e3:
+        return f"${d/1e3:.0f}K"
+    return f"${d:,.0f}"
+
+templates.env.filters["fmt_usd"] = _fmt_usd
+
+# ticker → display name. Interim map until the companies table (0048) lands; the
+# watchlist index + /company page both read this so names live in one place.
+DISPLAY_NAMES = {
+    "VSAT": "Viasat", "AVAV": "AeroVironment", "KTOS": "Kratos",
+    "MRCY": "Mercury Systems", "CMTL": "Comtech", "DRS": "Leonardo DRS",
+    "LUNR": "Intuitive Machines", "RKLB": "Rocket Lab", "RDW": "Redwire",
+    "BKSY": "BlackSky",
+}
 
 _EVENT_TYPE_WEIGHTS = {
     "bankruptcy": 6,
@@ -360,6 +386,306 @@ async def list_sam_notices(request: Request, page: int = 1, page_size: int = 50,
         "total_pages": total_pages,
         "q": q,
         "et": ET,
+    })
+
+
+@app.get("/usaspending")
+async def list_usaspending_awards(request: Request, page: int = 1, page_size: int = 100,
+                                  q: str = "", uei: str = "", kind: str = ""):
+    """Raw USASpending awards (manual pull-by-UEI). See apps/ingest/pull_usaspending.py.
+    kind ∈ {idv, orders, standalone} filters vehicles / draws / standalone contracts."""
+    if page < 1:
+        page = 1
+    if page_size < 1:
+        page_size = 100
+    if page_size > 500:
+        page_size = 500
+    offset = (page - 1) * page_size
+
+    async with AsyncSessionLocal() as session:
+        filters = []
+        if q:
+            filters.append(or_(
+                UsaspendingAward.recipient_name.ilike(f"%{q}%"),
+                UsaspendingAward.award_id.ilike(f"%{q}%"),
+                UsaspendingAward.recipient_uei.ilike(f"%{q}%"),
+                UsaspendingAward.parent_award_id.ilike(f"%{q}%"),
+                UsaspendingAward.description.ilike(f"%{q}%"),
+            ))
+        if uei:
+            filters.append(UsaspendingAward.recipient_uei == uei)
+        if kind == "idv":
+            filters.append(UsaspendingAward.is_idv.is_(True))
+        elif kind == "orders":
+            filters.append(and_(UsaspendingAward.is_idv.is_(False),
+                                UsaspendingAward.parent_award_id.isnot(None)))
+        elif kind == "standalone":
+            filters.append(and_(UsaspendingAward.is_idv.is_(False),
+                                UsaspendingAward.parent_award_id.is_(None)))
+
+        total = int((await session.execute(
+            select(func.count()).select_from(UsaspendingAward).where(*filters)
+        )).scalar() or 0)
+
+        # money roll-up over the filtered set (undrawn = ceiling − obligated, floored at 0)
+        oblig = func.coalesce(UsaspendingAward.total_obligation, UsaspendingAward.amount)
+        sum_ceiling, sum_obligated, sum_undrawn, n_enriched = (await session.execute(
+            select(
+                func.coalesce(func.sum(UsaspendingAward.ceiling), 0),
+                func.coalesce(func.sum(oblig), 0),
+                func.coalesce(func.sum(func.greatest(UsaspendingAward.ceiling - oblig, 0)), 0),
+                func.count().filter(UsaspendingAward.enriched_at.isnot(None)),
+            ).where(*filters)
+        )).one()
+
+        awards = list((await session.execute(
+            select(UsaspendingAward)
+            .where(*filters)
+            .order_by(UsaspendingAward.amount.desc().nullslast(), UsaspendingAward.id.desc())
+            .offset(offset)
+            .limit(page_size)
+        )).scalars().all())
+
+        # UEI family present in the table, for the filter dropdown
+        ueis = list((await session.execute(
+            select(UsaspendingAward.recipient_uei, UsaspendingAward.recipient_name,
+                   func.count().label("n"))
+            .group_by(UsaspendingAward.recipient_uei, UsaspendingAward.recipient_name)
+            .order_by(func.count().desc())
+        )).all())
+
+    total_pages = max(1, (total + page_size - 1) // page_size)
+    return templates.TemplateResponse("usaspending_awards.html", {
+        "request": request,
+        "title": "Strata - USASpending Awards",
+        "awards": awards,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+        "total_pages": total_pages,
+        "q": q,
+        "uei": uei,
+        "kind": kind,
+        "ueis": ueis,
+        "sum_ceiling": sum_ceiling,
+        "sum_obligated": sum_obligated,
+        "sum_undrawn": sum_undrawn,
+        "n_enriched": n_enriched,
+    })
+
+
+@app.get("/coverage")
+async def coverage_index(request: Request, sort: str = "undrawn"):
+    """Coverage grid — one row per confirmed watchlist company, each drilling into
+    /company/{ticker}. Per-company summary reuses the /company computation (exclusive
+    latent = single-award active undrawn; shared seats = active multi-award vehicles).
+    Data-driven off idiq_recipients confirmed UEIs, so adding a company needs no nav edit."""
+    today = date.today()
+    async with AsyncSessionLocal() as session:
+        pairs = (await session.execute(
+            select(IdiqRecipient.uei, IdiqRecipient.ticker)
+            .where(IdiqRecipient.mapping_status == "confirmed")
+        )).all()
+        uei_ticker = {u: t for u, t in pairs}
+        ueis = list(uei_ticker.keys())
+        rows = list((await session.execute(
+            select(UsaspendingAward).where(UsaspendingAward.recipient_uei.in_(ueis))
+        )).scalars().all()) if ueis else []
+
+    def f(x):
+        return float(x) if x is not None else 0.0
+
+    by_ticker = {}
+    for r in rows:
+        t = uei_ticker.get(r.recipient_uei)
+        if t:
+            by_ticker.setdefault(t, []).append(r)
+
+    companies = []
+    for ticker in sorted(set(uei_ticker.values())):
+        crows = by_ticker.get(ticker, [])
+        vehicles = [r for r in crows if r.is_idv]
+        orders   = [r for r in crows if (not r.is_idv) and r.parent_generated_id]
+
+        drawn = {}
+        for o in orders:
+            slot = drawn.setdefault(o.parent_generated_id, {"amt": 0.0})
+            slot["amt"] += f(o.amount)
+
+        excl_latent = 0.0
+        n_excl = n_shared = 0
+        for v in vehicles:
+            ceiling = f(v.ceiling)
+            expiry  = v.last_order_date or v.end_date
+            active  = (expiry is None) or (expiry >= today)
+            if not active or ceiling <= 0:
+                continue
+            if v.is_multi_award:
+                n_shared += 1
+            else:
+                n_excl += 1
+                vd = drawn.get(v.generated_internal_id, {"amt": 0.0})["amt"]
+                excl_latent += max(ceiling - vd, 0.0)
+
+        last_draw = None
+        n_draws_90 = 0
+        for o in orders:
+            od = o.date_signed or o.start_date
+            if od:
+                if last_draw is None or od > last_draw:
+                    last_draw = od
+                if (today - od).days <= 90:
+                    n_draws_90 += 1
+
+        companies.append({
+            "ticker": ticker, "name": DISPLAY_NAMES.get(ticker, ticker),
+            "exclusive_latent": excl_latent, "n_exclusive": n_excl, "n_shared": n_shared,
+            "last_draw": last_draw, "n_draws_90": n_draws_90,
+            "total_drawn": sum(d["amt"] for d in drawn.values()),
+            "n_vehicles": len(vehicles), "n_awards": len(crows),
+        })
+
+    keyfns = {
+        "undrawn": (lambda c: c["exclusive_latent"], True),
+        "recent":  (lambda c: c["last_draw"] or date.min, True),
+        "drawn":   (lambda c: c["total_drawn"], True),
+        "name":    (lambda c: c["name"], False),
+    }
+    keyfn, rev = keyfns.get(sort, keyfns["undrawn"])
+    companies.sort(key=keyfn, reverse=rev)
+
+    totals = {
+        "n_companies": len(companies),
+        "excl_latent": sum(c["exclusive_latent"] for c in companies),
+        "n_draws_90": sum(c["n_draws_90"] for c in companies),
+    }
+    return templates.TemplateResponse("coverage.html", {
+        "request": request, "title": "Coverage — Federal Contracts",
+        "companies": companies, "totals": totals, "sort": sort, "today": today,
+    })
+
+
+@app.get("/company/{ticker}")
+async def company_page(request: Request, ticker: str = "VSAT", show_expired: bool = False):
+    """Clean, customer-facing single-company view (v1: Viasat). Position & capacity
+    from usaspending_awards (USASpending, ~90-day lagged). Hero = exclusive undrawn
+    (single-award, active vehicles); shared multi-award shown separately as seats."""
+    ticker = (ticker or "VSAT").upper()
+    today = date.today()
+    display_name = DISPLAY_NAMES.get(ticker, ticker)
+
+    async with AsyncSessionLocal() as session:
+        # resolve the ticker's CONFIRMED UEIs from the directory, then filter awards by UEI
+        ueis = list((await session.execute(
+            select(IdiqRecipient.uei).where(
+                IdiqRecipient.ticker == ticker,
+                IdiqRecipient.mapping_status == "confirmed",
+            )
+        )).scalars().all())
+        rows = list((await session.execute(
+            select(UsaspendingAward).where(UsaspendingAward.recipient_uei.in_(ueis))
+        )).scalars().all()) if ueis else []
+
+    def f(x):
+        return float(x) if x is not None else 0.0
+
+    vehicles = [r for r in rows if r.is_idv]
+    orders   = [r for r in rows if (not r.is_idv) and r.parent_generated_id]
+
+    # drawn per vehicle = Σ of its child orders' amounts (search gives this; no enrich needed)
+    drawn = {}
+    for o in orders:
+        slot = drawn.setdefault(o.parent_generated_id, {"amt": 0.0, "n": 0, "last": None})
+        slot["amt"] += f(o.amount)
+        slot["n"]   += 1
+        od = o.date_signed or o.start_date
+        if od and (slot["last"] is None or od > slot["last"]):
+            slot["last"] = od
+
+    veh = []
+    for v in vehicles:
+        d = drawn.get(v.generated_internal_id, {"amt": 0.0, "n": 0, "last": None})
+        ceiling = f(v.ceiling)
+        vdrawn  = d["amt"]
+        undrawn = max(ceiling - vdrawn, 0.0)
+        expiry  = v.last_order_date or v.end_date
+        veh.append({
+            "gid": v.generated_internal_id, "award_id": v.award_id,
+            "program": v.program_acronym, "desc": v.description,
+            "ceiling": ceiling, "drawn": vdrawn, "undrawn": undrawn,
+            "pct": (vdrawn / ceiling) if ceiling > 0 else None,
+            "expiry": expiry, "active": (expiry is None) or (expiry >= today),
+            "is_multi": bool(v.is_multi_award), "n_orders": d["n"], "last_draw": d["last"],
+            "funding": v.funding_sub_agency, "agency": v.awarding_sub_agency,
+            "enriched": v.enriched_at is not None,
+        })
+
+    exclusive_veh = sorted([x for x in veh if not x["is_multi"]],
+                           key=lambda x: (x["active"], x["undrawn"]), reverse=True)
+    shared_veh    = sorted([x for x in veh if x["is_multi"]],
+                           key=lambda x: (x["active"], x["ceiling"]), reverse=True)
+
+    # hero
+    exclusive_latent = sum(x["undrawn"] for x in exclusive_veh if x["active"] and x["ceiling"] > 0)
+    n_active = sum(1 for x in veh if x["active"] and x["ceiling"] > 0)
+    total_drawn = sum(d["amt"] for d in drawn.values())
+    n_enriched = sum(1 for r in rows if r.enriched_at is not None)
+
+    # recent draws (the signal) — newest first, paired with the parent's remaining undrawn
+    veh_by_gid = {x["gid"]: x for x in veh}
+    dated = [o for o in orders if (o.date_signed or o.start_date)]
+    dated.sort(key=lambda o: (o.date_signed or o.start_date), reverse=True)
+    draws = []
+    for o in dated[:25]:
+        pv = veh_by_gid.get(o.parent_generated_id)
+        draws.append({
+            "date": o.date_signed or o.start_date, "order": o.award_id,
+            "program": pv["program"] if pv else None, "amount": f(o.amount),
+            "parent": o.parent_award_id, "parent_undrawn": pv["undrawn"] if pv else None,
+            "customer": o.funding_sub_agency or o.awarding_sub_agency,
+            "desc": o.description, "gid": o.generated_internal_id, "parent_gid": o.parent_generated_id,
+        })
+
+    # by program
+    prog = {}
+    for x in veh:
+        if not x["program"]:
+            continue
+        p = prog.setdefault(x["program"], {"ceiling": 0.0, "drawn": 0.0, "n": 0, "multi": x["is_multi"]})
+        p["ceiling"] += x["ceiling"]; p["drawn"] += x["drawn"]; p["n"] += 1; p["multi"] = p["multi"] or x["is_multi"]
+    programs = sorted([{"name": k, **v} for k, v in prog.items()], key=lambda x: x["ceiling"], reverse=True)
+
+    # standalone definitive contracts (not a vehicle, no parent) — undrawn = unexercised options
+    definitive = []
+    for r in rows:
+        if r.is_idv or r.parent_generated_id:
+            continue
+        if (r.award_type or "").upper() != "DEFINITIVE CONTRACT":
+            continue  # this section = only true definitive contracts (FPDS type D)
+        ceiling   = f(r.ceiling)
+        obligated = f(r.total_obligation if r.total_obligation is not None else r.amount)
+        expiry    = r.end_date
+        definitive.append({
+            "award_id": r.award_id, "program": r.program_acronym, "desc": r.description,
+            "ceiling": ceiling, "obligated": obligated, "undrawn": max(ceiling - obligated, 0.0),
+            "pct": (obligated / ceiling) if ceiling > 0 else None,
+            "expiry": expiry, "active": (expiry is None) or (expiry >= today),
+            "funding": r.funding_sub_agency, "agency": r.awarding_sub_agency,
+            "gid": r.generated_internal_id,
+        })
+    definitive.sort(key=lambda x: (x["active"], x["ceiling"]), reverse=True)
+    n_definitive = len(definitive)
+    def_options_total = sum(x["undrawn"] for x in definitive if x["active"] and x["ceiling"] > 0)
+    definitive = definitive[:60]  # cap for display; big/active first
+
+    return templates.TemplateResponse("company.html", {
+        "request": request, "ticker": ticker, "name": display_name,
+        "title": f"{display_name} ({ticker}) — Position",
+        "exclusive_latent": exclusive_latent, "n_active": n_active,
+        "total_drawn": total_drawn, "n_rows": len(rows), "n_enriched": n_enriched,
+        "n_vehicles": len(veh), "exclusive_veh": exclusive_veh, "shared_veh": shared_veh,
+        "show_expired": show_expired, "draws": draws, "programs": programs, "today": today,
+        "definitive": definitive, "n_definitive": n_definitive, "def_options_total": def_options_total,
     })
 
 
