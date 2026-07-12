@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .wl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 4px; }
+  .wl-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 18px; }
+  .wl-kpis { display: flex; gap: 28px; margin: 8px 0 20px; }
+  .wl-kpi .v { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; color: var(--ink); }
+  .wl-kpi .l { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .wl-tools { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .wl-tools input { flex: 0 0 240px; }
+  .wl-sorts { font-size: 12px; color: var(--muted); }
+  .wl-sorts a { margin-left: 10px; }
+  .wl-sorts a.on { font-weight: 700; color: var(--accent-dark); }
+  table.wl td { vertical-align: middle; }
+  table.wl tbody tr { cursor: pointer; }
+  .wl-tk { font-weight: 700; color: var(--accent-dark); }
+  .wl-name { color: var(--ink); }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .big { font-weight: 600; }
+  .dim { color: var(--muted); }
+  .seat { display: inline-block; min-width: 20px; text-align: center; }
+  .draw-badge { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11px;
+                font-weight: 600; background: #ecfdf5; color: #047857; }
+  .draw-none { color: #b0b4bd; }
+</style>
+
+<div class="wl-head">
+  <h2>Coverage</h2>
+</div>
+<div class="wl-sub">Undrawn = single-award capacity left to compete for — capacity to <em>watch</em>, not a revenue forecast. Click a company for its full position.</div>
+
+<div class="wl-kpis">
+  <div class="wl-kpi"><div class="v">{{ totals.n_companies }}</div><div class="l">Companies</div></div>
+  <div class="wl-kpi"><div class="v">{{ totals.excl_latent | fmt_usd }}</div><div class="l">Exclusive latent (coverage)</div></div>
+  <div class="wl-kpi"><div class="v">{{ totals.n_draws_90 }}</div><div class="l">Draws · last 90d</div></div>
+</div>
+
+<div class="wl-tools">
+  <input type="text" id="wl-filter" placeholder="Filter by ticker or name…" autocomplete="off">
+  <span class="wl-sorts">sort:
+    <a href="/watchlist?sort=undrawn" class="{{ 'on' if sort=='undrawn' }}">undrawn</a>
+    <a href="/watchlist?sort=recent"  class="{{ 'on' if sort=='recent' }}">recent draw</a>
+    <a href="/watchlist?sort=drawn"   class="{{ 'on' if sort=='drawn' }}">total drawn</a>
+    <a href="/watchlist?sort=name"    class="{{ 'on' if sort=='name' }}">name</a>
+  </span>
+</div>
+
+<table class="wl">
+  <thead>
+    <tr>
+      <th>Ticker</th>
+      <th>Company</th>
+      <th class="num">Excl. veh</th>
+      <th class="num">Excl. undrawn</th>
+      <th class="num">Shared seats</th>
+      <th class="num">Total drawn</th>
+      <th>Recent draw</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in companies %}
+    <tr data-key="{{ c.ticker|lower }} {{ c.name|lower }}" onclick="location.href='/company/{{ c.ticker }}'">
+      <td><span class="wl-tk">{{ c.ticker }}</span></td>
+      <td class="wl-name">{{ c.name }}</td>
+      <td class="num">{{ c.n_exclusive or '—' }}</td>
+      <td class="num big">{{ c.exclusive_latent | fmt_usd if c.exclusive_latent > 0 else '—' }}</td>
+      <td class="num"><span class="seat {{ 'dim' if not c.n_shared }}">{{ c.n_shared or '—' }}</span></td>
+      <td class="num dim">{{ c.total_drawn | fmt_usd if c.total_drawn > 0 else '—' }}</td>
+      <td>
+        {% if c.last_draw %}
+          <span class="dim">{{ c.last_draw }}</span>
+          {% if c.n_draws_90 %}<span class="draw-badge">{{ c.n_draws_90 }} in 90d</span>{% endif %}
+        {% else %}
+          <span class="draw-none">—</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+  const f = document.getElementById('wl-filter');
+  f.addEventListener('input', () => {
+    const q = f.value.trim().toLowerCase();
+    document.querySelectorAll('table.wl tbody tr').forEach(tr => {
+      tr.style.display = tr.dataset.key.includes(q) ? '' : 'none';
+    });
+  });
+</script>
+{% endblock %}

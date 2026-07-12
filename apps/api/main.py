@@ -74,6 +74,15 @@ def _fmt_usd(d):
 
 templates.env.filters["fmt_usd"] = _fmt_usd
 
+# ticker → display name. Interim map until the companies table (0048) lands; the
+# watchlist index + /company page both read this so names live in one place.
+DISPLAY_NAMES = {
+    "VSAT": "Viasat", "AVAV": "AeroVironment", "KTOS": "Kratos",
+    "MRCY": "Mercury Systems", "CMTL": "Comtech", "DRS": "Leonardo DRS",
+    "LUNR": "Intuitive Machines", "RKLB": "Rocket Lab", "RDW": "Redwire",
+    "BKSY": "BlackSky",
+}
+
 _EVENT_TYPE_WEIGHTS = {
     "bankruptcy": 6,
     "legal_action": 5,
@@ -465,6 +474,97 @@ async def list_usaspending_awards(request: Request, page: int = 1, page_size: in
     })
 
 
+@app.get("/watchlist")
+async def watchlist_index(request: Request, sort: str = "undrawn"):
+    """Coverage grid — one row per confirmed watchlist company, each drilling into
+    /company/{ticker}. Per-company summary reuses the /company computation (exclusive
+    latent = single-award active undrawn; shared seats = active multi-award vehicles).
+    Data-driven off idiq_recipients confirmed UEIs, so adding a company needs no nav edit."""
+    today = date.today()
+    async with AsyncSessionLocal() as session:
+        pairs = (await session.execute(
+            select(IdiqRecipient.uei, IdiqRecipient.ticker)
+            .where(IdiqRecipient.mapping_status == "confirmed")
+        )).all()
+        uei_ticker = {u: t for u, t in pairs}
+        ueis = list(uei_ticker.keys())
+        rows = list((await session.execute(
+            select(UsaspendingAward).where(UsaspendingAward.recipient_uei.in_(ueis))
+        )).scalars().all()) if ueis else []
+
+    def f(x):
+        return float(x) if x is not None else 0.0
+
+    by_ticker = {}
+    for r in rows:
+        t = uei_ticker.get(r.recipient_uei)
+        if t:
+            by_ticker.setdefault(t, []).append(r)
+
+    companies = []
+    for ticker in sorted(set(uei_ticker.values())):
+        crows = by_ticker.get(ticker, [])
+        vehicles = [r for r in crows if r.is_idv]
+        orders   = [r for r in crows if (not r.is_idv) and r.parent_generated_id]
+
+        drawn = {}
+        for o in orders:
+            slot = drawn.setdefault(o.parent_generated_id, {"amt": 0.0})
+            slot["amt"] += f(o.amount)
+
+        excl_latent = 0.0
+        n_excl = n_shared = 0
+        for v in vehicles:
+            ceiling = f(v.ceiling)
+            expiry  = v.last_order_date or v.end_date
+            active  = (expiry is None) or (expiry >= today)
+            if not active or ceiling <= 0:
+                continue
+            if v.is_multi_award:
+                n_shared += 1
+            else:
+                n_excl += 1
+                vd = drawn.get(v.generated_internal_id, {"amt": 0.0})["amt"]
+                excl_latent += max(ceiling - vd, 0.0)
+
+        last_draw = None
+        n_draws_90 = 0
+        for o in orders:
+            od = o.date_signed or o.start_date
+            if od:
+                if last_draw is None or od > last_draw:
+                    last_draw = od
+                if (today - od).days <= 90:
+                    n_draws_90 += 1
+
+        companies.append({
+            "ticker": ticker, "name": DISPLAY_NAMES.get(ticker, ticker),
+            "exclusive_latent": excl_latent, "n_exclusive": n_excl, "n_shared": n_shared,
+            "last_draw": last_draw, "n_draws_90": n_draws_90,
+            "total_drawn": sum(d["amt"] for d in drawn.values()),
+            "n_vehicles": len(vehicles), "n_awards": len(crows),
+        })
+
+    keyfns = {
+        "undrawn": (lambda c: c["exclusive_latent"], True),
+        "recent":  (lambda c: c["last_draw"] or date.min, True),
+        "drawn":   (lambda c: c["total_drawn"], True),
+        "name":    (lambda c: c["name"], False),
+    }
+    keyfn, rev = keyfns.get(sort, keyfns["undrawn"])
+    companies.sort(key=keyfn, reverse=rev)
+
+    totals = {
+        "n_companies": len(companies),
+        "excl_latent": sum(c["exclusive_latent"] for c in companies),
+        "n_draws_90": sum(c["n_draws_90"] for c in companies),
+    }
+    return templates.TemplateResponse("watchlist.html", {
+        "request": request, "title": "Coverage — Watchlist",
+        "companies": companies, "totals": totals, "sort": sort, "today": today,
+    })
+
+
 @app.get("/company/{ticker}")
 async def company_page(request: Request, ticker: str = "VSAT", show_expired: bool = False):
     """Clean, customer-facing single-company view (v1: Viasat). Position & capacity
@@ -472,7 +572,7 @@ async def company_page(request: Request, ticker: str = "VSAT", show_expired: boo
     (single-award, active vehicles); shared multi-award shown separately as seats."""
     ticker = (ticker or "VSAT").upper()
     today = date.today()
-    display_name = {"VSAT": "Viasat", "AVAV": "AeroVironment"}.get(ticker, ticker)
+    display_name = DISPLAY_NAMES.get(ticker, ticker)
 
     async with AsyncSessionLocal() as session:
         # resolve the ticker's CONFIRMED UEIs from the directory, then filter awards by UEI

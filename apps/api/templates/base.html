@@ -256,8 +256,7 @@
     <nav id="sidebar">
       {% set path = request.url.path %}
       <div class="nav-section">Watchlist</div>
-      <a href="/company/VSAT"          class="nav-item {% if path.startswith('/company/VSAT') %}active{% endif %}">Viasat (VSAT)</a>
-      <a href="/company/AVAV"          class="nav-item {% if path.startswith('/company/AVAV') %}active{% endif %}">AeroVironment (AVAV)</a>
+      <a href="/watchlist"             class="nav-item {% if path.startswith('/watchlist') or path.startswith('/company/') %}active{% endif %}">Coverage</a>
 
       <div class="nav-section" style="margin-top: 16px;">FCC / ICFS</div>
       <a href="/admin/icfs/canonicals" class="nav-item {% if path.startswith('/admin/icfs/canonicals') or path.startswith('/admin/icfs/entity') %}active{% endif %}">All Companies</a>
