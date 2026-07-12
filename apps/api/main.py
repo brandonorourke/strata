@@ -642,6 +642,7 @@ async def company_page(request: Request, ticker: str = "VSAT", show_expired: boo
             "date": o.date_signed or o.start_date, "order": o.award_id,
             "program": pv["program"] if pv else None, "amount": f(o.amount),
             "parent": o.parent_award_id, "parent_undrawn": pv["undrawn"] if pv else None,
+            "customer": o.funding_sub_agency or o.awarding_sub_agency,
             "desc": o.description, "gid": o.generated_internal_id, "parent_gid": o.parent_generated_id,
         })
 

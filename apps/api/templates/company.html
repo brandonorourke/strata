@@ -211,18 +211,19 @@
     </div>
     <table>
       <thead><tr>
-        <th>Date</th><th>Order</th><th>Program</th><th class="num">Amount</th>
-        <th>On vehicle</th><th class="num">Parent undrawn</th>
+        <th>Date</th><th>Order</th><th class="num">Amount</th><th class="num">Parent undrawn</th>
+        <th>End customer</th><th>On vehicle</th><th>Program</th>
       </tr></thead>
       <tbody>
       {% for d in draws %}
         <tr>
-          <td class="num">{{ d.date.strftime("%Y-%m-%d") if d.date else "—" }}</td>
+          <td>{{ d.date.strftime("%Y-%m-%d") if d.date else "—" }}</td>
           <td><a class="mono" href="https://www.usaspending.gov/award/{{ d.gid }}" target="_blank" rel="noopener">{{ d.order }}</a></td>
-          <td>{% if d.program %}<span class="pill prog">{{ d.program }}</span>{% else %}<span class="muted small">—</span>{% endif %}</td>
           <td class="num">{{ d.amount | fmt_usd }}</td>
-          <td class="small">{% if d.parent %}<a class="mono" href="https://www.usaspending.gov/award/{{ d.parent_gid }}" target="_blank" rel="noopener">{{ d.parent }}</a>{% else %}—{% endif %}</td>
           <td class="num">{% if d.parent_undrawn is not none %}{{ d.parent_undrawn | fmt_usd }}{% else %}<span class="muted small">—</span>{% endif %}</td>
+          <td class="small">{{ d.customer or "—" }}</td>
+          <td class="small">{% if d.parent %}<a class="mono" href="https://www.usaspending.gov/award/{{ d.parent_gid }}" target="_blank" rel="noopener">{{ d.parent }}</a>{% else %}—{% endif %}</td>
+          <td>{% if d.program %}<span class="pill prog">{{ d.program }}</span>{% else %}<span class="muted small">—</span>{% endif %}</td>
         </tr>
       {% endfor %}
       </tbody>
