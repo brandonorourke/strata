@@ -255,15 +255,13 @@
 
     <nav id="sidebar">
       {% set path = request.url.path %}
-      <div class="nav-section">Watchlist</div>
-      <a href="/watchlist"             class="nav-item {% if path.startswith('/watchlist') or path.startswith('/company/') %}active{% endif %}">Coverage</a>
+      <div class="nav-section">Federal Contracts</div>
+      <a href="/coverage"              class="nav-item {% if path.startswith('/coverage') or path.startswith('/company/') %}active{% endif %}">Coverage</a>
+      <a href="/dow"                   class="nav-item {% if path == '/dow' %}active{% endif %}">DoW Releases</a>
 
       <div class="nav-section" style="margin-top: 16px;">FCC / ICFS</div>
       <a href="/admin/icfs/canonicals" class="nav-item {% if path.startswith('/admin/icfs/canonicals') or path.startswith('/admin/icfs/entity') %}active{% endif %}">All Companies</a>
       <a href="/admin/icfs/contested"  class="nav-item {% if path.startswith('/admin/icfs/contested') %}active{% endif %}">Contested Filings</a>
-
-      <div class="nav-section" style="margin-top: 16px;">Dept. of War</div>
-      <a href="/dow"                   class="nav-item {% if path == '/dow' %}active{% endif %}">Awards</a>
 
       <div class="nav-section" style="margin-top: 16px;">Admin</div>
       <a href="/admin/icfs/signals"    class="nav-item {% if path.startswith('/admin/icfs/signals') %}active{% endif %}">ICFS · Signal Notices</a>

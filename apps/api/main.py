@@ -474,8 +474,8 @@ async def list_usaspending_awards(request: Request, page: int = 1, page_size: in
     })
 
 
-@app.get("/watchlist")
-async def watchlist_index(request: Request, sort: str = "undrawn"):
+@app.get("/coverage")
+async def coverage_index(request: Request, sort: str = "undrawn"):
     """Coverage grid — one row per confirmed watchlist company, each drilling into
     /company/{ticker}. Per-company summary reuses the /company computation (exclusive
     latent = single-award active undrawn; shared seats = active multi-award vehicles).
@@ -559,8 +559,8 @@ async def watchlist_index(request: Request, sort: str = "undrawn"):
         "excl_latent": sum(c["exclusive_latent"] for c in companies),
         "n_draws_90": sum(c["n_draws_90"] for c in companies),
     }
-    return templates.TemplateResponse("watchlist.html", {
-        "request": request, "title": "Coverage — Watchlist",
+    return templates.TemplateResponse("coverage.html", {
+        "request": request, "title": "Coverage — Federal Contracts",
         "companies": companies, "totals": totals, "sort": sort, "today": today,
     })
 
