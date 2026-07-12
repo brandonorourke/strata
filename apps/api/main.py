@@ -472,7 +472,7 @@ async def company_page(request: Request, ticker: str = "VSAT", show_expired: boo
     (single-award, active vehicles); shared multi-award shown separately as seats."""
     ticker = (ticker or "VSAT").upper()
     today = date.today()
-    display_name = {"VSAT": "Viasat"}.get(ticker, ticker)
+    display_name = {"VSAT": "Viasat", "AVAV": "AeroVironment"}.get(ticker, ticker)
 
     async with AsyncSessionLocal() as session:
         # resolve the ticker's CONFIRMED UEIs from the directory, then filter awards by UEI
