@@ -101,7 +101,12 @@ research, not a sellable edge. Sequence:
 2. **Fix DoW obligated-vs-ceiling extraction.** THE data-quality fix (see the ceiling
    mis-attribution bug below). Extract the obligated amount from the DoW prose
    ("$X are being obligated at time of award") instead of stamping the ceiling; flag
-   shared multi-award IDIQs ("1 of M"). Fixtures: Andromeda ($1.843B ceiling / $1.4M
+   shared multi-award IDIQs ("1 of M"). **Method: classify amount TYPE with the LLM**
+   (obligated / ceiling / other — e.g. not-to-exceed, cumulative, "if all options
+   exercised"), regex as cross-check — not regex-signal alone. DoD prose varies too much
+   for regex to reliably separate the figures; fold amount-type classification into the
+   v2 extractor's existing per-release LLM call, keep regex authoritative on the numerals.
+   Fixtures: Andromeda ($1.843B ceiling / $1.4M
    obligated / 14 awardees) and PTS-G ($437.7M / $150M / Viasat+Intelsat). Delivers the
    obligated-vs-ceiling differentiator in real time — no USASpending needed (the number is
    in the announcement text). USASpending deferred: it's the deterministic-but-lagged
