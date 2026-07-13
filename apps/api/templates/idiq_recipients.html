@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .ur-sub { font-size: 12.5px; color: var(--muted); margin: 2px 0 16px; }
+  .ur-kpis { display: flex; gap: 26px; margin: 8px 0 18px; }
+  .ur-kpi .v { font-size: 20px; font-weight: 700; color: var(--ink); }
+  .ur-kpi .l { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .ur-tools { margin-bottom: 12px; }
+  .ur-tools input { flex: 0 0 260px; }
+  table.ur td { vertical-align: middle; }
+  .ur-tk { font-weight: 700; color: var(--accent-dark); }
+  .mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 10.5px;
+           font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .badge.confirmed { background: #ecfdf5; color: #047857; }
+  .badge.candidate { background: #fffbeb; color: #b45309; }
+  .badge.excluded  { background: #f3f4f6; color: #9ca3af; }
+  tr.ex td { opacity: 0.6; }
+</style>
+
+<h2>UEI directory</h2>
+<div class="ur-sub">
+  <code>idiq_recipients</code> — UEI → ticker mapping &amp; <code>mapping_status</code>.
+  <strong>Read-only</strong> (no auth on this app) — curation happens via SQL. Award counts help spot
+  divestiture-stale strays (non-eponymous name + high awards).
+</div>
+
+<div class="ur-kpis">
+  <div class="ur-kpi"><div class="v">{{ summary.total }}</div><div class="l">UEIs</div></div>
+  <div class="ur-kpi"><div class="v">{{ summary.tickers }}</div><div class="l">Tickers</div></div>
+  <div class="ur-kpi"><div class="v" style="color:#047857">{{ summary.confirmed }}</div><div class="l">Confirmed</div></div>
+  <div class="ur-kpi"><div class="v" style="color:#b45309">{{ summary.candidate }}</div><div class="l">Candidate</div></div>
+  <div class="ur-kpi"><div class="v" style="color:#9ca3af">{{ summary.excluded }}</div><div class="l">Excluded</div></div>
+</div>
+
+<div class="ur-tools">
+  <input type="text" id="ur-filter" placeholder="Filter ticker / name / UEI / status…" autocomplete="off">
+</div>
+
+<table class="ur">
+  <thead>
+    <tr>
+      <th>Ticker</th>
+      <th>Recipient name</th>
+      <th>UEI</th>
+      <th>Status</th>
+      <th class="num">Awards</th>
+      <th>Seed UEI</th>
+      <th>First seen</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in recipients %}
+    <tr class="{{ 'ex' if r.status == 'excluded' }}"
+        data-key="{{ (r.ticker or '')|lower }} {{ (r.name or '')|lower }} {{ r.uei|lower }} {{ r.status }}">
+      <td><span class="ur-tk">{{ r.ticker or '—' }}</span></td>
+      <td>{{ r.name or '—' }}</td>
+      <td class="mono muted">{{ r.uei }}</td>
+      <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
+      <td class="num">{{ r.awards or '—' }}</td>
+      <td class="mono muted">{{ r.seed_uei or '—' }}</td>
+      <td class="muted">{{ r.first_seen.strftime('%Y-%m-%d') if r.first_seen else '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+  const f = document.getElementById('ur-filter');
+  f.addEventListener('input', () => {
+    const q = f.value.trim().toLowerCase();
+    document.querySelectorAll('table.ur tbody tr').forEach(tr => {
+      tr.style.display = tr.dataset.key.includes(q) ? '' : 'none';
+    });
+  });
+</script>
+{% endblock %}

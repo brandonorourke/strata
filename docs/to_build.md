@@ -64,6 +64,17 @@ phantom-ceiling trap below). Full design + the validated market-moving research:
 - Later: materiality lens (capacity ÷ mktcap/revenue — separates "big number" from "moves the stock");
   formal `idiq_vehicles`/`holdings`/`draws` tables only if deriving from `usaspending_awards` strains.
 
+**DoW extractor QA — surface source paragraph in the UI (2026-07-12).** Show each `dow_awards`
+row's **`source_excerpt`** (the paragraph it was extracted from) inline with its extracted
+`awardees`/PIIDs on the `/admin/dow/contracts` card, so extraction drops (e.g. the multi-PIID-paren
+bug — one paragraph → one row → PIIDs as `awardees[]` entries, one per PIID) are eyeball-obvious and
+paragraphs can be copied straight into `tests/fixtures/dow/`. Turns the DoW screen into a
+fixture-harvesting tool. Check first whether `source_excerpt` is the FULL paragraph or truncated — if
+truncated, store the whole paragraph. Related: re-extract the ~55 releases with multi-PIID parens (run
+the fixed regex over the corpus for the exact list) to recover dropped order/vehicle PIIDs — writes to
+prod `dow_awards` (where the scheduler populates it), so confirm target first. Tests landed:
+`tests/test_dow_extractor.py` (13, green) — grow from the fixture corpus.
+
 **Commercialization (when it's paid).** The edge is proven but DISCRETIONARY (systematic version
 tested dead; discretionary edge real + tail-managed — the Viasat/PTS-G May-22 case). The gate to
 "paid" is a LIVE signal: today the data is ~90-day-stale for the DoD names that matter, so it's

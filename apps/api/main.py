@@ -565,6 +565,45 @@ async def coverage_index(request: Request, sort: str = "undrawn"):
     })
 
 
+@app.get("/admin/idiq/recipients")
+async def idiq_recipients_admin(request: Request):
+    """Read-only view of the idiq_recipients UEI→ticker directory + mapping_status.
+    This app has no auth, so it's VIEW-ONLY — curation still happens via SQL. Shows
+    per-UEI award counts so divestiture-stale strays (wrong name + high awards) are spottable."""
+    async with AsyncSessionLocal() as session:
+        recs = list((await session.execute(
+            select(IdiqRecipient).order_by(IdiqRecipient.ticker, IdiqRecipient.mapping_status)
+        )).scalars().all())
+        counts = {}
+        ueis = [r.uei for r in recs]
+        if ueis:
+            for u, c in (await session.execute(
+                select(UsaspendingAward.recipient_uei, func.count())
+                .where(UsaspendingAward.recipient_uei.in_(ueis))
+                .group_by(UsaspendingAward.recipient_uei)
+            )).all():
+                counts[u] = c
+
+    recipients = [{
+        "ticker": r.ticker, "uei": r.uei, "name": r.recipient_name,
+        "status": r.mapping_status, "seed_uei": r.seed_uei,
+        "first_seen": r.first_seen_at, "awards": counts.get(r.uei, 0),
+    } for r in recs]
+    recipients.sort(key=lambda x: (x["ticker"] or "~", x["status"], -x["awards"]))
+
+    summary = {
+        "total": len(recipients),
+        "tickers": len({x["ticker"] for x in recipients if x["ticker"]}),
+        "confirmed": sum(1 for x in recipients if x["status"] == "confirmed"),
+        "candidate": sum(1 for x in recipients if x["status"] == "candidate"),
+        "excluded": sum(1 for x in recipients if x["status"] == "excluded"),
+    }
+    return templates.TemplateResponse("idiq_recipients.html", {
+        "request": request, "title": "IDIQ Recipients — UEI directory",
+        "recipients": recipients, "summary": summary,
+    })
+
+
 @app.get("/company/{ticker}")
 async def company_page(request: Request, ticker: str = "VSAT", show_expired: bool = False):
     """Clean, customer-facing single-company view (v1: Viasat). Position & capacity
