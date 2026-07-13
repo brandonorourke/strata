@@ -49,10 +49,16 @@ phantom-ceiling trap below). Full design + the validated market-moving research:
 4. **Competitive-field / vehicle view** — `/coverage/vehicle/{id}`: full co-awardee set (tickers +
    privates) + draws timeline — the unique "live competition" screen. Co-awardee method validated
    (description-keyword search); feed discovered co-awardee UEIs back as watchlist candidates.
-5. **Universe expansion** — seed the Viasat competitive set (GD/RTX/LHX/NOC/LMT + privates Intelsat/
-   Astranis; tactical-mesh privates Persistent/Silvus) and more tradable names via the proven pull →
-   confirm → stale-guard flow. Cheap; interleave anytime. Resolve parent UEIs via `/api/v2/recipient/`
-   (returns P/C level); feed ALL parents, confirm by flipping `mapping_status`.
+5. **Universe expansion — systematic, USASpending-bottom-up** (see decisions.md 2026-07-12). Build
+   `apps/ingest/build_anchor_universe.py`: USASpending FPDS → roll UEI families up to companies →
+   filter by size (family contract $) + sector (NAICS/PSC or DoD/USSF/intel agency) → annotate
+   ticker + market cap (thin equity join) → materiality (contract $ ÷ mktcap) → rank → **anchors**
+   (tradeable × material, small/mid) + **context** (mega-primes, privates, foreign — labeled, never
+   dropped). Competitive field auto-discovers from anchors' vehicles. Sizing: ~700 contractors >$100M,
+   ~40–70 tradeable anchors, ~100–250 competitive-field entities (privates/foreign included). Interim
+   hand-seed still works via `pull_usaspending.py --uei … --ticker XXX` (resolve parents via
+   `/api/v2/recipient/`, feed ALL parents, confirm by flipping `mapping_status`, exclude divestiture-
+   stale). **Demo starter list for Stas is ready now** (10 confirmed + ~25 more, see session notes).
 6. **Draws monitor + alerts** — endgame: a new draw on a watched vehicle → `Alert` (reuse `Alert`/
    `AlertState`/`emit_alerts` pattern). This is the layer a trader actually pays for.
 - Later: materiality lens (capacity ÷ mktcap/revenue — separates "big number" from "moves the stock");
