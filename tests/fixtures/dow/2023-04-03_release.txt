@@ -1,0 +1,477 @@
+Contracts For Apr. 3, 2023 > U.S. Department of War > Contract | U.S. Department of War
+
+Skip to main content (Press Enter).
+
+An official website of the United States Government
+
+Here's how you know
+
+Official websites use .gov
+
+A .gov website belongs to an official
+
+government organization in the United States.
+
+Secure .gov websites use HTTPS
+
+A lock (
+
+lock
+
+) or
+
+https:// means you’ve safely connected to the .gov website.
+
+Share sensitive information only on official, secure websites.
+
+U.S. Department of War
+
+0, 'open': ddState === 1, 'opening': ddState === 2}"
+
+v-if="videos.all.length > 0">
+
+0">
+
+{{buttonLabel}}
+
+0">
+
+{{videos.all[0].title}}
+
+0" class="event-list">
+
+0 || videos.liveLater.length > 0" class="event-list-heading">Live Now
+
+{{item.title}}
+
+0 || videos.liveLater.length > 0" class="event-list">
+
+0" class="event-list-heading">Upcoming
+
+{{item.formattedStartDate}}
+
+{{item.title}}
+
+{{item.formattedStartDate}}
+
+{{item.title}}
+
+Back
+
+Home
+
+Place Holder
+
+News
+
+Press Products
+
+Today in DOW
+
+Live Events
+
+Releases
+
+Advisories
+
+Transcripts
+
+Speeches
+
+Publications
+
+Contracts
+
+Newsroom
+
+News Stories
+
+Feature Stories
+
+Stories from the Services
+
+Multimedia
+
+Multimedia
+
+Photos
+
+Photo Collections
+
+Week In Photos
+
+Videos
+
+Interactive Experiences
+
+Visual Stories
+
+Quizzes
+
+All Interactive
+
+Spotlights
+
+Topics
+
+Drone Dominance
+
+DOW Support to the Southern Border
+
+Value of Service
+
+COVID-19 Reinstatement
+
+All Spotlights
+
+About
+
+Leadership
+
+Secretary of War
+
+Deputy Secretary of War
+
+Chairman of the Joint Chiefs of Staff
+
+Vice Chairman of the Joint Chiefs of Staff
+
+Office of the Secretary of War
+
+More Leaders
+
+Components
+
+Army
+
+Marine Corps
+
+Navy
+
+Air Force
+
+Space Force
+
+Coast Guard
+
+National Guard
+
+Combatant Commands
+
+Resources
+
+Resources
+
+Executive Orders: Guidance for Federal Personnel & Readiness Policies
+
+Help Center
+
+Resources
+
+Contact
+
+UFO
+
+Search
+
+Search
+
+Search
+
+Back
+
+Home
+
+Place Holder
+
+News
+
+Press Products
+
+Today in DOW
+
+Live Events
+
+Releases
+
+Advisories
+
+Transcripts
+
+Speeches
+
+Publications
+
+Contracts
+
+Newsroom
+
+News Stories
+
+Feature Stories
+
+Stories from the Services
+
+Multimedia
+
+Multimedia
+
+Photos
+
+Photo Collections
+
+Week In Photos
+
+Videos
+
+Interactive Experiences
+
+Visual Stories
+
+Quizzes
+
+All Interactive
+
+Spotlights
+
+Topics
+
+Drone Dominance
+
+DOW Support to the Southern Border
+
+Value of Service
+
+COVID-19 Reinstatement
+
+All Spotlights
+
+About
+
+Leadership
+
+Secretary of War
+
+Deputy Secretary of War
+
+Chairman of the Joint Chiefs of Staff
+
+Vice Chairman of the Joint Chiefs of Staff
+
+Office of the Secretary of War
+
+More Leaders
+
+Components
+
+Army
+
+Marine Corps
+
+Navy
+
+Air Force
+
+Space Force
+
+Coast Guard
+
+National Guard
+
+Combatant Commands
+
+Resources
+
+Resources
+
+Executive Orders: Guidance for Federal Personnel & Readiness Policies
+
+Help Center
+
+Resources
+
+Contact
+
+UFO
+
+Legal & Administrative
+
+Privacy & Security
+
+Links Disclaimer
+
+Section 508
+
+Social Media Policy
+
+Web Policy
+
+Plain Writing Act
+
+DOW IG
+
+Reporting Civilian Casualties
+
+No FEAR Act
+
+Imagery Use
+
+FOIA
+
+Open GOV
+
+Strategic Management Plan
+
+USA.gov
+
+Office of Industrial Base Growth
+
+Site Map
+
+You have accessed part of a historical collection on war.gov. Some of the information contained within may be outdated and links may not function. Please contact the DOW Webmaster with any questions.
+
+Contracts
+
+Contracts For Apr. 3, 2023
+
+|
+
+&times;
+
+Share
+
+Copy Link
+
+Email
+
+Facebook
+
+X
+
+LinkedIn
+
+WhatsApp
+
+AIR FORCE
+
+L-3 Harris Technologies, Palm Bay, Florida, has been awarded a $584,000,000 ceiling, indefinite-delivery/indefinite-quantity contract for production, engineering services, and repair support for the ALQ-211(V) 4, (V) 8, (V) 9 Advanced Integrated Defensive Electronic Warfare Suite (AIDEWS). This contract provides for AIDEWS block cycle software development, engineering support, technical orders, system integrity and travel. Work will be performed at Clifton, New Jersey, and is expected to be completed April 2, 2028. This contract involves Foreign Military Sales to Pakistan, India, Poland, Chile, Oman, Turkey, Iraq, and Morocco. This contract was a sole-source acquisition. The first order will obligate a total of $2,072,128 and will utilize Special Defense Acquisition Funds. Air Force Life Cycle Management Center, Robins Air Force Base, Georgia, is the contracting activity (FA8523-23-D-0001).
+
+ARMY
+
+Workplace Solutions Inc.,* Jacksonville, Florida, was awarded a $39,529,524 modification (P00003) to contract W9127S-22-C-6001 to extend the delivery period for initial outfitting commodities. Work will be performed in Bethesda, Maryland, with an estimated completion date of Aug. 14, 2027. Fiscal 2023 procurement, defense-wide funds in the amount of $39,529,524 were obligated at the time of the award. U.S. Army Corps of Engineers, Little Rock, Arkansas, is the contracting activity. (Awarded March 31, 2023)
+
+General Dynamics Land Systems Inc., Sterling Heights, Michigan, was awarded an $8,743,692 modification (P00036) to contract W56HZV-22-C-0012 for Abrams systems technical support. Work will be performed in Sterling Heights, Michigan, with an estimated completion date of April 26, 2024. Fiscal 2010 Foreign Military Sales (Poland) funds; and fiscal 2022 research, development, test and evaluation, Army funds in the amount of $8,743,692 were obligated at the time of the award. U.S. Army Contracting Command, Detroit Arsenal, Michigan, is the contracting activity. (Awarded March 31, 2023)
+
+CORRECTION: A $12,377,686 contract announced on March 30, 2023, for BAE Systems Ordnance Systems Inc., Radford, Virginia (W519TC-23-F-0114), to develop the specification, selection and procurement of a new hammer mill and associated ancillary equipment for the processing of sheeted wood pulp or sheeted cotton linters was not awarded.
+
+CORRECTION: A $13,900,000 contract announced on March 30, 2023, for Northrop Grumman, McLean, Virginia (W900KK-23-C-0013), to provide mission command training and technical, exercise, simulation, and organizational support was not awarded.
+
+CORRECTION: Several contracts announced on March 30, 2023, were awarded the next day. The following contracts were actually awarded on March 31, 2023: W519TC-23-F-0173, W56HZV-20-C-0124 (modification number P00030), W56HZV-23-D-0034, W91238-23-C-0010, W9128F-23-C-0013, W58RGZ-19-F-0045 (modification number PZ0012), W56KGY-23-C-0008, W9124L-23-C-0003, W900KK-23-C-0013, W5168W-23-D-0009, and a Multiple Award Task Order Contract (W91278-23-D-0044, W91278-23-D-0045, W91278-23-D-0046, W91278-23-D-0047, W91278-23-D-0048, W91278-23-D-0049, W91278-23-D-0050, W91278-23-D-0051, W91278-23-D-0052, W91278-23-D-0053 and W91278-23-D-0054).
+
+NAVY
+
+Professional Contract Services Inc., Austin, Texas, is awarded a $34,997,838 indefinite-delivery/indefinite-quantity modification for contract N40085-20-D-0040. This modification provides for the exercise of Option Number Three for base operating support services at Naval Medical Center Portsmouth, and its outlying support sites. After award of this option, the total cumulative contract value will be $134,741,490.  Work will be performed in Portsmouth, Virginia. This option period is from March 31, 2023, to March 29, 2024. No funds will be obligated at time of award. Fiscal 2023 operation and maintenance, (Navy) funds in the amount of $32,545,920 for recurring work will be obligated on an individual task orders issued during the option period. The Naval Facilities Engineering Systems Command, Mid-Atlantic, Norfolk, Virginia, is the contracting activity.
+
+U.S. Marine Management Inc., Norfolk, Virginia (N3220523C4007), is awarded a $27,372,005 firm-fixed-price contract for the operation and maintenance of three government-owned large, medium-speed roll-on/roll-off (LMSR) vessels. The vessels under this award include USNS Seay (T-AKR 302), USNS Pililaau (T-AKR 304), and USNS Brittin (T-AKR 305). Work will be performed worldwide, with an expected completion date of Sept. 30, 2024. The maximum dollar value, including the base period and six month option, is $40,977,737. Working capital funds (Navy) in the amount of $13,739,119 are obligated for fiscal 2023. Contract funds in the amount of $27,372,005 will not expire at the end of the current fiscal year. This contract was not competitively procured. The contract was prepared under the authority of 41 U.S. Code 3304(a)(2), as implemented by Defense Federal Acquisition Regulation 6.302-1 only one responsible source and no other supplies or services will satisfy agency requirements. The Navy&rsquo;s Military Sealift Command, Norfolk, Virginia, is the contracting activity (N6238723C4007).
+
+Lockheed Martin Space, Titusville, Florida, is awarded a $20,941,008 cost-plus-fixed-fee, level-of-effort and completion type contract modification (P00002) to previously awarded contract N0003022C2023 for engineering, technical support services, operational support hardware and consumable spares for the Fleet Ballistic Missile Program. Work will be performed in Denver, Colorado (24.64%); Valley Forge, Pennsylvania (23.30%); Cape Canaveral, Florida (23.21%); Titusville, Florida (9.75%); Sunnyvale, California (7.77%); Coulport, Scotland (4.19%); Kings Bay, Georgia (1.83%); and various locations below one percent (5.31%). Work is expected to be completed by March 31, 2025. No year non-appropriated funds in the amount of $20,941,008 will be obligated on this award and no funds will expire at the end of the current fiscal year. This contract was awarded as a sole source acquisition pursuant to 10 U.S. Code 2304(c)(4). Strategic Systems Programs, Washington, D.C., is the contracting activity.
+
+Viasat Inc., Carlsbad, California, is awarded a $12,242,291 firm-fixed-price, indefinite-delivery/indefinite-quantity contract to provide software maintenance and technical support for the Viasat LinkWay and Enhanced Broadband Efficient Modem waveforms and associated hardware platforms. This contract will provide support for the Very Small Aperture Terminal Small/Medium/Large, Master Reference Terminal, Hub Modem Package, and Marine Corps Wideband Satellite Communications family of systems. Work will be performed in Carlsbad, California, and is expected to be completed by March 2028. The maximum dollar value, including the base period and four additional ordering periods, is $12,242,291. No funds will be obligated at the time of award. Funds will be obligated on individual delivery orders as they are issued. Fiscal 2023 procurement (Marine Corps) funds in the amount of $4,134,166; and fiscal 2023 operations and maintenance (Marine Corps) funds in the amount of $1,539,460 for a total of $5,673,626 will be obligated on the first delivery order immediately following contract award. This contract was a sole source acquisition pursuant to Federal Acquisition Regulation 6.302-1(a) and 10 U.S. Code &sect; 3204(a)(1). The Marine Corps Systems Command, Quantico, Virginia, is the contracting activity (M67854-23-D-2031).
+
+Vigor Marine LLC, Portland, Oregon, is awarded a $10,309,313 firm-fixed-price modification to previously awarded contract N4523A22C0552 for the procurement of 14 out of scope work specifications for repair, maintenance and modernization in support of the USS John Paul Jones 2C1 docking selected restricted availability. This is a sole source modification in accordance with 10 U.S. Code 3204(a)(1), only one responsible source and no other supplies or services will satisfy agency requirements on the basis of industrial mobilization. Work will be performed in Seattle, Washington, and is expected to be completed by April 2024. Fiscal 2023 operations and maintenance (Navy) funds in the amount of $10,309,313 will be obligated at time of award and will expire at the end of the current fiscal year. The Puget Sound Naval Shipyard and Intermediate Maintenance Facility/Northwest Regional Maintenance Center, Everett, Washington, is the contracting activity.
+
+DEFENSE COUNTERINTELLIGENCE AND SECURITY AGENCY
+
+Echelon Services LLC, Manassas, Virginia, has been awarded a modification (P00005) in the amount of $28,745,930 for Option Year One on firm-fixed-price, labor-hour contract HS0021-22-C-0004. The original award was for a total contract value of $144,898,872 for the Defense Counterintelligence and Security Agency (DCSA). The contract provides comprehensive cybersecurity support to the current enterprise and transformational cybersecurity support for the future DCSA organizational enterprise. Work will be performed in Quantico, Virginia. This option year is incrementally funded with $6,356,136 in fiscal 2023 DCSA operations and maintenance funds at the time of the option exercise. The period of performance for this option year is from June 29, 2023, to June 28, 2024. DCSA Contracting and Procurement Office, Quantico, Virginia, is the contracting activity.
+
+*Small business
+
+Subscribe to War.gov Products
+
+Choose which War.gov products you want delivered to your inbox.
+
+Subscribe
+
+Department of War
+
+Home
+
+News
+
+Spotlights
+
+About
+
+Helpful Links
+
+Live Events
+
+Today in DOW
+
+Contracts
+
+For the Media
+
+Contact
+
+Resources
+
+Resources
+
+Careers
+
+Help Center
+
+DOW / Military Websites
+
+Agency Financial Report
+
+Popular
+
+2026 National Defense Strategy
+
+America's Military – Celebrating Independence!
+
+Value of Service
+
+Drone Dominance
+
+The Department of War provides the military forces needed to deter war and ensure our nation's security.
+
+Enter Your Search Terms
+
+Privacy & Security
+
+Links Disclaimer
+
+Section 508
+
+Social Media Policy
+
+Web Policy
+
+Plain Writing Act
+
+DOW IG
+
+Reporting Civilian Casualties
+
+No FEAR Act
+
+Imagery Use
+
+FOIA
+
+Open GOV
+
+Strategic Management Plan
+
+USA.gov
+
+Office of Industrial Base Growth
+
+Site Map
+
+Subscribe
+
+Hosted by WEB.mil

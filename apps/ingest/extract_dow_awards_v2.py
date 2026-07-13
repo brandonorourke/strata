@@ -64,7 +64,12 @@ _STATE_CODES = {
 
 # ── Regexes ───────────────────────────────────────────────────────────────────
 
-# PIID in parens — handles (PIID) and (PIID, $amount)
+# PIID in parens. The anchored match grabs the first PIID reliably; its (?:,...)? tail plus the bare
+# fallback below preserve the proven handling of "(PIID, $amount)", dash-mods ("(PIID-P00008)"), and
+# "(A/B)" slash pairs (those don't match the anchor → they fall through to the mod-stripping bare
+# fallback). A parenthetical may ALSO list multiple PIIDs (vehicle + order); after the anchored match
+# we re-scan the SAME paren with the bare-PIID regex to recover the extras it discarded (2026-07-12
+# bug). Strictly additive vs the pre-fix extractor — verified drops=0 over the full corpus.
 _PIID_PAREN_RE = re.compile(r'\(([A-Z][A-Z0-9\-]{7,19})(?:,\s*[^)]+)?\)')
 # Bare dashed PIID — unambiguous without parens (for "to contract PIID" references)
 _PIID_BARE_RE  = re.compile(r'\b([A-Z]{1,2}[0-9A-Z]{3,6}-[0-9]{2}-[A-Z]-[A-Z0-9]{2,8})\b')
@@ -210,11 +215,18 @@ def _regex_groups(body: str) -> list[dict]:
         if re.fullmatch(r'[A-Z][A-Z &/\-\.]+', para):
             continue
 
-        piid_matches = [
-            (m.group(1), m.start(), m.end())
-            for m in _PIID_PAREN_RE.finditer(para)
-            if _is_piid(m.group(1))
-        ]
+        piid_matches = []
+        for m in _PIID_PAREN_RE.finditer(para):
+            first = m.group(1)
+            if not _is_piid(first):
+                continue
+            piid_matches.append((first, m.start(), m.end()))
+            # additional comma/slash-separated PIIDs in the SAME paren that the anchored match
+            # discarded (e.g. "(vehicle, order)") — the multi-PIID-parenthetical fix.
+            for em in _PIID_BARE_RE.finditer(m.group(0)):
+                extra = em.group(1)
+                if extra != first and _is_piid(extra):
+                    piid_matches.append((extra, m.start(), m.end()))
 
         if not piid_matches:
             # Try bare dashed PIIDs (modification "to contract PIID" references)

@@ -1,0 +1,465 @@
+Contracts for Feb. 20, 2026 > U.S. Department of War > Contract | U.S. Department of War
+
+Skip to main content (Press Enter).
+
+An official website of the United States Government
+
+Here's how you know
+
+Official websites use .gov
+
+A .gov website belongs to an official
+
+government organization in the United States.
+
+Secure .gov websites use HTTPS
+
+A lock (
+
+lock
+
+) or
+
+https:// means you’ve safely connected to the .gov website.
+
+Share sensitive information only on official, secure websites.
+
+U.S. Department of War
+
+0, 'open': ddState === 1, 'opening': ddState === 2}"
+
+v-if="videos.all.length > 0">
+
+0">
+
+{{buttonLabel}}
+
+0">
+
+{{videos.all[0].title}}
+
+0" class="event-list">
+
+0 || videos.liveLater.length > 0" class="event-list-heading">Live Now
+
+{{item.title}}
+
+0 || videos.liveLater.length > 0" class="event-list">
+
+0" class="event-list-heading">Upcoming
+
+{{item.formattedStartDate}}
+
+{{item.title}}
+
+{{item.formattedStartDate}}
+
+{{item.title}}
+
+Back
+
+Home
+
+Place Holder
+
+News
+
+Press Products
+
+Today in DOW
+
+Live Events
+
+Releases
+
+Advisories
+
+Transcripts
+
+Speeches
+
+Publications
+
+Contracts
+
+Newsroom
+
+News Stories
+
+Feature Stories
+
+Stories from the Services
+
+Multimedia
+
+Multimedia
+
+Photos
+
+Photo Collections
+
+Week In Photos
+
+Videos
+
+Interactive Experiences
+
+Visual Stories
+
+Quizzes
+
+All Interactive
+
+Spotlights
+
+Topics
+
+Drone Dominance
+
+DOW Support to the Southern Border
+
+Value of Service
+
+COVID-19 Reinstatement
+
+All Spotlights
+
+About
+
+Leadership
+
+Secretary of War
+
+Deputy Secretary of War
+
+Chairman of the Joint Chiefs of Staff
+
+Vice Chairman of the Joint Chiefs of Staff
+
+Office of the Secretary of War
+
+More Leaders
+
+Components
+
+Army
+
+Marine Corps
+
+Navy
+
+Air Force
+
+Space Force
+
+Coast Guard
+
+National Guard
+
+Combatant Commands
+
+Resources
+
+Resources
+
+Executive Orders: Guidance for Federal Personnel & Readiness Policies
+
+Help Center
+
+Resources
+
+Contact
+
+UFO
+
+Search
+
+Search
+
+Search
+
+Back
+
+Home
+
+Place Holder
+
+News
+
+Press Products
+
+Today in DOW
+
+Live Events
+
+Releases
+
+Advisories
+
+Transcripts
+
+Speeches
+
+Publications
+
+Contracts
+
+Newsroom
+
+News Stories
+
+Feature Stories
+
+Stories from the Services
+
+Multimedia
+
+Multimedia
+
+Photos
+
+Photo Collections
+
+Week In Photos
+
+Videos
+
+Interactive Experiences
+
+Visual Stories
+
+Quizzes
+
+All Interactive
+
+Spotlights
+
+Topics
+
+Drone Dominance
+
+DOW Support to the Southern Border
+
+Value of Service
+
+COVID-19 Reinstatement
+
+All Spotlights
+
+About
+
+Leadership
+
+Secretary of War
+
+Deputy Secretary of War
+
+Chairman of the Joint Chiefs of Staff
+
+Vice Chairman of the Joint Chiefs of Staff
+
+Office of the Secretary of War
+
+More Leaders
+
+Components
+
+Army
+
+Marine Corps
+
+Navy
+
+Air Force
+
+Space Force
+
+Coast Guard
+
+National Guard
+
+Combatant Commands
+
+Resources
+
+Resources
+
+Executive Orders: Guidance for Federal Personnel & Readiness Policies
+
+Help Center
+
+Resources
+
+Contact
+
+UFO
+
+Legal & Administrative
+
+Privacy & Security
+
+Links Disclaimer
+
+Section 508
+
+Social Media Policy
+
+Web Policy
+
+Plain Writing Act
+
+DOW IG
+
+Reporting Civilian Casualties
+
+No FEAR Act
+
+Imagery Use
+
+FOIA
+
+Open GOV
+
+Strategic Management Plan
+
+USA.gov
+
+Small Business Act
+
+Site Map
+
+Contracts
+
+Contracts for Feb. 20, 2026
+
+|
+
+&times;
+
+Share
+
+Copy Link
+
+Email
+
+Facebook
+
+X
+
+LinkedIn
+
+WhatsApp
+
+ARMY
+
+Exyte US Inc., Albany, New York, was awarded a firm-fixed-price contract for CH-53K aircraft bed down and construction. The amount of this action is $96,248,142. Bids were solicited via the internet with four received. Work will be performed in Israel, with an estimated completion date of March 23, 2029. Fiscal 2026 Foreign Military Sales (Israel) funds in the amount of $96,248,142 were obligated at the time of the award. U.S. Army Corps of Engineers, Middle East District, is the contracting activity (W912ER-26-C-A013).
+
+PAF Electrical Inc., Gilbert, Arizona, was awarded a firm-fixed-price contract for transformers and ancillary components. The amount of this action is $56,977,894. Bids were solicited via the internet with three received. Work will be performed in Fort Peck, Montana, and Pierre, South Dakota, with an estimated completion date of July 6, 2032. Fiscal 2026 civil construction funds in the amount of $56,977,893 were obligated at the time of the award. Army Contracting Command, Adelphi, Maryland, is the contracting activity (W9128F-26-C-A013).
+
+Lockheed Martin Corp., Grand Prairie, Texas, was awarded a $43,508,345 modification (P00018) to contract W31P4Q-22-D-0021 for Phased Array Tracking Radar to Intercept on Target (PATRIOT) Advanced Capability-3 product assurance and launcher recapitalization. The modification brings the total cumulative face value of the contract to $223,000,977. Work locations and funding will be determined with each order, with an estimated completion date of Feb. 22, 2027. Army Contracting Command, Redstone Arsenal, Alabama, is the contracting activity.
+
+NAVY
+
+Lockheed Martin Rotary and Mission Systems, Manassas, Virginia, is being awarded a $78,429,802 cost-plus-incentive-fee and cost only contract for engineering labor, program management, engineering other direct costs, travel, and material in support of development, qualification, certification, and integration initiatives required to maintain fielded AN/SQQ-89A(V)15 Surface Ship Undersea Warfare Combat System baselines and perform integration and certification of future baselines. This contract combines purchases for the Navy (82%); and the governments of Japan (13%); and Australia (5%), under the Foreign Military Sales program. This contract includes options which, if exercised, would bring the cumulative value of this contract to $479,933,956. Work will be performed in Manassas, Virginia (73%); Fairfax, Virginia (12%); Uniontown, Pennsylvania (8%); Reston, Virginia (6%); and San Diego, California (1%), and is expected to be completed by February 2027. If all options are exercised, work will continue through February 2031. Fiscal 2023 shipbuilding and conversion (Navy) funds in the amount of $4,098,645 (55%); fiscal 2024 shipbuilding and conversion (Navy) funds in the amount of $2,486,759 (33%); fiscal 2025 shipbuilding and conversion (Navy) funds in the amount of $516,538 (7%); fiscal 2026 research, development, test, and evaluation (Navy) funds in the amount of $250,000 (3%); and fiscal 2019 shipbuilding and conversion (Navy) funds in the amount of $115,993 (2%), will be obligated at the time of award and will not at expire the end of the current fiscal year. This contract was not competitively procured in accordance with 10 U.S. Code 3204(a)(1), only one responsible source and no other supplies or services will satisfy agency requirements. Naval Sea Systems Command, Washington, D.C., is the contracting activity (N00024-26-C-5203).
+
+Oshkosh Defense LLC, Oshkosh, Wisconsin, is awarded a $16,858,705 hybrid firm-fixed-price, cost-plus-fixed-fee, modification to the delivery order for the procurement of Remotely Operated Ground Unit for Expeditionary Fires carriers for use in the Navy and Marine Expeditionary Ship Interdiction System. Work will be performed in Oshkosh, Wisconsin (60%); Gaithersburg, Maryland (20%); Alexandria, Virginia (10%); and Pittsburgh, Pennsylvania (10%). Work is expected to be completed in December 2026. Fiscal 2026 procurement (Marine Corps) funds in the amount of $12,270,247 will be obligated at the time of the modification and will not expire at the end of the current fiscal year. Fiscal 2026 research, development, test and evaluation (Marine Corps) funds in the amount of $4,588,459 will be obligated at the time of the modification and will not expire at the end of the current fiscal year. This action is a negotiated modification to the delivery order in accordance with 10 U.S. Code 3403(c). Marine Corps Systems Command, Quantico, Virginia, is the contracting activity (M67854-22-F-1005-P00008).
+
+Detyens Shipyards Inc.,* North Charleston, South Carolina, is awarded a $15,145,663 firm-fixed-price contract (N3220526C0008) for the 76-calendar day shipyard availability for the mid-term availability of Military Sealift Command's fleet replenishment oiler vessel USNS Patuxent (T-AO 201). This contract includes a base work package and two unexercised options for additional work and time which, if exercised, would increase the cumulative value of this contract to $15,227,744. Work will be performed in North Charleston, South Carolina, beginning Jume 8, 2026, and is expected to be completed by Aug. 22, 2026. Fiscal 2026 operations and maintenance (Navy) funds in the amount of $15,145,663 are obligated and will expire at the end of the fiscal year. This contract was competitively procured with proposals solicited via the Government wide Point of Entry website and four offers were received. The U.S. Navy 's Military Sealift Command, headquartered in Norfolk, Virginia, is the contracting activity.
+
+AIR FORCE
+
+Northrop Grumman Systems Corporation, Colorado Springs, Colorado, has been awarded $76,655,632 contract modification (P00009) to previously awarded (FA8820-24-C-B001) for Deep Space Advanced Radar Capability Site 2. This modification provides for long-lead hardware items and vendor design support for the DARC Site 2 radar, including transmitters, antennas, and receivers. The modification brings the total cumulative value of the contract to $279,441,415 from $202,785,783. Work will be performed at Colorado Springs, Colorado and is expected to be completed by Feb. 4, 2030. No funds are being obligated at the time of award. The Space Systems Command Directorate of Contracting, Peterson Space Force Base, Colorado is the contracting activity.
+
+Sigmatech, Inc., Colorado Springs, Colardo has been awarded a $10,139,300 firm fixed-price contract for technical support. This contract provides for systems engineering and technical assistance support for Office of the Assistant Secretary for Space Acquisition and Integration. Work will be performed at the National Capital Region and is expected to be completed by Aug. 23, 2026.  This contract was a sole source acquisition. Fiscal 2026 operations and maintenance funds in the amount of $6,100,337 are being obligated at the time of award. The Air Force District of Washington, Joint Base Andrews, Maryland is the contracting agency (FA7014-26-C0013).
+
+*Small Business
+
+Subscribe to War.gov Products
+
+Choose which War.gov products you want delivered to your inbox.
+
+Subscribe
+
+Department of War
+
+Home
+
+News
+
+Spotlights
+
+About
+
+Helpful Links
+
+Live Events
+
+Today in DOW
+
+Contracts
+
+For the Media
+
+Contact
+
+Resources
+
+Resources
+
+Careers
+
+Help Center
+
+DOW / Military Websites
+
+Agency Financial Report
+
+Popular
+
+2026 National Defense Strategy
+
+America's Military – Celebrating Independence!
+
+Value of Service
+
+Drone Dominance
+
+The Department of War provides the military forces needed to deter war and ensure our nation's security.
+
+Enter Your Search Terms
+
+Privacy & Security
+
+Links Disclaimer
+
+Section 508
+
+Social Media Policy
+
+Web Policy
+
+Plain Writing Act
+
+DOW IG
+
+Reporting Civilian Casualties
+
+No FEAR Act
+
+Imagery Use
+
+FOIA
+
+Open GOV
+
+Strategic Management Plan
+
+USA.gov
+
+Small Business Act
+
+Site Map
+
+Subscribe
+
+Hosted by WEB.mil

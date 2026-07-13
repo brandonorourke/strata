@@ -1,0 +1,473 @@
+Contracts for June 3, 2026 > U.S. Department of War > Contract | U.S. Department of War
+
+Skip to main content (Press Enter).
+
+An official website of the United States Government
+
+Here's how you know
+
+Official websites use .gov
+
+A .gov website belongs to an official
+
+government organization in the United States.
+
+Secure .gov websites use HTTPS
+
+A lock (
+
+lock
+
+) or
+
+https:// means you’ve safely connected to the .gov website.
+
+Share sensitive information only on official, secure websites.
+
+U.S. Department of War
+
+0, 'open': ddState === 1, 'opening': ddState === 2}"
+
+v-if="videos.all.length > 0">
+
+0">
+
+{{buttonLabel}}
+
+0">
+
+{{videos.all[0].title}}
+
+0" class="event-list">
+
+0 || videos.liveLater.length > 0" class="event-list-heading">Live Now
+
+{{item.title}}
+
+0 || videos.liveLater.length > 0" class="event-list">
+
+0" class="event-list-heading">Upcoming
+
+{{item.formattedStartDate}}
+
+{{item.title}}
+
+{{item.formattedStartDate}}
+
+{{item.title}}
+
+Back
+
+Home
+
+Place Holder
+
+News
+
+Press Products
+
+Today in DOW
+
+Live Events
+
+Releases
+
+Advisories
+
+Transcripts
+
+Speeches
+
+Publications
+
+Contracts
+
+Newsroom
+
+News Stories
+
+Feature Stories
+
+Stories from the Services
+
+Multimedia
+
+Multimedia
+
+Photos
+
+Photo Collections
+
+Week In Photos
+
+Videos
+
+Interactive Experiences
+
+Visual Stories
+
+Quizzes
+
+All Interactive
+
+Spotlights
+
+Topics
+
+Drone Dominance
+
+DOW Support to the Southern Border
+
+Value of Service
+
+COVID-19 Reinstatement
+
+All Spotlights
+
+About
+
+Leadership
+
+Secretary of War
+
+Deputy Secretary of War
+
+Chairman of the Joint Chiefs of Staff
+
+Vice Chairman of the Joint Chiefs of Staff
+
+Office of the Secretary of War
+
+More Leaders
+
+Components
+
+Army
+
+Marine Corps
+
+Navy
+
+Air Force
+
+Space Force
+
+Coast Guard
+
+National Guard
+
+Combatant Commands
+
+Resources
+
+Resources
+
+Executive Orders: Guidance for Federal Personnel & Readiness Policies
+
+Help Center
+
+Resources
+
+Contact
+
+UFO
+
+Search
+
+Search
+
+Search
+
+Back
+
+Home
+
+Place Holder
+
+News
+
+Press Products
+
+Today in DOW
+
+Live Events
+
+Releases
+
+Advisories
+
+Transcripts
+
+Speeches
+
+Publications
+
+Contracts
+
+Newsroom
+
+News Stories
+
+Feature Stories
+
+Stories from the Services
+
+Multimedia
+
+Multimedia
+
+Photos
+
+Photo Collections
+
+Week In Photos
+
+Videos
+
+Interactive Experiences
+
+Visual Stories
+
+Quizzes
+
+All Interactive
+
+Spotlights
+
+Topics
+
+Drone Dominance
+
+DOW Support to the Southern Border
+
+Value of Service
+
+COVID-19 Reinstatement
+
+All Spotlights
+
+About
+
+Leadership
+
+Secretary of War
+
+Deputy Secretary of War
+
+Chairman of the Joint Chiefs of Staff
+
+Vice Chairman of the Joint Chiefs of Staff
+
+Office of the Secretary of War
+
+More Leaders
+
+Components
+
+Army
+
+Marine Corps
+
+Navy
+
+Air Force
+
+Space Force
+
+Coast Guard
+
+National Guard
+
+Combatant Commands
+
+Resources
+
+Resources
+
+Executive Orders: Guidance for Federal Personnel & Readiness Policies
+
+Help Center
+
+Resources
+
+Contact
+
+UFO
+
+Legal & Administrative
+
+Privacy & Security
+
+Links Disclaimer
+
+Section 508
+
+Social Media Policy
+
+Web Policy
+
+Plain Writing Act
+
+DOW IG
+
+Reporting Civilian Casualties
+
+No FEAR Act
+
+Imagery Use
+
+FOIA
+
+Open GOV
+
+Strategic Management Plan
+
+USA.gov
+
+Small Business Act
+
+Site Map
+
+Contracts
+
+Contracts for June 3, 2026
+
+|
+
+&times;
+
+Share
+
+Copy Link
+
+Email
+
+Facebook
+
+X
+
+LinkedIn
+
+WhatsApp
+
+NAVY
+
+BlueForge Alliance, Bryan, Texas, was awarded a $400,000,000 firm-fixed-price modification to a previously awarded contract (N00024-24-C-2135) to support planning, resourcing, coordinating, and uplifting the Submarine Industrial Base. Work will be performed in Bryan, Texas, and is expected to be completed by September 2027. Non-appropriated funds in the amount of $200,000,000 (50%); fiscal 2026 shipbuilding and conversion (Navy) funds in the amount of $144,963,691 (36%); and fiscal 2025 shipbuilding and conversion (Navy) funding in the amount of $50,000,000 (13%), will be obligated at time of award and will not expire at the end of the current fiscal year. Naval Sea Systems Command, Washington, D.C., is the contracting activity.
+
+Air Center Helicopters Inc.* Burleson, Texas, was awarded an $82,842,593 firm-fixed-price contract (N3220526C1236) to provide Vertical Replenishment (VERTREP) services. The Detachment will be forward deployed worldwide for extensive periods at sea. It is anticipated that the detachment will be primarily assigned to Combat Logistics Force ships of the T-AKE class and used to meet Seventh and Fifth Fleet requirements. The contract contains a one-year base period, four one-year option periods, and an option to extend services for up to six months in accordance with Federal Acquisition Regulation 52.217-8. This contract will be funded incrementally in accordance with Defense Federal Acquisition Regulation Supplement 252.232-7007 using Navy appropriated funds that do not expire. Contract performance will commence on July 25, 2026, and will conclude on Jan. 24, 2032, if all options are exercised. The procurement was solicited via the Government Point of Entry website, and one proposal was received. Military Sealift Command, Norfolk, Virginia, is the contracting activity.
+
+Detyens Shipyard Inc.,* North Charleston, South Carolina, is awarded a $13,425,560 firm-fixed-price contract (N3220526C0007) for the 90-calendar day shipyard availability for the post-shakedown availability of Military Sealift Command's expeditionary fast transport vessel USNS Point Loma (T-EPF 15). This contract includes a base work package and two unexercised options for additional work and time which, if exercised, would increase the cumulative value of this contract to $13,458,685. Work will be performed in North Charleston, South Carolina, beginning Aug. 3, 2026, and is expected to be completed by Oct. 31, 2026. Fiscal 2026 operations and maintenance (Navy) funds in the amount of $13,425,560.00 are obligated and will expire at the end of the fiscal year. This contract was competitively procured with proposals solicited via the Government wide Point of Entry website and two offers were received. Military Sealift Command, Norfolk, Virginia, is the contracting activity.
+
+ARMY
+
+AeroVironment Inc., Simi Valley, California, was awarded a $117,306,232 firm-fixed-price contract for procurement and delivery of 82 AeroVironment P550 unmanned aircraft systems to provide organic reconnaissance, surveillance, and target acquisition capability for battalion commanders and their organizations. Bids were solicited online, with 10 received. Work will be performed at locations to be determined, with an estimated completion date of July 23, 2026. Fiscal year and fund type will be determined with each order. Army Contracting Command, Redstone Arsenal, Alabama, is the contracting activity (W58RGZ-26-G-0005, W58RGZ-26-F-0334).
+
+Griffon Aerospace Inc.,* Madison, Alabama, was awarded a $67,940,895 firm-fixed-price contract for procurement of Outlaw Gen 3 UAS. Bids were solicited online, with one received. Work will be performed at locations to be determined, with an estimated completion date of March 30, 2027. Fiscal year and fund type will be determined with each order. Army Contracting Command, Redstone Arsenal, Alabama, is the contracting activity (W58RGZ-26-G-0062, W58RGZ-26-F-0326).
+
+Redwire Defense LLC, San Luis Obispo, California, was awarded a $15,857,020 firm-fixed-price contract for procurement of eight Stalker Block 35 systems to provide organic reconnaissance, surveillance, and target acquisition capabilities for maneuver commanders. Bids were solicited online, with 10 received. Work will be performed at locations to be determined, with an estimated completion date of Aug. 30, 2026. Fiscal year and fund type will be determined with each order. Army Contracting Command, Redstone Arsenal, Alabama, is the contracting activity (W58RGZ-26-G-0006, W58RGZ-26-F-0333).
+
+C2RL Engineering Inc.,* Alcoa, Tennessee, was awarded a $10,000,000 firm-fixed-price contract for architect and engineering services for the Tennessee Air and Army National Guard East Region. Bids were solicited online, with five received. Work locations and funding will be determined with each order, with an estimated completion date of June 2, 2031. U.S. Property and Fiscal Office for Tennessee, Purchasing and Contracting, is the contracting activity (W912L7-26-D-A003).
+
+MES-Garver JV LLC,* Tampa, Florida, was awarded a $10,000,000 firm-fixed-price contract for architect and engineering services for the Tennessee Air and Army National Guard Middle Region. Bids were solicited online, with five received. Work locations and funding will be determined with each order, with an estimated completion date of June 2, 2031. U.S. Property and Fiscal Office for Tennessee, Purchasing and Contracting, is the contracting activity (W912L7-26-D-A001).
+
+The Johnson-McAdams Firm P.A.,* Greenwood, Mississippi, was awarded a $10,000,000 firm-fixed-price contract for architect and engineering services for the Tennessee Air and Army National Guard West Region. Bids were solicited online, with five received. Work locations and funding will be determined with each order, with an estimated completion date of June 2, 2031. United States Property and Fiscal Office for Tennessee, Purchasing and Contracting, is the contracting activity (W912L7-26-D-A002).
+
+AIR FORCE
+
+Raytheon Co., Segundo, California, has been awarded a $15,868,698 modification (FA8119-26-F-0022-P00001) to a previously awarded contract (FA8119-23-D-0002) for the procurement of versatile diagnostics automatic validation support services for B-2 contract maintenance depot program. The modification brings the total cumulative face value of the contract to $15,964,204. Work will be performed in El Segundo, California, and is expected to be completed by June 3, 2029. This award is the result of the original task order. Fiscal 2026 repair of control indicator, test, teardown, and evaluation of control funds in the amount of $95,506 are being obligated at time of award. Tinker Air Force Sustainment Center, Tinker Air Force Base, Oklahoma, is the contracting activity.
+
+DEFENSE LOGISTICS AGENCY
+
+UPDATE: Hardigg Industries LLC, South Deerfield, Massachusetts (SPE2DH-26-D-0011, $11,000,000), has been added as an awardee to the multiple award contract for medical equipment and accessories for the Defense Logistics Agency Electronic Catalog, issued against solicitation SPE2DH-21-R-0002 and awarded Feb. 10, 2022. The contracting activity is Defense Logistics Agency Troop Support, Philadelphia, Pennsylvania.
+
+*Small business
+
+Subscribe to War.gov Products
+
+Choose which War.gov products you want delivered to your inbox.
+
+Subscribe
+
+Department of War
+
+Home
+
+News
+
+Spotlights
+
+About
+
+Helpful Links
+
+Live Events
+
+Today in DOW
+
+Contracts
+
+For the Media
+
+Contact
+
+Resources
+
+Resources
+
+Careers
+
+Help Center
+
+DOW / Military Websites
+
+Agency Financial Report
+
+Popular
+
+2026 National Defense Strategy
+
+America's Military – Celebrating Independence!
+
+Value of Service
+
+Drone Dominance
+
+The Department of War provides the military forces needed to deter war and ensure our nation's security.
+
+Enter Your Search Terms
+
+Privacy & Security
+
+Links Disclaimer
+
+Section 508
+
+Social Media Policy
+
+Web Policy
+
+Plain Writing Act
+
+DOW IG
+
+Reporting Civilian Casualties
+
+No FEAR Act
+
+Imagery Use
+
+FOIA
+
+Open GOV
+
+Strategic Management Plan
+
+USA.gov
+
+Small Business Act
+
+Site Map
+
+Subscribe
+
+Hosted by WEB.mil
