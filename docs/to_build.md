@@ -178,6 +178,26 @@ candidates for a drop migration.
 - After full run: SAM/USASpending enrichment keyed on PIID, then `dow_canonical_entities`
 - **DoW UI next**: award-level table — columns: Date, Awardee (raw), PIID, Amount, Purpose, Activity, Confidence
 
+**PLANNED — move semantic extraction to per-paragraph LLM calls (2026-07-14).** Replace the
+single full-body LLM call per release with **one small LLM call per regex-parsed award**, fed
+that award's own paragraph. Regex stays authoritative for the award *list* (unchanged); only
+the semantic fields (purpose, program_hint, action_type, company_name) move to per-paragraph.
+- **Why:** asking the LLM to enumerate a whole release doesn't scale to long ones. Evidence
+  from the corpus (all `finish_reason=stop`, modest output tokens — **not** truncation): release
+  155 has 86 regex awards but the LLM enumerated only **48** (it satisfices and stops listing);
+  release 59's LLM enumerated all 22 but **13 didn't PIID-match** the regex awards, so their
+  purpose never merged. Net ~4.5% of awards (124/2,779) lack purpose, heavily concentrated in
+  the long releases.
+- **Two failure modes, both fixed by per-paragraph:** (a) under-enumeration on long lists →
+  gone, since one paragraph = one call; (b) fragile PIID-match merge → gone, since purpose
+  attaches **by paragraph position**, not by matching PIIDs. Release 155 goes 42-missing → 0.
+- Keep the independent full-body enumeration ONLY as an optional QA gap-flag (`llm_only` PIID
+  detection), or drop it.
+- Cost: N small calls per release instead of 1 big — more calls, each tiny (gpt-4o-mini).
+- **Prereq:** the per-paragraph call must be fed the FULL paragraph, so the `source_excerpt`
+  `para[:600]` cap must be lifted first (else we'd feed the LLM truncated text — the exact bug
+  the full-body path avoided). See the source-excerpt cap note above.
+
 ## DoW multi-award IDIQ ceiling mis-attribution (BUG — investor-facing, priority)
 
 The extractor stamps a **shared program ceiling** onto each awardee individually, massively

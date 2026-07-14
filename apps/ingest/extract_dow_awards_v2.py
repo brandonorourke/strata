@@ -272,7 +272,7 @@ def _regex_groups(body: str) -> list[dict]:
             "amounts": amounts,
             "completion_date_raw": completion_date_raw,
             "contracting_activity": contracting_activity,
-            "source_excerpt": html.unescape(para[:600]),
+            "source_excerpt": html.unescape(para),   # full paragraph (was [:600]; feeds the per-paragraph LLM + hover QA)
         })
 
     return groups
