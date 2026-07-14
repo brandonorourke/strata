@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict aqcYyzAcZgQbgjPzNgaZzmz2vDBQpTun07y44caLgWYBtquZ0OZaA08YXHDDGV6
+\restrict IWZnUxlOvTz7Rt2Qf79fMs3SfqrHGNL33WCZZW7E6cmPAyXOSDbKI64s2D0m13A
 
 -- Dumped from database version 17.10 (Postgres.app)
 -- Dumped by pg_dump version 17.10 (Postgres.app)
@@ -156,6 +156,40 @@ CREATE SEQUENCE public.canonical_entities_id_seq
 --
 
 ALTER SEQUENCE public.canonical_entities_id_seq OWNED BY public.canonical_entities.id;
+
+
+--
+-- Name: companies; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.companies (
+    id integer NOT NULL,
+    slug text NOT NULL,
+    name text NOT NULL,
+    ticker text,
+    aliases text[] DEFAULT '{}'::text[] NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: companies_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.companies_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: companies_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.companies_id_seq OWNED BY public.companies.id;
 
 
 --
@@ -579,7 +613,16 @@ CREATE TABLE public.idiq_recipients (
     ticker text,
     mapping_status text DEFAULT 'candidate'::text NOT NULL,
     seed_uei text,
-    first_seen_at timestamp with time zone DEFAULT now() NOT NULL
+    first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+    company_id integer,
+    ownership_verdict text,
+    ownership_confidence text,
+    ownership_as_of text,
+    ownership_source text,
+    ownership_rationale text,
+    ownership_raw text,
+    ownership_model text,
+    ownership_checked_at timestamp with time zone
 );
 
 
@@ -787,6 +830,13 @@ ALTER TABLE ONLY public.canonical_entities ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
+-- Name: companies id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.companies ALTER COLUMN id SET DEFAULT nextval('public.companies_id_seq'::regclass);
+
+
+--
 -- Name: dow_awards id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -914,6 +964,30 @@ ALTER TABLE ONLY public.article_domains
 
 ALTER TABLE ONLY public.canonical_entities
     ADD CONSTRAINT canonical_entities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: companies companies_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.companies
+    ADD CONSTRAINT companies_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: companies companies_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.companies
+    ADD CONSTRAINT companies_slug_key UNIQUE (slug);
+
+
+--
+-- Name: companies companies_ticker_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.companies
+    ADD CONSTRAINT companies_ticker_key UNIQUE (ticker);
 
 
 --
@@ -1128,6 +1202,13 @@ CREATE INDEX idx_alerts_created_at ON public.alerts USING btree (created_at DESC
 --
 
 CREATE INDEX idx_alerts_unsent ON public.alerts USING btree (created_at) WHERE (sent_at IS NULL);
+
+
+--
+-- Name: idx_idiq_recipients_company_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_idiq_recipients_company_id ON public.idiq_recipients USING btree (company_id);
 
 
 --
@@ -1432,8 +1513,16 @@ ALTER TABLE ONLY public.icfs_filing_action_history
 
 
 --
+-- Name: idiq_recipients idiq_recipients_company_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.idiq_recipients
+    ADD CONSTRAINT idiq_recipients_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.companies(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict aqcYyzAcZgQbgjPzNgaZzmz2vDBQpTun07y44caLgWYBtquZ0OZaA08YXHDDGV6
+\unrestrict IWZnUxlOvTz7Rt2Qf79fMs3SfqrHGNL33WCZZW7E6cmPAyXOSDbKI64s2D0m13A
 

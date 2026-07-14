@@ -20,7 +20,7 @@ from sqlalchemy import (
     and_,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, ARRAY
 from sqlalchemy.orm import relationship, foreign
 
 from .db import Base
@@ -452,6 +452,22 @@ class UsaspendingAward(Base):
     pricing_type       = Column(Text, nullable=True)     # [LTCD] type_of_contract_pricing_description
 
 
+class Company(Base):
+    """Canonical company directory. `name` is the official exchange-registered name
+    (NASDAQ/NYSE); `ticker` is NULL for privates; `aliases` holds extra match strings for
+    subsidiary resolution when the official name + ticker aren't enough. Supersedes the
+    DISPLAY_NAMES map in the API and the company-directory role of canonical_entities
+    (news table, to be retired). See migration 0048."""
+    __tablename__ = "companies"
+
+    id         = Column(Integer, primary_key=True)
+    slug       = Column(Text, nullable=False, unique=True)
+    name       = Column(Text, nullable=False)
+    ticker     = Column(Text, nullable=True, unique=True)            # NULL = private (no ticker)
+    aliases    = Column(ARRAY(Text), nullable=False, server_default="{}")
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
 class IdiqRecipient(Base):
     """UEI → ticker directory (normalized recipient mapping). Seeded from the resolved
     UEI family; the ticker mapping is human-curated via mapping_status (candidate →
@@ -465,3 +481,13 @@ class IdiqRecipient(Base):
     mapping_status = Column(Text, nullable=False, server_default="candidate")  # candidate|confirmed|excluded
     seed_uei       = Column(Text, nullable=True)
     first_seen_at  = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    company_id     = Column(Integer, ForeignKey("companies.id"), nullable=True)
+    # ownership-verify result (scan_stale_parents.py); see migration 0049
+    ownership_verdict    = Column(Text, nullable=True)   # owned|divested|independent|jv|unknown
+    ownership_confidence = Column(Text, nullable=True)
+    ownership_as_of      = Column(Text, nullable=True)
+    ownership_source     = Column(Text, nullable=True)
+    ownership_rationale  = Column(Text, nullable=True)
+    ownership_raw        = Column(Text, nullable=True)   # full LLM output
+    ownership_model      = Column(Text, nullable=True)
+    ownership_checked_at = Column(DateTime(timezone=True), nullable=True)

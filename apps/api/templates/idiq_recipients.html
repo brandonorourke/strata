@@ -18,6 +18,21 @@
   .badge.candidate { background: #fffbeb; color: #b45309; }
   .badge.excluded  { background: #f3f4f6; color: #9ca3af; }
   tr.ex td { opacity: 0.6; }
+  .epo-no  { color: #b91c1c; font-weight: 700; }
+  .epo-yes { color: #9ca3af; }
+  tr.flag td { background: #fef2f2; }
+  .chips { display: inline-flex; gap: 6px; margin-left: 14px; }
+  .chip { padding: 3px 11px; border-radius: 999px; font-size: 12px; cursor: pointer;
+          border: 1px solid var(--border, #d1d5db); color: var(--muted); user-select: none; }
+  .chip.on { background: var(--accent-dark, #1f2937); color: #fff; border-color: transparent; }
+  .ov { display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 10.5px;
+        font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; cursor: help; }
+  .ov-owned       { background: #ecfdf5; color: #047857; }
+  .ov-divested    { background: #fef2f2; color: #b91c1c; }
+  .ov-independent { background: #fef2f2; color: #b91c1c; }
+  .ov-jv          { background: #eff6ff; color: #1d4ed8; }
+  .ov-unknown     { background: #f3f4f6; color: #6b7280; }
+  .ov-src { font-size: 10.5px; margin-left: 5px; color: var(--accent, #2563eb); }
 </style>
 
 <h2>UEI directory</h2>
@@ -33,10 +48,18 @@
   <div class="ur-kpi"><div class="v" style="color:#047857">{{ summary.confirmed }}</div><div class="l">Confirmed</div></div>
   <div class="ur-kpi"><div class="v" style="color:#b45309">{{ summary.candidate }}</div><div class="l">Candidate</div></div>
   <div class="ur-kpi"><div class="v" style="color:#9ca3af">{{ summary.excluded }}</div><div class="l">Excluded</div></div>
+  <div class="ur-kpi"><div class="v" style="color:#b91c1c">{{ summary.review }}</div><div class="l">Review</div></div>
 </div>
 
 <div class="ur-tools">
-  <input type="text" id="ur-filter" placeholder="Filter ticker / name / UEI / status…" autocomplete="off">
+  <input type="text" id="ur-filter" placeholder="Filter ticker / name / UEI…" autocomplete="off">
+  <span class="chips" id="ur-chips">
+    <span class="chip on" data-f="all">All</span>
+    <span class="chip" data-f="candidate">Candidate</span>
+    <span class="chip" data-f="confirmed">Confirmed</span>
+    <span class="chip" data-f="excluded">Excluded</span>
+    <span class="chip" data-f="review">Review (non-eponymous · active · ≥$50M)</span>
+  </span>
 </div>
 
 <table class="ur">
@@ -44,6 +67,7 @@
     <tr>
       <th>Ticker</th>
       <th>Recipient name</th>
+      <th>Review</th>
       <th>UEI</th>
       <th>Status</th>
       <th class="num">Awards</th>
@@ -53,10 +77,19 @@
   </thead>
   <tbody>
     {% for r in recipients %}
-    <tr class="{{ 'ex' if r.status == 'excluded' }}"
-        data-key="{{ (r.ticker or '')|lower }} {{ (r.name or '')|lower }} {{ r.uei|lower }} {{ r.status }}">
+    <tr class="{{ 'ex' if r.status == 'excluded' }} {{ 'flag' if r.review }}"
+        data-status="{{ r.status }}" data-review="{{ '1' if r.review else '0' }}"
+        data-key="{{ (r.ticker or '')|lower }} {{ (r.name or '')|lower }} {{ r.uei|lower }}">
       <td><span class="ur-tk">{{ r.ticker or '—' }}</span></td>
       <td>{{ r.name or '—' }}</td>
+      <td>
+        {% if r.ov_verdict %}
+          <span class="ov ov-{{ r.ov_verdict }}" title="{{ r.ov_rationale }}{% if r.ov_as_of and r.ov_as_of != 'unknown' %} ({{ r.ov_as_of }}){% endif %}">{{ r.ov_verdict }}</span>
+          {% if r.ov_source and r.ov_source.startswith('http') %}<a href="{{ r.ov_source }}" target="_blank" rel="noopener" class="ov-src">src</a>{% endif %}
+        {% elif r.review %}<span class="epo-no">⚠ verify</span>
+          <span class="muted">${{ '%.0f' | format(r.recent_obl / 1e6) }}M</span>
+        {% else %}<span class="muted">—</span>{% endif %}
+      </td>
       <td class="mono muted">{{ r.uei }}</td>
       <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
       <td class="num">{{ r.awards or '—' }}</td>
@@ -69,11 +102,27 @@
 
 <script>
   const f = document.getElementById('ur-filter');
-  f.addEventListener('input', () => {
+  const chips = document.getElementById('ur-chips');
+  let mode = 'all';
+
+  function apply() {
     const q = f.value.trim().toLowerCase();
     document.querySelectorAll('table.ur tbody tr').forEach(tr => {
-      tr.style.display = tr.dataset.key.includes(q) ? '' : 'none';
+      const okText = tr.dataset.key.includes(q);
+      const okMode = mode === 'all' ? true
+                   : mode === 'review' ? tr.dataset.review === '1'
+                   : tr.dataset.status === mode;
+      tr.style.display = (okText && okMode) ? '' : 'none';
     });
+  }
+
+  f.addEventListener('input', apply);
+  chips.addEventListener('click', e => {
+    const c = e.target.closest('.chip');
+    if (!c) return;
+    mode = c.dataset.f;
+    chips.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c));
+    apply();
   });
 </script>
 {% endblock %}

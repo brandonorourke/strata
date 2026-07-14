@@ -3,6 +3,7 @@
 from datetime import datetime, timedelta, timezone, date
 from zoneinfo import ZoneInfo
 import json
+import re
 
 ET = ZoneInfo("America/New_York")   # SAM/DoW timestamps display in true Eastern (EDT/EST)
 
@@ -33,6 +34,7 @@ from strata_core.models import (
     SamAwardNotice,
     UsaspendingAward,
     IdiqRecipient,
+    Company,
 )
 
 app = FastAPI(title="Strata UI")
@@ -82,6 +84,49 @@ DISPLAY_NAMES = {
     "LUNR": "Intuitive Machines", "RKLB": "Rocket Lab", "RDW": "Redwire",
     "BKSY": "BlackSky",
 }
+
+# Eponymy check for the UEI directory: does a recipient's name share a distinctive brand
+# token with its parent company? Generic industry words are dropped so unrelated firms don't
+# false-match (a random "Advanced Defense Systems" must NOT read as eponymous with Kratos).
+# Non-eponymous + high awards = divestiture-stale stray to review before confirming.
+_EPO_STOP = {
+    "inc", "llc", "corp", "corporation", "company", "holding", "holdings", "systems",
+    "system", "technologies", "technology", "group", "international", "intl", "the", "and",
+    "ltd", "llp", "services", "solutions", "communications", "telecommunications", "defense",
+    "security", "federal", "national", "laboratories", "labs", "operations", "division", "pbc",
+}
+
+
+def _epo_tokens(s):
+    return {t for t in re.findall(r"[a-z0-9]+", (s or "").lower())
+            if t not in _EPO_STOP and len(t) > 2}
+
+
+def _epo_roots(name, aliases, ticker):
+    """Distinctive brand tokens for a company: official name + aliases, plus the ticker
+    itself if it's 4+ chars (acronym brands like SAIC/CACI; short tickers are too collision-prone)."""
+    roots = _epo_tokens(name)
+    for a in (aliases or []):
+        roots |= _epo_tokens(a)
+    if ticker and len(ticker) >= 4:
+        roots.add(ticker.lower())
+    return roots
+
+
+def _is_eponymous(recipient_name, roots):
+    if not roots:
+        return None
+    return bool(roots & _epo_tokens(recipient_name))
+
+
+# A recipient is flagged for a manual ownership check ("review") only when it's a
+# non-eponymous candidate that is BOTH recently active and material — the divestiture-
+# stale profile (e.g. ASRC Federal, sold by SAIC in 2023 but still doing ~$466M/yr, which
+# USASpending still hangs off SAIC). Dormant or tiny strays (a single old award, like the
+# 2011 Idaho Treatment Group JV) don't distort the footprint, so they are NOT flagged.
+_REVIEW_RECENT_SINCE = date(2023, 1, 1)
+_REVIEW_MATERIAL_USD = 50_000_000
+
 
 _EVENT_TYPE_WEIGHTS = {
     "bankruptcy": 6,
@@ -574,22 +619,42 @@ async def idiq_recipients_admin(request: Request):
         recs = list((await session.execute(
             select(IdiqRecipient).order_by(IdiqRecipient.ticker, IdiqRecipient.mapping_status)
         )).scalars().all())
-        counts = {}
+        counts, recent_obl = {}, {}
         ueis = [r.uei for r in recs]
         if ueis:
-            for u, c in (await session.execute(
-                select(UsaspendingAward.recipient_uei, func.count())
+            for u, c, ro in (await session.execute(
+                select(UsaspendingAward.recipient_uei, func.count(),
+                       func.sum(UsaspendingAward.total_obligation).filter(
+                           UsaspendingAward.base_obligation_date >= _REVIEW_RECENT_SINCE))
                 .where(UsaspendingAward.recipient_uei.in_(ueis))
                 .group_by(UsaspendingAward.recipient_uei)
             )).all():
                 counts[u] = c
+                recent_obl[u] = float(ro or 0)
+        # brand roots per ticker, from the canonical companies table (0048)
+        roots_by_ticker = {
+            c.ticker: _epo_roots(c.name, c.aliases, c.ticker)
+            for c in (await session.execute(select(Company))).scalars().all()
+            if c.ticker
+        }
 
-    recipients = [{
-        "ticker": r.ticker, "uei": r.uei, "name": r.recipient_name,
-        "status": r.mapping_status, "seed_uei": r.seed_uei,
-        "first_seen": r.first_seen_at, "awards": counts.get(r.uei, 0),
-    } for r in recs]
-    recipients.sort(key=lambda x: (x["ticker"] or "~", x["status"], -x["awards"]))
+    recipients = []
+    for r in recs:
+        epo = _is_eponymous(r.recipient_name, roots_by_ticker.get(r.ticker, set()))
+        ro = recent_obl.get(r.uei, 0.0)
+        # the ownership-check flag: non-eponymous + candidate + recently active + material
+        review = (r.mapping_status == "candidate" and epo is False
+                  and ro >= _REVIEW_MATERIAL_USD)
+        recipients.append({
+            "ticker": r.ticker, "uei": r.uei, "name": r.recipient_name,
+            "status": r.mapping_status, "seed_uei": r.seed_uei,
+            "first_seen": r.first_seen_at, "awards": counts.get(r.uei, 0),
+            "eponymous": epo, "recent_obl": ro, "review": review,
+            "ov_verdict": r.ownership_verdict, "ov_source": r.ownership_source,
+            "ov_rationale": r.ownership_rationale, "ov_as_of": r.ownership_as_of,
+        })
+    # flagged rows first, then by ticker/status/awards
+    recipients.sort(key=lambda x: (not x["review"], x["ticker"] or "~", x["status"], -x["awards"]))
 
     summary = {
         "total": len(recipients),
@@ -597,6 +662,8 @@ async def idiq_recipients_admin(request: Request):
         "confirmed": sum(1 for x in recipients if x["status"] == "confirmed"),
         "candidate": sum(1 for x in recipients if x["status"] == "candidate"),
         "excluded": sum(1 for x in recipients if x["status"] == "excluded"),
+        # the review queue: non-eponymous candidates that are recently active + material
+        "review": sum(1 for x in recipients if x["review"]),
     }
     return templates.TemplateResponse("idiq_recipients.html", {
         "request": request, "title": "IDIQ Recipients — UEI directory",
