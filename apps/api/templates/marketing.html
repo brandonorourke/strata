@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strata — Primary-source intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1c1f;
+    --ink-soft: #4a4e54;
+    --ink-faint: #6b7178;   /* darkened from #8b9097 → ~4.6:1 on paper (WCAG AA) */
+    --paper: #f6f4ef;
+    --paper-raised: #fbfaf7;
+    --rule: #d9d5cc;
+    --rule-soft: #e6e2d9;
+    --flag: #b5502a;        /* muted amber-clay: the "surfaced signal" mark */
+    --flag-soft: #f0e2d8;
+    --seal: #2d4a6b;        /* deep institutional blue, used sparingly */
+    --stamp-bg: #edeae2;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 32px; }
+
+  .mono {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------- top bar ---------- */
+  header {
+    border-bottom: 1px solid var(--rule);
+    position: sticky; top: 0;
+    background: rgba(246,244,239,0.86);
+    backdrop-filter: blur(8px);
+    z-index: 50;
+  }
+  .bar {
+    display: flex; align-items: baseline; justify-content: space-between;
+    height: 62px;
+  }
+  .brand {
+    font-family: 'Newsreader', serif;
+    font-size: 22px; font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .brand span { color: var(--flag); }
+  .bar-meta {
+    font-size: 11px; color: var(--ink-faint);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 88px 0 64px; }
+  .eyebrow {
+    font-size: 11.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--flag); font-weight: 500; margin-bottom: 28px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .eyebrow::before {
+    content: ""; width: 26px; height: 1px; background: var(--flag); display: inline-block;
+  }
+  h1 {
+    font-family: 'Newsreader', serif;
+    font-weight: 400;
+    font-size: clamp(38px, 6vw, 66px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    max-width: 15ch;
+    margin-bottom: 26px;
+  }
+  h1 em { font-style: italic; color: var(--flag); }
+  .lede {
+    font-size: 19px; color: var(--ink-soft); max-width: 52ch;
+    line-height: 1.55;
+  }
+  .hero-cta { margin-top: 40px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+
+  .btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 14.5px; font-weight: 500;
+    background: var(--ink); color: var(--paper);
+    border: 1px solid var(--ink);
+    padding: 13px 24px; cursor: pointer;
+    text-decoration: none; display: inline-block;
+    transition: background .18s ease, color .18s ease;
+  }
+  .btn:hover { background: var(--flag); border-color: var(--flag); }
+  .btn-ghost {
+    background: transparent; color: var(--ink);
+    border: 1px solid var(--rule);
+  }
+  .btn-ghost:hover { background: transparent; color: var(--flag); border-color: var(--flag); }
+
+  /* ---------- the cited-record signature ---------- */
+  .record {
+    margin-top: 72px;
+    border: 1px solid var(--rule);
+    background: var(--paper-raised);
+    box-shadow: 0 1px 0 var(--rule-soft), 0 18px 40px -28px rgba(26,28,31,0.28);
+  }
+  .record-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 20px; border-bottom: 1px solid var(--rule-soft);
+    background: var(--stamp-bg);
+  }
+  .record-head .mono { font-size: 11px; color: var(--ink-faint); letter-spacing: 0.06em; }
+  .live {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft);
+  }
+  .live .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--flag);
+    box-shadow: 0 0 0 0 rgba(181,80,42,0.5);
+    animation: pulse 2.6s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(181,80,42,0.45); }
+    70% { box-shadow: 0 0 0 7px rgba(181,80,42,0); }
+    100% { box-shadow: 0 0 0 0 rgba(181,80,42,0); }
+  }
+  .row {
+    display: grid; grid-template-columns: 130px 1fr auto;
+    gap: 20px; align-items: baseline;
+    padding: 16px 20px; border-bottom: 1px solid var(--rule-soft);
+    opacity: 0; transform: translateY(6px);
+    animation: rise .6s ease forwards;
+  }
+  .row:last-child { border-bottom: none; }
+  .row:nth-child(2) { animation-delay: .15s; }
+  .row:nth-child(3) { animation-delay: .35s; }
+  .row:nth-child(4) { animation-delay: .55s; }
+  @keyframes rise { to { opacity: 1; transform: translateY(0); } }
+  .row .src { font-size: 11px; color: var(--flag); letter-spacing: 0.05em; }
+  .row .desc { font-size: 14.5px; color: var(--ink); line-height: 1.4; }
+  .row .desc b { font-weight: 600; }
+  .row .cite { font-size: 10.5px; color: var(--ink-faint); text-align: right; white-space: nowrap; }
+  .record-foot {
+    padding: 11px 20px; font-size: 11px; color: var(--ink-faint);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .row { opacity: 1; transform: none; animation: none; }
+    .live .dot { animation: none; }
+  }
+
+  /* ---------- throughline band ---------- */
+  .band {
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    margin-top: 96px; padding: 46px 0;
+    background: var(--paper-raised);
+  }
+  .band-inner { display: grid; grid-template-columns: 1fr 1.4fr; gap: 48px; align-items: center; }
+  .band h2 {
+    font-family: 'Newsreader', serif; font-weight: 400;
+    font-size: 30px; line-height: 1.12; letter-spacing: -0.015em;
+  }
+  .band p { color: var(--ink-soft); font-size: 16px; line-height: 1.6; }
+  .band p + p { margin-top: 14px; }
+
+  /* ---------- verticals ---------- */
+  .verticals { padding: 96px 0 40px; }
+  .section-label {
+    font-size: 11.5px; letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-faint); font-weight: 500; margin-bottom: 8px;
+  }
+  .section-title {
+    font-family: 'Newsreader', serif; font-weight: 400;
+    font-size: 28px; letter-spacing: -0.015em; margin-bottom: 44px;
+    max-width: 30ch;
+  }
+  .vgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1px solid var(--rule); }
+  .vcard {
+    padding: 34px 26px 40px; border-bottom: 1px solid var(--rule);
+    border-right: 1px solid var(--rule);
+    position: relative;
+  }
+  .vcard:first-child { border-left: 1px solid var(--rule); }
+  .vcard .idx { font-size: 11px; color: var(--flag); letter-spacing: 0.08em; }
+  .vcard h3 {
+    font-family: 'Newsreader', serif; font-weight: 500;
+    font-size: 21px; margin: 16px 0 12px; letter-spacing: -0.01em; line-height: 1.15;
+  }
+  .vcard p { font-size: 14px; color: var(--ink-soft); line-height: 1.58; }
+  .vcard .who {
+    margin-top: 20px; font-size: 11px; color: var(--ink-faint);
+    letter-spacing: 0.04em; text-transform: uppercase;
+    padding-top: 14px; border-top: 1px solid var(--rule-soft);
+  }
+
+  /* ---------- sources ---------- */
+  .sources { padding: 72px 0 40px; }
+  .srow {
+    display: grid; grid-template-columns: 210px 1fr; gap: 40px;
+    padding: 28px 0; border-top: 1px solid var(--rule-soft); align-items: start;
+  }
+  .srow:last-child { border-bottom: 1px solid var(--rule-soft); }
+  .srow .stag { font-family: 'Newsreader', serif; font-size: 20px; letter-spacing: -0.01em; }
+  .srow .stag .mono { display: block; font-size: 11px; color: var(--ink-faint); margin-top: 6px; letter-spacing: 0.04em; }
+  .srow .sbody { font-size: 15px; color: var(--ink-soft); line-height: 1.62; max-width: 60ch; }
+  .srow .sbody .flag { color: var(--flag); font-weight: 500; }
+
+  /* ---------- cta ---------- */
+  .cta-sec { margin-top: 90px; border-top: 1px solid var(--rule); padding: 76px 0 90px; }
+  .cta-inner { max-width: 620px; }
+  .cta-inner h2 {
+    font-family: 'Newsreader', serif; font-weight: 400;
+    font-size: clamp(30px, 4.5vw, 44px); letter-spacing: -0.02em; line-height: 1.08;
+    margin-bottom: 20px;
+  }
+  .cta-inner p { color: var(--ink-soft); font-size: 16.5px; margin-bottom: 32px; max-width: 48ch; }
+  form { display: flex; gap: 10px; max-width: 460px; flex-wrap: wrap; }
+  input[type=email] {
+    flex: 1; min-width: 220px;
+    font-family: 'Inter', sans-serif; font-size: 15px;
+    padding: 13px 16px; border: 1px solid var(--rule);
+    background: var(--paper-raised); color: var(--ink);
+  }
+  input[type=email]:focus { outline: 2px solid var(--flag); outline-offset: 1px; border-color: var(--flag); }
+  input[type=email]::placeholder { color: var(--ink-faint); }
+  .form-note { font-size: 12px; color: var(--ink-faint); margin-top: 14px; }
+
+  /* ---------- footer ---------- */
+  footer {
+    border-top: 1px solid var(--rule); padding: 30px 0 44px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  }
+  footer .mono { font-size: 11px; color: var(--ink-faint); letter-spacing: 0.05em; }
+  footer .brand { font-size: 16px; }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 860px) {
+    .band-inner { grid-template-columns: 1fr; gap: 24px; }
+    .vgrid { grid-template-columns: 1fr; }
+    .vcard { border-left: 1px solid var(--rule); }
+    .srow { grid-template-columns: 1fr; gap: 10px; }
+    .row { grid-template-columns: 90px 1fr; }
+    .row .cite { display: none; }
+  }
+  @media (max-width: 560px) {
+    .wrap { padding: 0 20px; }
+    .hero { padding: 60px 0 44px; }
+    .record { margin-top: 48px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap bar">
+    <div class="brand">Strata<span>.</span></div>
+    <div class="bar-meta mono">Primary-source intelligence</div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="eyebrow">Continuous monitoring of your positions</div>
+    <h1>Signal from the records other tools <em>don't reach</em>.</h1>
+    <p class="lede">Strata watches government and legal filings — regulatory dockets, UCC liens, court records — and resolves them into the few cited events that actually move the companies you hold.</p>
+    <div class="hero-cta">
+      <a href="#access" class="btn">Request access</a>
+      <a href="#what" class="btn btn-ghost">What we monitor</a>
+    </div>
+
+    <!-- SIGNATURE: the cited record, surfacing live -->
+    <div class="record" aria-label="Example of surfaced records">
+      <div class="record-head">
+        <span class="mono">WATCHLIST · 14 ENTITIES</span>
+        <span class="live"><span class="dot"></span>Monitoring</span>
+      </div>
+      <div class="row">
+        <span class="src mono">FCC · ICFS</span>
+        <span class="desc"><b>Viasat, Inc.</b> — 60-day STA extension filed on an active earth-station authorization</span>
+        <span class="cite mono">SES-STA-20260707 · Jul 7</span>
+      </div>
+      <div class="row">
+        <span class="src mono">UCC · LIEN</span>
+        <span class="desc">All-asset lien granted to a lender across <b>four related subsidiaries</b> on one day — filed as a transmitting utility</span>
+        <span class="cite mono">DE · Nov 25</span>
+      </div>
+      <div class="row">
+        <span class="src mono">PACER · DOCKET</span>
+        <span class="desc">Mortgage recorded <b>56 days</b> after the credit agreement — outside the 30-day perfection safe harbor</span>
+        <span class="cite mono">§547(c)(3)(B)</span>
+      </div>
+      <div class="record-foot">
+        <span class="mono">Resolved to entity · cited to source</span>
+        <span class="mono">3 of 1,204 filings surfaced</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- THROUGHLINE BAND -->
+<section class="band">
+  <div class="wrap band-inner">
+    <h2>The record moves before the market does.</h2>
+    <div>
+      <p>A lien is perfected. A proceeding opens. A supplier is named on a call. These events are public — but they sit in fragmented systems, under inconsistent names, in the tail nobody watches by hand.</p>
+      <p>Strata monitors those systems continuously, resolves every filing to the right entity across sources, and surfaces the handful that matter on the positions you already hold — with the record cited, not summarized away.</p>
+    </div>
+  </div>
+</section>
+
+<!-- VERTICALS -->
+<main class="wrap">
+  <section class="verticals" id="who">
+    <div class="section-label">Built for</div>
+    <div class="section-title">One monitoring engine, tuned to how you hold risk.</div>
+    <div class="vgrid">
+      <div class="vcard">
+        <span class="idx mono">01</span>
+        <h3>Event-driven equity</h3>
+        <p>A regulatory ruling, a contract award, or another company's disclosure moves one of your names. Strata surfaces it — resolved to the ticker — before the second-order impact prices in.</p>
+        <div class="who">Fundamental &amp; event-driven equity</div>
+      </div>
+      <div class="vcard">
+        <span class="idx mono">02</span>
+        <h3>Distressed &amp; special situations</h3>
+        <p>Lien perfection, docket activity, and capital-structure signals assembled across fragmented records — the legal-depth layer most credit desks piece together by hand, if at all.</p>
+        <div class="who">Distressed &amp; special-situations credit</div>
+      </div>
+      <div class="vcard">
+        <span class="idx mono">03</span>
+        <h3>Private credit &amp; ABF</h3>
+        <p>Your counterparties are private — but they still leave a public trail. Monitor liens, litigation, and subsidiary moves across your platforms and originators, ahead of the loan tape.</p>
+        <div class="who">Private credit &amp; asset-based finance</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOURCES -->
+  <section class="sources" id="what">
+    <div class="section-label">What we monitor</div>
+    <div class="section-title">Primary sources, not aggregators.</div>
+
+    <div class="srow">
+      <div class="stag">FCC filings<span class="mono">ICFS · SATELLITE &amp; SPECTRUM</span></div>
+      <div class="sbody">Regulatory filings, actions, pleadings, and public notices from the FCC's satellite and spectrum licensing systems — <span class="flag">where regulatory signal often surfaces well before it reaches the market</span>, and a system most platforms don't track at all.</div>
+    </div>
+
+    <div class="srow">
+      <div class="stag">UCC &amp; liens<span class="mono">SECRETARY OF STATE · MULTI-JURISDICTION</span></div>
+      <div class="sbody">Lien filings and perfection status resolved across jurisdictions and subsidiaries — <span class="flag">a direct read on collateral and distress</span>, ahead of public disclosure.</div>
+    </div>
+
+    <div class="srow">
+      <div class="stag">Court dockets<span class="mono">PACER · BANKRUPTCY &amp; LITIGATION</span></div>
+      <div class="sbody">Litigation and bankruptcy docket activity tied back to the same entities — <span class="flag">assembled alongside everything else</span> we track on them, so a filing lands in context, not in isolation.</div>
+    </div>
+
+    <div class="srow">
+      <div class="stag">Federal contracts<span class="mono">DOW · SAM · USASPENDING</span></div>
+      <div class="sbody">Contract awards, task-order draws, and competitive vehicles resolved to the parent entity — <span class="flag">the award beneath the headline number</span>, linked to the company you actually trade.</div>
+    </div>
+  </section>
+</main>
+
+<!-- CTA -->
+<section class="cta-sec" id="access">
+  <div class="wrap cta-inner">
+    <h2>See what surfaces on your book.</h2>
+    <p>Send the names you hold. We'll show you the records already moving on them.</p>
+    <form action="/signup" method="POST">
+      <input type="email" name="email" placeholder="you@firm.com" required aria-label="Work email">
+      <button type="submit" class="btn">Request access</button>
+    </form>
+    <div class="form-note mono">Or reach us directly — hello@strataterminal.com</div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <div class="brand">Strata<span style="color:var(--flag)">.</span></div>
+  <div class="mono">Proofgraph Inc · Primary-source intelligence for credit &amp; equity</div>
+</footer>
+
+</body>
+</html>

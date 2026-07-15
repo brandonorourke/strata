@@ -174,6 +174,13 @@ async def landing(request: Request):
     return templates.TemplateResponse("landing.html", {"request": request})
 
 
+@app.get("/marketing")
+async def marketing(request: Request):
+    # preview of the paper-light marketing page (designer template) — standalone,
+    # fonts via Google CDN for now. Candidate to become the public apex landing.
+    return templates.TemplateResponse("marketing.html", {"request": request})
+
+
 @app.get("/admin")
 async def admin_home(request: Request):
     return templates.TemplateResponse(
