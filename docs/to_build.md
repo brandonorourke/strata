@@ -241,6 +241,26 @@ ceiling." This is a credibility fix for the screen investors actually see.
     - Proof of concept for: AI synthesis of “friction over time” to answer: “What does this all mean?”
 - The first sellable MVP for the first wedge (litigation finance or special situations or private credit portfolio monitoring)
 
+## Marketing site — deploy to strataterminal.com (apex, no www)
+
+Serve the marketing site on the **bare apex** `strataterminal.com` (no `www`) from **Railway**.
+Blocker: Railway custom domains are **CNAME-only** (it hands you a CNAME + a TXT, no apex IP —
+apex static IPs are an open Railway feature request), and **GoDaddy's DNS can't flatten a CNAME
+at the apex**. So the apex can't point at Railway on GoDaddy DNS.
+
+**Fix — move DNS (not the domain) to Cloudflare (free); keep GoDaddy as registrar:**
+1. Railway → service Settings → Networking → add custom domain `strataterminal.com`; note the
+   **CNAME target** + **TXT** it shows (TXT is required — missing it = 404).
+2. Cloudflare → add `strataterminal.com` (auto-imports current records) → get 2 nameservers.
+3. GoDaddy → change nameservers `ns43/44.domaincontrol.com` → the Cloudflare pair. (Registrar and
+   renewal stay at GoDaddy; only DNS delegation moves.)
+4. Cloudflare DNS → **CNAME at apex** → Railway's target (Cloudflare flattens it) + the **TXT** from
+   Railway. **DNS-only (grey cloud)** so Railway terminates TLS. No `www` record.
+- ⚠️ Before flipping nameservers, confirm any **email/MX records** carry into Cloudflare (moving NS
+  moves all DNS) or mail breaks.
+- Current apex is a GoDaddy Website Builder placeholder (A → 13.248.243.5 / 76.223.105.230) — replaced
+  by the above.
+
 ## Pending cleanup
 
 - **Run `apps/ingest/backfill_dow_raw_html.py` then delete it.** After the HTML backfill completes and all rows have `raw_html`, delete the script — `ingest_dow_contracts.py` stores `raw_html` on all new records going forward.
