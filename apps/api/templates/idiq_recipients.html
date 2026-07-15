@@ -9,17 +9,17 @@
   .ur-tools input { flex: 0 0 260px; }
   table.ur td { vertical-align: middle; }
   .ur-tk { font-weight: 700; color: var(--accent-dark); }
-  .mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
+  .mono { font-family: 'IBM Plex Mono', "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
   .muted { color: var(--muted); }
   .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 10.5px;
            font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
   .badge.confirmed { background: #ecfdf5; color: #047857; }
   .badge.candidate { background: #fffbeb; color: #b45309; }
-  .badge.excluded  { background: #f3f4f6; color: #9ca3af; }
+  .badge.excluded  { background: #efece4; color: var(--muted); }
   tr.ex td { opacity: 0.6; }
   .epo-no  { color: #b91c1c; font-weight: 700; }
-  .epo-yes { color: #9ca3af; }
+  .epo-yes { color: var(--muted); }
   tr.flag td { background: #fef2f2; }
   .chips { display: inline-flex; gap: 6px; margin-left: 14px; }
   .chip { padding: 3px 11px; border-radius: 999px; font-size: 12px; cursor: pointer;
@@ -30,9 +30,9 @@
   .ov-owned       { background: #ecfdf5; color: #047857; }
   .ov-divested    { background: #fef2f2; color: #b91c1c; }
   .ov-independent { background: #fef2f2; color: #b91c1c; }
-  .ov-jv          { background: #eff6ff; color: #1d4ed8; }
-  .ov-unknown     { background: #f3f4f6; color: #6b7280; }
-  .ov-src { font-size: 10.5px; margin-left: 5px; color: var(--accent, #2563eb); }
+  .ov-jv          { background: #e7edf3; color: var(--seal); }
+  .ov-unknown     { background: #efece4; color: var(--muted); }
+  .ov-src { font-size: 10.5px; margin-left: 5px; color: var(--accent); }
 </style>
 
 <h2>UEI directory</h2>
@@ -47,7 +47,7 @@
   <div class="ur-kpi"><div class="v">{{ summary.tickers }}</div><div class="l">Tickers</div></div>
   <div class="ur-kpi"><div class="v" style="color:#047857">{{ summary.confirmed }}</div><div class="l">Confirmed</div></div>
   <div class="ur-kpi"><div class="v" style="color:#b45309">{{ summary.candidate }}</div><div class="l">Candidate</div></div>
-  <div class="ur-kpi"><div class="v" style="color:#9ca3af">{{ summary.excluded }}</div><div class="l">Excluded</div></div>
+  <div class="ur-kpi"><div class="v" style="color:var(--muted)">{{ summary.excluded }}</div><div class="l">Excluded</div></div>
   <div class="ur-kpi"><div class="v" style="color:#b91c1c">{{ summary.review }}</div><div class="l">Review</div></div>
 </div>
 

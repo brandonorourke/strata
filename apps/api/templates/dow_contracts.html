@@ -32,7 +32,7 @@
                 {{ a.name_raw or "(unnamed)" }}
                 {%- set loc = [a.city_raw, a.state_raw] | select | list %}
                 {%- if loc %} <span style="font-weight: 400; color: var(--muted);">({{ loc | join(", ") }})</span>{% endif %}
-                {%- if a.piid %} <span style="font-weight: 400; color: var(--muted); font-family: monospace; font-size: 11px;">{{ a.piid }}</span>{% endif %}
+                {%- if a.piid %} <span style="font-weight: 400; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;">{{ a.piid }}</span>{% endif %}
                 {%- if a.pairing_confidence == "regex_only" %} <span style="color: #c0392b;" title="parent-ref / needs review">⚑</span>{% endif %}
                 {%- if not loop.last %} · {% endif %}
               {% endfor %}
