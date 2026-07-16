@@ -1,8 +1,10 @@
 # Authentication & accounts — data model (v1)
 
-Status: **login + sessions BUILT** (migration 0051 applied; `POST /login`/`/logout`, the
-session cookie + gating middleware, and the staff `/admin` gate are live). **Invite flow +
-default-deny on customer pages: not yet built** (see end).
+Status: **login + sessions + default-deny BUILT** (migration 0051 applied; `POST /login`/
+`/logout`, session cookie, and the gating middleware are live). The whole product requires
+login; public allowlist = `/`, `/login`, `/signup`, `/logout`, `/marketing`, `/health`,
+`/favicon.ico`, `/invite/*`. `/admin` additionally requires staff. Post-login → `/coverage`;
+root redirects by auth state (retires `landing.html`). **Invite flow: not yet built** (see end).
 Supersedes the placeholder `/login` (`POST /login` returns a "not available yet" note) and
 builds on `access_requests` (migration 0050), which becomes the top of the funnel.
 

@@ -46,23 +46,32 @@ app = FastAPI(title="Strata UI")
 templates = Jinja2Templates(directory="apps/api/templates")
 
 
+# Default-deny: every path requires a logged-in user EXCEPT these. `/` decides its own
+# redirect by auth state; /health is Railway's check; /invite/* is the future accept page.
+_PUBLIC_EXACT = {"/", "/login", "/signup", "/logout", "/marketing", "/health", "/favicon.ico"}
+_PUBLIC_PREFIXES = ("/invite",)
+
+
+def _is_public(path: str) -> bool:
+    return path in _PUBLIC_EXACT or path.startswith(_PUBLIC_PREFIXES)
+
+
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     # Resolve the session cookie once per request — only when a cookie is present, so
-    # anonymous traffic (marketing, healthcheck) takes no DB hit. Stash on request.state
-    # so routes and base.html can read the current user.
+    # anonymous traffic takes no DB hit. Stash on request.state for routes/base.html.
     request.state.user = None
     if request.cookies.get(auth_web.COOKIE_NAME):
         request.state.user = await auth_web.load_current_user(request)
 
-    # Gate the internal /admin surface behind a staff login.
-    if request.url.path.startswith("/admin"):
-        user = request.state.user
-        if user is None:
+    path = request.url.path
+    if not _is_public(path):
+        if request.state.user is None:
             return RedirectResponse(
-                f"/login?next={quote(request.url.path, safe='/')}", status_code=303
+                f"/login?next={quote(path, safe='/')}", status_code=303
             )
-        if not user.is_staff:
+        # /admin additionally requires staff
+        if path.startswith("/admin") and not request.state.user.is_staff:
             return HTMLResponse("Forbidden", status_code=403)
 
     return await call_next(request)
@@ -200,7 +209,11 @@ async def proxy_pdf(url: str):
 
 @app.get("/")
 async def landing(request: Request):
-    return templates.TemplateResponse("landing.html", {"request": request})
+    # bare domain: logged-in users go to the product, visitors to the marketing page.
+    # (retires the old landing.html)
+    if getattr(request.state, "user", None):
+        return RedirectResponse("/coverage", status_code=303)
+    return RedirectResponse("/marketing", status_code=303)
 
 
 @app.get("/marketing")
@@ -229,17 +242,18 @@ async def signup(request: Request, email: str = Form(...)):
     return RedirectResponse("/marketing?requested=1#access", status_code=303)
 
 
-def _safe_next(nxt: str, is_staff: bool) -> str:
-    # only allow local paths (block open-redirect / protocol-relative); sensible default
-    if nxt and nxt.startswith("/") and not nxt.startswith("//"):
+def _safe_next(nxt: str) -> str:
+    # honor a captured local path (block open-redirect / protocol-relative); otherwise
+    # land on the product home. "/" is treated as "no target" so we don't bounce to root.
+    if nxt and nxt != "/" and nxt.startswith("/") and not nxt.startswith("//"):
         return nxt
-    return "/admin" if is_staff else "/coverage"
+    return "/coverage"
 
 
 @app.get("/login")
 async def login_page(request: Request, next: str = "/"):
     if getattr(request.state, "user", None):
-        return RedirectResponse(_safe_next(next, request.state.user.is_staff), status_code=303)
+        return RedirectResponse(_safe_next(next), status_code=303)
     return templates.TemplateResponse("login.html", {"request": request, "next": next})
 
 
@@ -274,7 +288,7 @@ async def login_submit(
             user.password_hash = auth.hash_password(password)
         raw = await auth_web.new_session_row(db, user, request)
         user.last_login_at = datetime.now(timezone.utc)
-        dest = _safe_next(next, user.is_staff)
+        dest = _safe_next(next)
         await db.commit()
 
     resp = RedirectResponse(dest, status_code=303)
