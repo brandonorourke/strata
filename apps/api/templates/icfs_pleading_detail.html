@@ -59,7 +59,7 @@
             <td class="actions">
               <a href="{{ att.url }}" target="_blank" rel="noopener">↗</a>
               {% if att.name and att.name.lower().endswith('.pdf') %}
-              <button class="preview-btn" onclick="togglePreview(this, '{{ att.url }}')" style="font-size: 11px; padding: 3px 8px; background: var(--surface); color: var(--accent); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; font-weight: 500;">preview</button>
+              <button class="preview-btn" onclick="togglePreview(this, '{{ att.url }}')" style="font-size: 11px; padding: 3px 8px; background: var(--surface); color: var(--accent); border: 1px solid var(--border); border-radius: 2px; cursor: pointer; font-weight: 500;">preview</button>
               {% endif %}
             </td>
           </tr>
@@ -78,7 +78,7 @@
     <h3>Extracted Events</h3>
     <div style="display: flex; flex-direction: column; gap: 12px;">
       {% for ev in pleading.extracted_events %}
-        <div style="border: 1px solid var(--border); border-radius: 6px; padding: 14px; background: var(--surface);">
+        <div style="border: 1px solid var(--border); border-radius: 2px; padding: 14px; background: var(--surface);">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
             <strong style="font-size: 0.9em;">{{ ev.extracted_name }}</strong>
             {% if ev.event_date %}
@@ -93,7 +93,7 @@
           {% endif %}
           {% if ev.signal_tier == "signal" %}
             <div style="margin-top: 6px;">
-              <span style="font-size: 11px; font-weight: 600; color: #b45309; background: #fef3c7; border-radius: 4px; padding: 2px 7px;">
+              <span style="font-size: 11px; font-weight: 600; color: #b45309; background: #fef3c7; border-radius: 2px; padding: 2px 7px;">
                 {{ ev.signal_reason or "signal" }}
               </span>
             </div>

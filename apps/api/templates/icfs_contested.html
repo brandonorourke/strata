@@ -9,10 +9,10 @@
       name="applicant"
       value="{{ applicant }}"
       placeholder="Filter by applicant…"
-      style="padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9em; background: var(--surface); color: var(--text); width: 260px;"
+      style="padding: 7px 12px; border: 1px solid var(--border); border-radius: 2px; font-size: 0.9em; background: var(--surface); color: var(--text); width: 260px;"
     >
     <input type="hidden" name="min_pleadings" value="{{ min_pleadings }}">
-    <button type="submit" style="padding: 7px 14px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-size: 0.9em; cursor: pointer;">Filter</button>
+    <button type="submit" style="padding: 7px 14px; background: var(--accent); color: #fff; border: none; border-radius: 2px; font-size: 0.9em; cursor: pointer;">Filter</button>
     {% if applicant %}
       <a href="/admin/icfs/contested" class="meta" style="font-size: 0.85em;">clear</a>
     {% endif %}
