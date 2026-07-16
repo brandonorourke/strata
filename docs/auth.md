@@ -31,8 +31,11 @@ builds on `access_requests` (migration 0050), which becomes the top of the funne
 - **Who invites:** in v1 **only staff** create invitations (operator-led onboarding). `org_role`
   (`owner|member`) is carried but mostly informational until firms self-invite colleagues; the
   first user of an org is `owner`.
-- **Session lifetime:** 30-day absolute `expires_at`, `last_seen_at` bumped on use (sliding
-  activity, hard cap at 30d). Tune later.
+- **Session lifetime:** **hybrid** — sliding idle window (14d) under an absolute ceiling (90d),
+  using the existing columns (no extra field). On each use set
+  `expires_at = min(now + 14d, created_at + 90d)`; a session is valid while `now < expires_at`.
+  So a daily user stays logged in up to 90 days then re-auths; an idle session dies after 14 days.
+  `last_seen_at` is bumped on use for visibility. Tune either window.
 - **Password hashing:** argon2id via `argon2-cffi` (new dependency). bcrypt/passlib is the
   fallback if argon2 install is a problem.
 - **Token storage:** session + invite tokens are `secrets.token_urlsafe(32)`; the DB stores the
@@ -79,7 +82,7 @@ access_requests *────* invitations ──1 users (invited_by)
 | user_id     | int FK NN      | → users(id), ON DELETE CASCADE                   |
 | created_at  | timestamptz NN | default now()                                    |
 | last_seen_at| timestamptz    | bumped on use                                    |
-| expires_at  | timestamptz NN | absolute expiry (created_at + 30d)               |
+| expires_at  | timestamptz NN | sliding: `min(now + 14d, created_at + 90d)`      |
 | user_agent  | text           | best-effort context                              |
 | ip          | text           | best-effort context                              |
 
