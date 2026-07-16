@@ -217,28 +217,26 @@ async def proxy_pdf(url: str):
 
 
 @app.get("/")
-async def landing(request: Request):
-    # bare domain: logged-in users go to the product, visitors to the marketing page.
-    # (retires the old landing.html)
+async def landing(request: Request, requested: int = 0):
+    # bare domain IS the marketing page (no redirect). Logged-in users go to the product.
+    # `requested=1` (set by the POST /signup redirect) shows the thank-you state.
     if getattr(request.state, "user", None):
         return RedirectResponse("/icfs/canonicals", status_code=303)
-    return RedirectResponse("/marketing", status_code=303)
-
-
-@app.get("/marketing")
-async def marketing(request: Request, requested: int = 0):
-    # preview of the paper-light marketing page (designer template) — standalone,
-    # fonts via Google CDN for now. Candidate to become the public apex landing.
-    # `requested=1` (set by the POST /signup redirect) shows the thank-you state.
     return templates.TemplateResponse(
         "marketing.html", {"request": request, "requested": bool(requested)}
     )
 
 
+@app.get("/marketing")
+async def marketing(request: Request):
+    # canonicalize to root — marketing now lives at "/". Kept for old links/bookmarks.
+    return RedirectResponse("/", status_code=301)
+
+
 @app.post("/signup")
 async def signup(request: Request, email: str = Form(...)):
-    # Capture an access request from the marketing page, then PRG-redirect back
-    # to the thank-you state so a refresh doesn't resubmit.
+    # Capture an access request from the marketing page, then PRG-redirect back to the
+    # thank-you state (at root, so the visitor stays on the bare domain).
     email = (email or "").strip().lower()
     if email:
         async with AsyncSessionLocal() as session:
@@ -248,7 +246,7 @@ async def signup(request: Request, email: str = Form(...)):
                 user_agent=request.headers.get("user-agent"),
             ))
             await session.commit()
-    return RedirectResponse("/marketing?requested=1#access", status_code=303)
+    return RedirectResponse("/?requested=1#access", status_code=303)
 
 
 def _safe_next(nxt: str) -> str:
