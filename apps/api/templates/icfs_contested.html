@@ -48,7 +48,12 @@
               {% else %}—{% endif %}
             </td>
             <td style="text-align: right; font-weight: 600;">{{ row.pleading_count }}</td>
-            <td class="meta" style="font-size: 0.82em; max-width: 320px; white-space: normal; line-height: 1.4;">{{ row.contestants or "—" }}</td>
+            <td class="meta" style="font-size: 0.82em; max-width: 320px; white-space: normal; line-height: 1.4;">
+              {% if row.contestants %}
+                {% set names = row.contestants.split(' · ') %}
+                {{ names[:6] | join(' · ') }}{% if names | length > 6 %} <span style="white-space: nowrap; font-weight: 600;">+{{ names | length - 6 }} more</span>{% endif %}
+              {% else %}—{% endif %}
+            </td>
           </tr>
         {% endfor %}
       </tbody>
