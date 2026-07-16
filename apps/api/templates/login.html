@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Log in · Strata</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500&family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;450;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1c1f; --ink-soft: #4a4e54; --ink-faint: #6b7178;
+    --paper: #f6f4ef; --paper-raised: #fbfaf7; --rule: #d9d5cc; --flag: #b5502a;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--paper); color: var(--ink);
+    font-family: 'Inter', sans-serif; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+    min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px;
+  }
+  .card {
+    width: 100%; max-width: 400px;
+    background: var(--paper-raised); border: 1px solid var(--rule);
+    padding: 40px 36px 34px;
+    box-shadow: 0 18px 40px -28px rgba(26,28,31,0.28);
+  }
+  .brand {
+    font-family: 'Newsreader', serif; font-size: 24px; font-weight: 500;
+    letter-spacing: -0.01em; color: var(--ink); text-decoration: none;
+  }
+  .brand span { color: var(--flag); }
+  h1 { font-family: 'Newsreader', serif; font-weight: 400; font-size: 22px;
+       letter-spacing: -0.01em; margin: 18px 0 24px; }
+  label { display: block; font-size: 11.5px; font-weight: 500; text-transform: uppercase;
+          letter-spacing: 0.06em; color: var(--ink-faint); margin-bottom: 6px; }
+  input {
+    width: 100%; font-family: 'Inter', sans-serif; font-size: 15px;
+    padding: 11px 13px; border: 1px solid var(--rule);
+    background: var(--paper); color: var(--ink); margin-bottom: 18px;
+  }
+  input:focus { outline: 2px solid var(--flag); outline-offset: 1px; border-color: var(--flag); }
+  input::placeholder { color: var(--ink-faint); }
+  button {
+    width: 100%; font-family: 'Inter', sans-serif; font-size: 14.5px; font-weight: 500;
+    background: var(--ink); color: var(--paper); border: 1px solid var(--ink);
+    padding: 12px; cursor: pointer; transition: background .18s ease, border-color .18s ease;
+  }
+  button:hover { background: var(--flag); border-color: var(--flag); }
+  .msg { font-size: 13px; color: var(--flag); margin-bottom: 18px; line-height: 1.45; }
+  .alt { margin-top: 22px; font-size: 13px; color: var(--ink-faint); }
+  .alt a { color: var(--flag); text-decoration: none; }
+  .alt a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <a href="/marketing" class="brand">Strata<span>.</span></a>
+    <h1>Sign in</h1>
+    {% if message %}<div class="msg">{{ message }}</div>{% endif %}
+    <form method="post" action="/login">
+      <label for="email">Work email</label>
+      <input type="email" id="email" name="email" placeholder="you@firm.com" required autocomplete="email">
+      <label for="password">Password</label>
+      <input type="password" id="password" name="password" required autocomplete="current-password">
+      <button type="submit">Log in</button>
+    </form>
+    <div class="alt">No account yet? <a href="/marketing#access">Request access</a></div>
+  </div>
+</body>
+</html>

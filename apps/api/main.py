@@ -181,6 +181,21 @@ async def marketing(request: Request):
     return templates.TemplateResponse("marketing.html", {"request": request})
 
 
+@app.get("/login")
+async def login_page(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
+
+@app.post("/login")
+async def login_submit(request: Request):
+    # placeholder — real auth to be built next; for now just re-render with a note.
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request,
+         "message": "Sign-in isn’t available yet — request access and we’ll be in touch."},
+    )
+
+
 @app.get("/admin")
 async def admin_home(request: Request):
     return templates.TemplateResponse(

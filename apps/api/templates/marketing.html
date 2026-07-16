@@ -53,7 +53,7 @@
     z-index: 50;
   }
   .bar {
-    display: flex; align-items: baseline; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between;
     height: 62px;
   }
   .brand {
@@ -66,6 +66,12 @@
     font-size: 11px; color: var(--ink-faint);
     letter-spacing: 0.08em; text-transform: uppercase;
   }
+  .bar-login {
+    font-size: 13px; font-weight: 500; color: var(--ink); text-decoration: none;
+    padding: 6px 14px; border: 1px solid var(--rule); white-space: nowrap;
+    transition: border-color .18s ease, color .18s ease;
+  }
+  .bar-login:hover { border-color: var(--flag); color: var(--flag); }
 
   /* ---------- hero ---------- */
   .hero { padding: 88px 0 64px; }
@@ -238,8 +244,8 @@
   .form-note { font-size: 12px; color: var(--ink-faint); margin-top: 14px; }
 
   /* ---------- footer ---------- */
-  footer {
-    border-top: 1px solid var(--rule); padding: 30px 0 44px;
+  footer.wrap {
+    border-top: 1px solid var(--rule); padding: 32px 32px;
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
   }
   footer .mono { font-size: 11px; color: var(--ink-faint); letter-spacing: 0.05em; }
@@ -266,7 +272,7 @@
 <header>
   <div class="wrap bar">
     <div class="brand">Strata<span>.</span></div>
-    <div class="bar-meta mono">Primary-source intelligence</div>
+    <a href="/login" class="bar-login">Log in</a>
   </div>
 </header>
 
@@ -391,7 +397,7 @@
 
 <footer class="wrap">
   <div class="brand">Strata<span style="color:var(--flag)">.</span></div>
-  <div class="mono">Proofgraph Inc · Primary-source intelligence for credit &amp; equity</div>
+  <div class="mono">Proofgraph, Inc · Primary-source intelligence for credit &amp; equity</div>
 </footer>
 
 </body>
