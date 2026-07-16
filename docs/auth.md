@@ -38,6 +38,12 @@ builds on `access_requests` (migration 0050), which becomes the top of the funne
   `last_seen_at` is bumped on use for visibility. Tune either window.
 - **Password hashing:** argon2id via `argon2-cffi` (new dependency). bcrypt/passlib is the
   fallback if argon2 install is a problem.
+- **Password policy (NIST 800-63B style):** the user *chooses* their password at invite
+  acceptance (not generated); only the invite *token* is generated. Enforced server-side at
+  accept + reset: **min 12 / max 128 chars**, all characters allowed (spaces/unicode/symbols),
+  **no composition mandates**, **no forced rotation**. Reject a tiny blocklist now (`password`,
+  the user's own email, single-repeated-char); add a Have I Been Pwned k-anonymity breach check
+  later. Client-side shows a length hint; the server is the enforcer.
 - **Token storage:** session + invite tokens are `secrets.token_urlsafe(32)`; the DB stores the
   **sha256 hash**, the raw value lives only in the cookie / invite URL.
 - **Cookie flags:** `HttpOnly`, `SameSite=Lax`, `Secure` in prod (off on localhost http),

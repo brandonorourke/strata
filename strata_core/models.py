@@ -503,4 +503,70 @@ class AccessRequest(Base):
     source     = Column(Text, nullable=False, server_default="marketing")
     user_agent = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    # funnel state (migration 0051): new | invited | active | rejected
+    status     = Column(Text, nullable=False, server_default="new")
+    handled_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class Organization(Base):
+    """Customer firm / tenant boundary. Users belong to one org; per-firm data (watchlists)
+    will scope to org_id later. See docs/auth.md, migration 0051."""
+    __tablename__ = "organizations"
+
+    id         = Column(Integer, primary_key=True)
+    slug       = Column(Text, nullable=False, unique=True)
+    name       = Column(Text, nullable=False)
+    status     = Column(Text, nullable=False, server_default="active")   # active | suspended
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class User(Base):
+    """A person + credential. Invite-only: password_hash is NULL until the invite is accepted.
+    is_staff=True marks a Strata operator (sees /admin). Email is unique case-insensitively via
+    a functional index. See docs/auth.md, migration 0051."""
+    __tablename__ = "users"
+
+    id            = Column(Integer, primary_key=True)
+    org_id        = Column(Integer, ForeignKey("organizations.id"), nullable=False)
+    email         = Column(Text, nullable=False)                        # unique on lower(email)
+    name          = Column(Text, nullable=True)
+    password_hash = Column(Text, nullable=True)                         # NULL until invite accepted
+    org_role      = Column(Text, nullable=False, server_default="member")  # owner | member
+    is_staff      = Column(Boolean, nullable=False, server_default="false")
+    status        = Column(Text, nullable=False, server_default="active")  # active | disabled
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
+    created_at    = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+
+class Session(Base):
+    """Server-side, revocable session. id = sha256 hex of the raw session token (raw lives only
+    in the cookie). expires_at encodes both the sliding idle window and the absolute cap:
+    min(now+14d, created_at+90d), bumped on use. See docs/auth.md, migration 0051."""
+    __tablename__ = "sessions"
+
+    id           = Column(Text, primary_key=True)                       # sha256 hex of raw token
+    user_id      = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at   = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    last_seen_at = Column(DateTime(timezone=True), nullable=True)
+    expires_at   = Column(DateTime(timezone=True), nullable=False)
+    user_agent   = Column(Text, nullable=True)
+    ip           = Column(Text, nullable=True)
+
+
+class Invitation(Base):
+    """Operator-issued invite that converts a requester (or colleague) into a user.
+    token_hash = sha256 hex of the raw invite token (raw lives only in the invite URL).
+    See docs/auth.md, migration 0051."""
+    __tablename__ = "invitations"
+
+    id                = Column(Integer, primary_key=True)
+    org_id            = Column(Integer, ForeignKey("organizations.id"), nullable=False)
+    email             = Column(Text, nullable=False)
+    org_role          = Column(Text, nullable=False, server_default="member")
+    token_hash        = Column(Text, nullable=False, unique=True)
+    invited_by        = Column(Integer, ForeignKey("users.id"), nullable=True)
+    access_request_id = Column(Integer, ForeignKey("access_requests.id"), nullable=True)
+    created_at        = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    expires_at        = Column(DateTime(timezone=True), nullable=False)
+    accepted_at       = Column(DateTime(timezone=True), nullable=True)
 

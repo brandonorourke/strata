@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict osoVcy5D2yMyP6cV3A8NeCN6jaQG8Hd1dT8fpTDHYxIcNs9Nt8Fto5IC0BqW7B8
+\restrict FnLIkaz63Po7T7YeUraENVxB4Znm7FANHJV494CbC3O0nDQHOnlshAZoH5QwYH1
 
 -- Dumped from database version 17.10 (Postgres.app)
 -- Dumped by pg_dump version 17.10 (Postgres.app)
@@ -39,6 +39,41 @@ CREATE TYPE public.news_source_enum AS ENUM (
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
+
+--
+-- Name: access_requests; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.access_requests (
+    id integer NOT NULL,
+    email text NOT NULL,
+    source text DEFAULT 'marketing'::text NOT NULL,
+    user_agent text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    status text DEFAULT 'new'::text NOT NULL,
+    handled_at timestamp with time zone
+);
+
+
+--
+-- Name: access_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.access_requests_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: access_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.access_requests_id_seq OWNED BY public.access_requests.id;
+
 
 --
 -- Name: alert_state; Type: TABLE; Schema: public; Owner: -
@@ -662,6 +697,44 @@ ALTER SEQUENCE public.ingest_runs_id_seq OWNED BY public.ingest_runs.id;
 
 
 --
+-- Name: invitations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.invitations (
+    id integer NOT NULL,
+    org_id integer NOT NULL,
+    email text NOT NULL,
+    org_role text DEFAULT 'member'::text NOT NULL,
+    token_hash text NOT NULL,
+    invited_by integer,
+    access_request_id integer,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    accepted_at timestamp with time zone
+);
+
+
+--
+-- Name: invitations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.invitations_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: invitations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.invitations_id_seq OWNED BY public.invitations.id;
+
+
+--
 -- Name: news_articles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -698,6 +771,39 @@ CREATE SEQUENCE public.news_articles_id_seq
 --
 
 ALTER SEQUENCE public.news_articles_id_seq OWNED BY public.news_articles.id;
+
+
+--
+-- Name: organizations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.organizations (
+    id integer NOT NULL,
+    slug text NOT NULL,
+    name text NOT NULL,
+    status text DEFAULT 'active'::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: organizations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.organizations_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: organizations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.organizations_id_seq OWNED BY public.organizations.id;
 
 
 --
@@ -741,6 +847,21 @@ CREATE SEQUENCE public.sam_award_notices_id_seq
 --
 
 ALTER SEQUENCE public.sam_award_notices_id_seq OWNED BY public.sam_award_notices.id;
+
+
+--
+-- Name: sessions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sessions (
+    id text NOT NULL,
+    user_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_seen_at timestamp with time zone,
+    expires_at timestamp with time zone NOT NULL,
+    user_agent text,
+    ip text
+);
 
 
 --
@@ -806,6 +927,51 @@ CREATE SEQUENCE public.usaspending_awards_id_seq
 --
 
 ALTER SEQUENCE public.usaspending_awards_id_seq OWNED BY public.usaspending_awards.id;
+
+
+--
+-- Name: users; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.users (
+    id integer NOT NULL,
+    org_id integer NOT NULL,
+    email text NOT NULL,
+    name text,
+    password_hash text,
+    org_role text DEFAULT 'member'::text NOT NULL,
+    is_staff boolean DEFAULT false NOT NULL,
+    status text DEFAULT 'active'::text NOT NULL,
+    last_login_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.users_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
+
+
+--
+-- Name: access_requests id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_requests ALTER COLUMN id SET DEFAULT nextval('public.access_requests_id_seq'::regclass);
 
 
 --
@@ -914,10 +1080,24 @@ ALTER TABLE ONLY public.ingest_runs ALTER COLUMN id SET DEFAULT nextval('public.
 
 
 --
+-- Name: invitations id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invitations ALTER COLUMN id SET DEFAULT nextval('public.invitations_id_seq'::regclass);
+
+
+--
 -- Name: news_articles id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.news_articles ALTER COLUMN id SET DEFAULT nextval('public.news_articles_id_seq'::regclass);
+
+
+--
+-- Name: organizations id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.organizations ALTER COLUMN id SET DEFAULT nextval('public.organizations_id_seq'::regclass);
 
 
 --
@@ -932,6 +1112,21 @@ ALTER TABLE ONLY public.sam_award_notices ALTER COLUMN id SET DEFAULT nextval('p
 --
 
 ALTER TABLE ONLY public.usaspending_awards ALTER COLUMN id SET DEFAULT nextval('public.usaspending_awards_id_seq'::regclass);
+
+
+--
+-- Name: users id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+
+
+--
+-- Name: access_requests access_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.access_requests
+    ADD CONSTRAINT access_requests_pkey PRIMARY KEY (id);
 
 
 --
@@ -1143,6 +1338,22 @@ ALTER TABLE ONLY public.ingest_runs
 
 
 --
+-- Name: invitations invitations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invitations
+    ADD CONSTRAINT invitations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: invitations invitations_token_hash_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invitations
+    ADD CONSTRAINT invitations_token_hash_key UNIQUE (token_hash);
+
+
+--
 -- Name: news_articles news_articles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1156,6 +1367,22 @@ ALTER TABLE ONLY public.news_articles
 
 ALTER TABLE ONLY public.news_articles
     ADD CONSTRAINT news_articles_url_key UNIQUE (url);
+
+
+--
+-- Name: organizations organizations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.organizations
+    ADD CONSTRAINT organizations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: organizations organizations_slug_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.organizations
+    ADD CONSTRAINT organizations_slug_key UNIQUE (slug);
 
 
 --
@@ -1175,6 +1402,14 @@ ALTER TABLE ONLY public.sam_award_notices
 
 
 --
+-- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sessions
+    ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: usaspending_awards usaspending_awards_generated_internal_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1188,6 +1423,14 @@ ALTER TABLE ONLY public.usaspending_awards
 
 ALTER TABLE ONLY public.usaspending_awards
     ADD CONSTRAINT usaspending_awards_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_pkey PRIMARY KEY (id);
 
 
 --
@@ -1226,6 +1469,13 @@ CREATE INDEX idx_idiq_recipients_ticker ON public.idiq_recipients USING btree (t
 
 
 --
+-- Name: idx_invitations_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_invitations_email ON public.invitations USING btree (lower(email));
+
+
+--
 -- Name: idx_sam_notices_needs_detail; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1251,6 +1501,13 @@ CREATE INDEX idx_sam_notices_posted_date ON public.sam_award_notices USING btree
 --
 
 CREATE INDEX idx_sam_notices_uei ON public.sam_award_notices USING btree (awardee_uei);
+
+
+--
+-- Name: idx_sessions_user; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_sessions_user ON public.sessions USING btree (user_id);
 
 
 --
@@ -1307,6 +1564,34 @@ CREATE INDEX idx_usa_awards_recipient_uei ON public.usaspending_awards USING btr
 --
 
 CREATE INDEX idx_usa_awards_seed_uei ON public.usaspending_awards USING btree (seed_uei);
+
+
+--
+-- Name: idx_users_email_lower; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX idx_users_email_lower ON public.users USING btree (lower(email));
+
+
+--
+-- Name: idx_users_org; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_users_org ON public.users USING btree (org_id);
+
+
+--
+-- Name: ix_access_requests_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_access_requests_created_at ON public.access_requests USING btree (created_at DESC);
+
+
+--
+-- Name: ix_access_requests_email; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX ix_access_requests_email ON public.access_requests USING btree (email);
 
 
 --
@@ -1521,8 +1806,48 @@ ALTER TABLE ONLY public.idiq_recipients
 
 
 --
+-- Name: invitations invitations_access_request_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invitations
+    ADD CONSTRAINT invitations_access_request_id_fkey FOREIGN KEY (access_request_id) REFERENCES public.access_requests(id);
+
+
+--
+-- Name: invitations invitations_invited_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invitations
+    ADD CONSTRAINT invitations_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES public.users(id);
+
+
+--
+-- Name: invitations invitations_org_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.invitations
+    ADD CONSTRAINT invitations_org_id_fkey FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
+-- Name: sessions sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sessions
+    ADD CONSTRAINT sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: users users_org_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.users
+    ADD CONSTRAINT users_org_id_fkey FOREIGN KEY (org_id) REFERENCES public.organizations(id);
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict osoVcy5D2yMyP6cV3A8NeCN6jaQG8Hd1dT8fpTDHYxIcNs9Nt8Fto5IC0BqW7B8
+\unrestrict FnLIkaz63Po7T7YeUraENVxB4Znm7FANHJV494CbC3O0nDQHOnlshAZoH5QwYH1
 
