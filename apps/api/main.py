@@ -922,45 +922,49 @@ async def dow_awards_screen(
 
 
 @app.get("/admin/icfs/canonicals")
-async def list_icfs_canonicals(request: Request, page: int = 1, page_size: int = 50):
-    if page < 1:
-        page = 1
-    if page_size < 1:
-        page_size = 50
-    if page_size > 200:
-        page_size = 200
-
+async def list_icfs_canonicals(request: Request, page: int = 1, page_size: int = 50, q: str | None = None):
+    """FCC entity directory. Header KPIs (Active/New = last/first-seen within 90d) are counted
+    over the FULL set; the list itself is paginated + server-side name-searched so we never
+    ship all ~1,500+ rows at once (the universe grows)."""
+    page = max(1, page)
+    page_size = min(max(page_size, 1), 200)
     offset = (page - 1) * page_size
+    cutoff = datetime.now(timezone.utc) - timedelta(days=90)
+    ql = (q or "").strip()
+    where = [IcfsCanonicalEntity.canonical_name.ilike(f"%{ql}%")] if ql else []
 
     async with AsyncSessionLocal() as session:
-        count_stmt = select(func.count()).select_from(IcfsCanonicalEntity)
-        count_result = await session.execute(count_stmt)
-        total = int(count_result.scalar() or 0)
+        # header KPIs — full-set counts, independent of page/search
+        total = int((await session.execute(
+            select(func.count()).select_from(IcfsCanonicalEntity))).scalar() or 0)
+        active_90d = int((await session.execute(
+            select(func.count()).select_from(IcfsCanonicalEntity)
+            .where(IcfsCanonicalEntity.last_seen_at >= cutoff))).scalar() or 0)
+        new_90d = int((await session.execute(
+            select(func.count()).select_from(IcfsCanonicalEntity)
+            .where(IcfsCanonicalEntity.first_seen_at >= cutoff))).scalar() or 0)
+        matched = int((await session.execute(
+            select(func.count()).select_from(IcfsCanonicalEntity).where(*where))).scalar() or 0)
 
         mention_count = func.count(ExtractedEntity.id).label("mention_count")
         stmt = (
             select(IcfsCanonicalEntity, mention_count)
             .outerjoin(ExtractedEntity, ExtractedEntity.icfs_canonical_entity_id == IcfsCanonicalEntity.id)
+            .where(*where)
             .group_by(IcfsCanonicalEntity.id)
             .order_by(mention_count.desc())
-            .offset(offset)
-            .limit(page_size)
+            .offset(offset).limit(page_size)
         )
-        result = await session.execute(stmt)
-        canonicals = list(result.all())
+        canonicals = list((await session.execute(stmt)).all())
 
-    total_pages = max(1, (total + page_size - 1) // page_size)
-
+    total_pages = max(1, (matched + page_size - 1) // page_size)
     return templates.TemplateResponse(
         "icfs_canonicals.html",
         {
-            "request": request,
-            "canonicals": canonicals,
-            "page": page,
-            "page_size": page_size,
-            "total": total,
-            "total_pages": total_pages,
-            "title": "Strata - FCC Entities",
+            "request": request, "canonicals": canonicals,
+            "total": total, "active_90d": active_90d, "new_90d": new_90d,
+            "matched": matched, "q": ql, "page": page, "page_size": page_size,
+            "total_pages": total_pages, "title": "Strata - FCC Entities",
         },
     )
 
