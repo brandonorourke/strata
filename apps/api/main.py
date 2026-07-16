@@ -1275,7 +1275,7 @@ async def icfs_contested(request: Request, applicant: str = "", min_pleadings: i
                         AS contestants
                 FROM icfs_filings f
                 LEFT JOIN icfs_pleadings_and_comments p
-                    ON p.file_number ILIKE '%' || f.file_number || '%'
+                    ON p.file_number = f.file_number
                 WHERE f.action IS NULL
                     AND f.file_number IS NOT NULL
                     AND (:applicant_pattern IS NULL OR f.applicant_name ILIKE :applicant_pattern)
@@ -1425,7 +1425,7 @@ async def icfs_entity_timeline(request: Request, canonical_id: int, tab: str = "
                             AS contestants
                     FROM icfs_filings f
                     LEFT JOIN icfs_pleadings_and_comments p
-                        ON p.file_number ILIKE '%' || f.file_number || '%'
+                        ON p.file_number = f.file_number
                     WHERE f.action IS NULL
                         AND f.file_number IS NOT NULL
                         AND f.applicant_name ILIKE :applicant_pattern
