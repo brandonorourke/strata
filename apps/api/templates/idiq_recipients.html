@@ -12,28 +12,17 @@
   .mono { font-family: 'IBM Plex Mono', "SF Mono", Menlo, Consolas, monospace; font-size: 12px; }
   .num { text-align: right; font-variant-numeric: tabular-nums; }
   .muted { color: var(--muted); }
-  .badge { display: inline-block; padding: 2px 9px; border-radius: 2px; font-size: 10.5px;
-           font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-  .badge.confirmed { background: #ecfdf5; color: #047857; }
-  .badge.candidate { background: #fffbeb; color: #b45309; }
-  .badge.excluded  { background: #efece4; color: var(--muted); }
   tr.ex td { opacity: 0.6; }
   .epo-no  { color: #b91c1c; font-weight: 700; }
   .epo-yes { color: var(--muted); }
   tr.flag td { background: #fef2f2; }
   .chips { display: inline-flex; gap: 6px; margin-left: 14px; }
-  .chip { padding: 3px 11px; border-radius: 2px; font-size: 12px; cursor: pointer;
-          border: 1px solid var(--border, #d1d5db); color: var(--muted); user-select: none; }
-  .chip.on { background: var(--accent-dark, #1f2937); color: #fff; border-color: transparent; }
-  .ov { display: inline-block; padding: 1px 7px; border-radius: 2px; font-size: 10.5px;
-        font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; cursor: help; }
-  .ov-owned       { background: #ecfdf5; color: #047857; }
-  .ov-divested    { background: #fef2f2; color: #b91c1c; }
-  .ov-independent { background: #fef2f2; color: #b91c1c; }
-  .ov-jv          { background: #e7edf3; color: var(--seal); }
-  .ov-unknown     { background: #efece4; color: var(--muted); }
   .ov-src { font-size: 10.5px; margin-left: 5px; color: var(--accent); }
 </style>
+
+{# status/verdict → shared semantic badge variant #}
+{% set STATUS_SEM = {'confirmed':'ok','candidate':'warn','excluded':'neutral'} %}
+{% set VERDICT_SEM = {'owned':'ok','divested':'bad','independent':'bad','jv':'info','unknown':'neutral'} %}
 
 <h2>UEI directory</h2>
 <div class="ur-sub">
@@ -54,7 +43,7 @@
 <div class="ur-tools">
   <input type="text" id="ur-filter" placeholder="Filter ticker / name / UEI…" autocomplete="off">
   <span class="chips" id="ur-chips">
-    <span class="chip on" data-f="all">All</span>
+    <span class="chip active" data-f="all">All</span>
     <span class="chip" data-f="candidate">Candidate</span>
     <span class="chip" data-f="confirmed">Confirmed</span>
     <span class="chip" data-f="excluded">Excluded</span>
@@ -84,14 +73,14 @@
       <td>{{ r.name or '—' }}</td>
       <td>
         {% if r.ov_verdict %}
-          <span class="ov ov-{{ r.ov_verdict }}" title="{{ r.ov_rationale }}{% if r.ov_as_of and r.ov_as_of != 'unknown' %} ({{ r.ov_as_of }}){% endif %}">{{ r.ov_verdict }}</span>
+          <span class="badge badge--{{ VERDICT_SEM.get(r.ov_verdict, 'neutral') }}" title="{{ r.ov_rationale }}{% if r.ov_as_of and r.ov_as_of != 'unknown' %} ({{ r.ov_as_of }}){% endif %}">{{ r.ov_verdict }}</span>
           {% if r.ov_source and r.ov_source.startswith('http') %}<a href="{{ r.ov_source }}" target="_blank" rel="noopener" class="ov-src">src</a>{% endif %}
         {% elif r.review %}<span class="epo-no">⚠ verify</span>
           <span class="muted">${{ '%.0f' | format(r.recent_obl / 1e6) }}M</span>
         {% else %}<span class="muted">—</span>{% endif %}
       </td>
       <td class="mono muted">{{ r.uei }}</td>
-      <td><span class="badge {{ r.status }}">{{ r.status }}</span></td>
+      <td><span class="badge badge--{{ STATUS_SEM.get(r.status, 'neutral') }}">{{ r.status }}</span></td>
       <td class="num">{{ r.awards or '—' }}</td>
       <td class="mono muted">{{ r.seed_uei or '—' }}</td>
       <td class="muted">{{ r.first_seen.strftime('%Y-%m-%d') if r.first_seen else '—' }}</td>
@@ -121,7 +110,7 @@
     const c = e.target.closest('.chip');
     if (!c) return;
     mode = c.dataset.f;
-    chips.querySelectorAll('.chip').forEach(x => x.classList.toggle('on', x === c));
+    chips.querySelectorAll('.chip').forEach(x => x.classList.toggle('active', x === c));
     apply();
   });
 </script>

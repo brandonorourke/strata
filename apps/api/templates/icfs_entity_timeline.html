@@ -102,7 +102,7 @@
               {% endif %}
             </div>
             {% if ev.signal_tier == "signal" %}
-              <span style="font-size: 11px; font-weight: 600; color: #b45309; background: #fef3c7; border-radius: 2px; padding: 2px 7px; white-space: nowrap; margin-left: 8px;">
+              <span class="badge badge--warn" style="margin-left: 8px;">
                 {{ ev.signal_reason or "signal" }}
               </span>
             {% endif %}
@@ -178,25 +178,6 @@
   {% endif %}
 
 <style>
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border-radius: 2px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 0.8em;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-}
-.chip.active {
-  background: var(--ink);
-  color: var(--bg);
-  border-color: var(--ink);
-}
 .chip-signal.active {
   background: #fef3c7;
   color: #b45309;

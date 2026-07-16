@@ -199,6 +199,29 @@
         color: var(--muted);
       }
       .status.confirmed { background: #ecfdf5; color: #047857; }
+
+      /* ── Badges: shared status system (single source of truth) ── */
+      .badge {
+        display: inline-block; padding: 2px 8px; border-radius: var(--radius);
+        font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.04em; white-space: nowrap;
+      }
+      .badge--ok      { background: #ecfdf5; color: #047857; }      /* confirmed · owned   */
+      .badge--warn    { background: #fef3c7; color: #b45309; }      /* candidate · signal  */
+      .badge--bad     { background: #fef2f2; color: #b91c1c; }      /* divested · negative */
+      .badge--neutral { background: #efece4; color: var(--muted); } /* excluded · unknown  */
+      .badge--info    { background: #e7edf3; color: var(--seal); }  /* modification · jv   */
+
+      /* ── Chips: shared filter/toggle pill ── */
+      .chip {
+        display: inline-flex; align-items: center; gap: 5px;
+        padding: 4px 11px; border-radius: var(--radius);
+        border: 1px solid var(--border); background: var(--surface);
+        color: var(--muted); font-size: 12px; font-weight: 500;
+        cursor: pointer; user-select: none;
+        transition: background 0.1s, color 0.1s, border-color 0.1s;
+      }
+      .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
       .events { display: flex; flex-wrap: wrap; gap: 8px; }
       .event {
         border: 1px solid var(--border);

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+{% set ACTION_SEM = {'award':'ok','modification':'info','other':'neutral'} %}
 
 <style>
   .page-head { margin-bottom: 18px; }
@@ -78,13 +79,6 @@
     font-size: 12px; font-weight: 400; line-height: 1.55; color: var(--ink); white-space: normal;
   }
 
-  .badge {
-    display: inline-block; padding: 2px 8px; border-radius: 2px; font-size: 10.5px;
-    font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
-  }
-  .badge-award        { background: #ecfdf5; color: #047857; }
-  .badge-modification { background: #e7edf3; color: var(--seal); }
-  .badge-other        { background: #efece4; color: var(--muted); }
   .badge-program {
     background: var(--accent-tint); color: var(--accent-dark);
     text-transform: none; font-weight: 600; margin-left: 6px; letter-spacing: 0;
@@ -177,7 +171,7 @@
                     {% else %}—{% endif %}
                   </td>
                   <td class="grp" rowspan="{{ n }}">
-                    {% if award.action_type %}<span class="badge badge-{{ award.action_type }}">{{ award.action_type }}</span>{% else %}—{% endif %}
+                    {% if award.action_type %}<span class="badge badge--{{ ACTION_SEM.get(award.action_type, 'neutral') }}">{{ award.action_type }}</span>{% else %}—{% endif %}
                   </td>
                   <td class="grp purpose" rowspan="{{ n }}">
                     {{ award.purpose or "—" }}
