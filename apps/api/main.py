@@ -1077,32 +1077,35 @@ async def icfs_filing_detail(request: Request, filing_id: int):
 
 
 @app.get("/admin/icfs/pleadings")
-async def list_icfs_pleadings(request: Request, page: int = 1, page_size: int = 50):
-    if page < 1:
-        page = 1
-    if page_size < 1:
-        page_size = 50
-    if page_size > 200:
-        page_size = 200
-
+async def list_icfs_pleadings(request: Request, page: int = 1, page_size: int = 50, q: str | None = None):
+    page = max(1, page)
+    page_size = min(max(page_size, 1), 200)
     offset = (page - 1) * page_size
+    ql = (q or "").strip()
+    where = [or_(
+        IcfsPleadingAndComment.file_number.ilike(f"%{ql}%"),
+        IcfsPleadingAndComment.filer_name.ilike(f"%{ql}%"),
+        IcfsPleadingAndComment.applicant_names.ilike(f"%{ql}%"),
+        IcfsPleadingAndComment.pleading_type.ilike(f"%{ql}%"),
+    )] if ql else []
 
     async with AsyncSessionLocal() as session:
-        count_stmt = select(func.count()).select_from(IcfsPleadingAndComment)
-        count_result = await session.execute(count_stmt)
-        total = int(count_result.scalar() or 0)
+        total = int((await session.execute(
+            select(func.count()).select_from(IcfsPleadingAndComment))).scalar() or 0)
+        matched = int((await session.execute(
+            select(func.count()).select_from(IcfsPleadingAndComment).where(*where))).scalar() or 0)
 
         stmt = (
             select(IcfsPleadingAndComment)
             .options(selectinload(IcfsPleadingAndComment.extracted_events))
+            .where(*where)
             .order_by(IcfsPleadingAndComment.sys_created_on.desc().nullslast(), IcfsPleadingAndComment.id.desc())
             .offset(offset)
             .limit(page_size)
         )
-        result = await session.execute(stmt)
-        pleadings = list(result.scalars().all())
+        pleadings = list((await session.execute(stmt)).scalars().all())
 
-    total_pages = max(1, (total + page_size - 1) // page_size)
+    total_pages = max(1, (matched + page_size - 1) // page_size)
 
     return templates.TemplateResponse(
         "icfs_pleadings.html",
@@ -1110,6 +1113,8 @@ async def list_icfs_pleadings(request: Request, page: int = 1, page_size: int = 
             "request": request,
             "pleadings": pleadings,
             "citation_url": _icfs_pleading_citation_url,
+            "q": ql,
+            "matched": matched,
             "page": page,
             "page_size": page_size,
             "total": total,

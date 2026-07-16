@@ -1,7 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-  <h2>ICFS — Pleadings &amp; Comments</h2>
-  <div class="meta" style="margin-bottom: 12px;">{{ total }} total</div>
+  <h2>Pleadings</h2>
+  <div class="meta" style="margin-bottom: 12px;">FCC ICFS pleadings &amp; comments — {{ total }} total.</div>
+
+  <form method="get" class="search-tools">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search filer, applicant, file number, type…" autocomplete="off">
+    <button type="submit">Search</button>
+    {% if q %}<a href="/admin/icfs/pleadings" class="meta">Clear</a>
+      <span class="meta">{{ matched }} match{{ "es" if matched != 1 }}</span>{% endif %}
+  </form>
 
   <table>
     <thead>
@@ -49,15 +56,12 @@
     </tbody>
   </table>
 
-  {% if total_pages and total_pages > 1 %}
+  {% if total_pages > 1 %}
+    {% set qs = ('&q=' ~ q) if q else '' %}
     <div class="meta" style="margin-top: 12px;">
-      {% if page > 1 %}
-        <a href="/admin/icfs/pleadings?page={{ page - 1 }}&page_size={{ page_size }}">Prev</a>
-      {% endif %}
+      {% if page > 1 %}<a href="?page={{ page - 1 }}{{ qs }}">Prev</a>{% endif %}
       <span>Page {{ page }} of {{ total_pages }}</span>
-      {% if page < total_pages %}
-        <a href="/admin/icfs/pleadings?page={{ page + 1 }}&page_size={{ page_size }}">Next</a>
-      {% endif %}
+      {% if page < total_pages %}<a href="?page={{ page + 1 }}{{ qs }}">Next</a>{% endif %}
     </div>
   {% endif %}
 {% endblock %}

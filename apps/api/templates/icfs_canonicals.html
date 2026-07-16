@@ -1,8 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
 <style>
-  .fe-tools { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
-  .fe-tools input { width: 280px; }
   .fe-pager { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
 </style>
 
@@ -17,7 +15,7 @@
   <div class="kpi"><div class="v">{{ new_90d }}</div><div class="l">New 90d</div></div>
 </div>
 
-<form method="get" class="fe-tools">
+<form method="get" class="search-tools">
   <input type="text" name="q" value="{{ q }}" placeholder="Search company…" autocomplete="off">
   <button type="submit">Search</button>
   {% if q %}<a href="/admin/icfs/canonicals" class="meta">Clear</a>
