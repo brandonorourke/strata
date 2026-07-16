@@ -35,6 +35,7 @@ from strata_core.models import (
     UsaspendingAward,
     IdiqRecipient,
     Company,
+    AccessRequest,
 )
 
 app = FastAPI(title="Strata UI")
@@ -175,10 +176,29 @@ async def landing(request: Request):
 
 
 @app.get("/marketing")
-async def marketing(request: Request):
+async def marketing(request: Request, requested: int = 0):
     # preview of the paper-light marketing page (designer template) — standalone,
     # fonts via Google CDN for now. Candidate to become the public apex landing.
-    return templates.TemplateResponse("marketing.html", {"request": request})
+    # `requested=1` (set by the POST /signup redirect) shows the thank-you state.
+    return templates.TemplateResponse(
+        "marketing.html", {"request": request, "requested": bool(requested)}
+    )
+
+
+@app.post("/signup")
+async def signup(request: Request, email: str = Form(...)):
+    # Capture an access request from the marketing page, then PRG-redirect back
+    # to the thank-you state so a refresh doesn't resubmit.
+    email = (email or "").strip().lower()
+    if email:
+        async with AsyncSessionLocal() as session:
+            session.add(AccessRequest(
+                email=email,
+                source="marketing",
+                user_agent=request.headers.get("user-agent"),
+            ))
+            await session.commit()
+    return RedirectResponse("/marketing?requested=1#access", status_code=303)
 
 
 @app.get("/login")

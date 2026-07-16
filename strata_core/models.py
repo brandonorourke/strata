@@ -491,3 +491,16 @@ class IdiqRecipient(Base):
     ownership_raw        = Column(Text, nullable=True)   # full LLM output
     ownership_model      = Column(Text, nullable=True)
     ownership_checked_at = Column(DateTime(timezone=True), nullable=True)
+
+
+class AccessRequest(Base):
+    """Inbound 'Request access' submissions from the public marketing page. One row per
+    submission — no dedup, so the full inbound trail is preserved. See migration 0050."""
+    __tablename__ = "access_requests"
+
+    id         = Column(Integer, primary_key=True)
+    email      = Column(Text, nullable=False)
+    source     = Column(Text, nullable=False, server_default="marketing")
+    user_agent = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+

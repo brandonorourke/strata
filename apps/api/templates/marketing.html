@@ -66,12 +66,19 @@
     font-size: 11px; color: var(--ink-faint);
     letter-spacing: 0.08em; text-transform: uppercase;
   }
+  .bar-actions { display: flex; align-items: center; gap: 10px; }
   .bar-login {
     font-size: 13px; font-weight: 500; color: var(--ink); text-decoration: none;
     padding: 6px 14px; border: 1px solid var(--rule); white-space: nowrap;
     transition: border-color .18s ease, color .18s ease;
   }
   .bar-login:hover { border-color: var(--flag); color: var(--flag); }
+  .bar-signup {
+    font-size: 13px; font-weight: 500; color: var(--paper); text-decoration: none;
+    padding: 6px 14px; border: 1px solid var(--ink); background: var(--ink); white-space: nowrap;
+    transition: background .18s ease, border-color .18s ease;
+  }
+  .bar-signup:hover { background: var(--flag); border-color: var(--flag); }
 
   /* ---------- hero ---------- */
   .hero { padding: 88px 0 64px; }
@@ -242,6 +249,11 @@
   input[type=email]:focus { outline: 2px solid var(--flag); outline-offset: 1px; border-color: var(--flag); }
   input[type=email]::placeholder { color: var(--ink-faint); }
   .form-note { font-size: 12px; color: var(--ink-faint); margin-top: 14px; }
+  .request-ok {
+    font-family: 'Newsreader', serif; font-size: 18px; color: var(--flag);
+    padding: 16px 20px; border: 1px solid var(--flag-soft); background: var(--flag-soft);
+    max-width: 460px;
+  }
 
   /* ---------- footer ---------- */
   footer.wrap {
@@ -272,7 +284,10 @@
 <header>
   <div class="wrap bar">
     <div class="brand">Strata<span>.</span></div>
-    <a href="/login" class="bar-login">Log in</a>
+    <div class="bar-actions">
+      <a href="/login" class="bar-login">Log in</a>
+      <a href="#access" class="bar-signup">Sign up</a>
+    </div>
   </div>
 </header>
 
@@ -387,17 +402,21 @@
   <div class="wrap cta-inner">
     <h2>See what surfaces on your book.</h2>
     <p>Send the names you hold. We'll show you the records already moving on them.</p>
-    <form action="/signup" method="POST">
-      <input type="email" name="email" placeholder="you@firm.com" required aria-label="Work email">
-      <button type="submit" class="btn">Request access</button>
-    </form>
+    {% if requested %}
+      <div class="request-ok">Thanks — we've got your request and we'll be in touch shortly.</div>
+    {% else %}
+      <form action="/signup" method="POST">
+        <input type="email" name="email" placeholder="you@firm.com" required aria-label="Work email">
+        <button type="submit" class="btn">Request access</button>
+      </form>
+    {% endif %}
     <div class="form-note mono">Or reach us directly at hello@strataterminal.com</div>
   </div>
 </section>
 
 <footer class="wrap">
   <div class="brand">Strata<span style="color:var(--flag)">.</span></div>
-  <div class="mono">Proofgraph, Inc · Primary-source intelligence for credit &amp; equity</div>
+  <div class="mono">Proofgraph, Inc · Primary-source intelligence for credit &amp; equity investors</div>
 </footer>
 
 </body>
