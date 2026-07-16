@@ -6,10 +6,10 @@
     <span title="precise publish time from the unkeyed detail endpoint">Published</span> is the exact SAM go-live instant
   </div>
 
-  <form method="get" action="/admin/sam" style="margin-bottom: 12px;">
+  <form method="get" action="/sam" style="margin-bottom: 12px;">
     <input type="text" name="q" value="{{ q }}" placeholder="Search awardee, PIID, or UEI…" style="padding: 6px 8px; width: 320px;">
     <button type="submit">Search</button>
-    {% if q %}<a href="/admin/sam" style="margin-left: 8px;">Clear</a>{% endif %}
+    {% if q %}<a href="/sam" style="margin-left: 8px;">Clear</a>{% endif %}
   </form>
 
   <table>
@@ -57,11 +57,11 @@
   {% if total_pages and total_pages > 1 %}
     <div class="meta" style="margin-top: 12px;">
       {% if page > 1 %}
-        <a href="/admin/sam?page={{ page - 1 }}&page_size={{ page_size }}&q={{ q }}">Prev</a>
+        <a href="/sam?page={{ page - 1 }}&page_size={{ page_size }}&q={{ q }}">Prev</a>
       {% endif %}
       <span>Page {{ page }} of {{ total_pages }}</span>
       {% if page < total_pages %}
-        <a href="/admin/sam?page={{ page + 1 }}&page_size={{ page_size }}&q={{ q }}">Next</a>
+        <a href="/sam?page={{ page + 1 }}&page_size={{ page_size }}&q={{ q }}">Next</a>
       {% endif %}
     </div>
   {% endif %}

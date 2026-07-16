@@ -323,14 +323,14 @@
 
       <div class="nav-section" style="margin-top: 16px;">Federal Contracts</div>
       <a href="/coverage"              class="nav-item {% if path.startswith('/coverage') or path.startswith('/company/') %}active{% endif %}">Coverage</a>
-      <a href="/dow"                   class="nav-item {% if path == '/dow' %}active{% endif %}">DoW Releases</a>
+      <a href="/dow"                   class="nav-item {% if path == '/dow' %}active{% endif %}">Dept. of War</a>
+      <a href="/sam"                   class="nav-item {% if path.startswith('/sam') %}active{% endif %}">SAM.gov</a>
 
       {% if request.state.user and request.state.user.is_staff %}
       <div class="nav-section" style="margin-top: 16px;">Admin</div>
       <a href="/admin/icfs/signals"    class="nav-item {% if path.startswith('/admin/icfs/signals') %}active{% endif %}">ICFS · Signal Notices</a>
       <a href="/admin/dow/contracts"   class="nav-item {% if path.startswith('/admin/dow') %}active{% endif %}">DoW · Releases</a>
-      <a href="/admin/sam"             class="nav-item {% if path.startswith('/admin/sam') %}active{% endif %}">SAM · Award Notices</a>
-      <a href="/usaspending"           class="nav-item {% if path.startswith('/usaspending') %}active{% endif %}">USASpending · Raw Awards</a>
+      <a href="/admin/usaspending"     class="nav-item {% if path.startswith('/admin/usaspending') %}active{% endif %}">USASpending · Raw Awards</a>
       <a href="/admin/idiq/recipients" class="nav-item {% if path.startswith('/admin/idiq') %}active{% endif %}">IDIQ · UEI Directory</a>
       {% endif %}
     </nav>

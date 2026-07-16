@@ -56,9 +56,9 @@ def _is_public(path: str) -> bool:
     return path in _PUBLIC_EXACT or path.startswith(_PUBLIC_PREFIXES)
 
 
-# Staff-only surface: everything under /admin, plus the raw source screens. Customer ICFS
-# pages live under /icfs (not /admin), so they only require login, not staff.
-_STAFF_ONLY_PREFIXES = ("/admin", "/usaspending")
+# Staff-only surface: everything under /admin. Customer pages (/icfs, /sam, /coverage, /dow)
+# live outside /admin, so they only require login, not staff.
+_STAFF_ONLY_PREFIXES = ("/admin",)
 
 
 def _is_staff_only(path: str) -> bool:
@@ -529,7 +529,7 @@ async def dow_contracts(request: Request, page: int = 1, page_size: int = 50):
     })
 
 
-@app.get("/admin/sam")
+@app.get("/sam")
 async def list_sam_notices(request: Request, page: int = 1, page_size: int = 50, q: str = ""):
     """Raw SAM award-notice table (paged, awardee search). See ingest_sam_awards.py."""
     if page < 1:
@@ -575,7 +575,7 @@ async def list_sam_notices(request: Request, page: int = 1, page_size: int = 50,
     })
 
 
-@app.get("/usaspending")
+@app.get("/admin/usaspending")
 async def list_usaspending_awards(request: Request, page: int = 1, page_size: int = 100,
                                   q: str = "", uei: str = "", kind: str = ""):
     """Raw USASpending awards (manual pull-by-UEI). See apps/ingest/pull_usaspending.py.

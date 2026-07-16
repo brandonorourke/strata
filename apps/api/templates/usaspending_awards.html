@@ -12,7 +12,7 @@
     undrawn <b>{{ sum_undrawn | fmt_usd }}</b> · {{ n_enriched }}/{{ total }} detail-enriched{% if n_enriched < total %} — <span title="ceilings come from the detail-endpoint enrichment pass">run enrich to complete</span>{% endif %}
   </div>
 
-  <form method="get" action="/usaspending" style="margin-bottom: 12px;">
+  <form method="get" action="/admin/usaspending" style="margin-bottom: 12px;">
     <input type="text" name="q" value="{{ q }}" placeholder="Search awardee, PIID, parent, description…" style="padding: 6px 8px; width: 300px;">
     <select name="uei" style="padding: 6px 8px;">
       <option value="">All UEIs ({{ ueis|length }})</option>
@@ -27,7 +27,7 @@
       <option value="standalone" {% if kind == 'standalone' %}selected{% endif %}>Standalone</option>
     </select>
     <button type="submit">Filter</button>
-    {% if q or uei or kind %}<a href="/usaspending" style="margin-left: 8px;">Clear</a>{% endif %}
+    {% if q or uei or kind %}<a href="/admin/usaspending" style="margin-left: 8px;">Clear</a>{% endif %}
   </form>
 
   <table>
@@ -58,7 +58,7 @@
         </td>
         <td style="white-space: nowrap;">{{ a.award_id or "—" }}</td>
         <td style="white-space: nowrap;">
-          {% if a.parent_award_id %}<a href="/usaspending?q={{ a.parent_award_id }}" class="meta">{{ a.parent_award_id }}</a>{% else %}—{% endif %}
+          {% if a.parent_award_id %}<a href="/admin/usaspending?q={{ a.parent_award_id }}" class="meta">{{ a.parent_award_id }}</a>{% else %}—{% endif %}
         </td>
         {% set oblig = a.total_obligation if a.total_obligation is not none else a.amount %}
         <td style="white-space: nowrap; text-align: right;" title="base + all options{% if a.base_exercised_options is not none %} · exercised {{ a.base_exercised_options | fmt_usd }}{% endif %}">
@@ -89,9 +89,9 @@
 
   {% if total_pages and total_pages > 1 %}
     <div class="meta" style="margin-top: 12px;">
-      {% if page > 1 %}<a href="/usaspending?page={{ page - 1 }}{{ qs }}">Prev</a>{% endif %}
+      {% if page > 1 %}<a href="/admin/usaspending?page={{ page - 1 }}{{ qs }}">Prev</a>{% endif %}
       <span>Page {{ page }} of {{ total_pages }}</span>
-      {% if page < total_pages %}<a href="/usaspending?page={{ page + 1 }}{{ qs }}">Next</a>{% endif %}
+      {% if page < total_pages %}<a href="/admin/usaspending?page={{ page + 1 }}{{ qs }}">Next</a>{% endif %}
     </div>
   {% endif %}
 {% endblock %}
