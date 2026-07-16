@@ -55,6 +55,19 @@
         text-decoration: none;
       }
       #header .wordmark span { color: var(--accent); }
+      #header .userbox {
+        margin-left: auto;
+        display: flex; align-items: center; gap: 12px;
+        font-size: 12px; color: var(--muted);
+      }
+      #header .userbox .who { font-family: 'IBM Plex Mono', monospace; }
+      #header .userbox form { margin: 0; }
+      #header .userbox button {
+        font: inherit; font-size: 12px; color: var(--muted);
+        background: none; border: none; padding: 0; cursor: pointer;
+        border-bottom: 1px solid transparent;
+      }
+      #header .userbox button:hover { color: var(--accent); border-bottom-color: var(--accent); }
 
       /* ── Sidebar ── */
       #sidebar {
@@ -291,6 +304,12 @@
 
     <div id="header">
       <a href="/coverage" class="wordmark">Strata<span>.</span></a>
+      {% if request.state.user %}
+        <div class="userbox">
+          <span class="who">{{ request.state.user.email }}</span>
+          <form method="post" action="/logout"><button type="submit">Log out</button></form>
+        </div>
+      {% endif %}
     </div>
 
     <nav id="sidebar">

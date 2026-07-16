@@ -1,6 +1,8 @@
 # Authentication & accounts — data model (v1)
 
-Status: **design** (data model finalized; migrations/code not yet built).
+Status: **login + sessions BUILT** (migration 0051 applied; `POST /login`/`/logout`, the
+session cookie + gating middleware, and the staff `/admin` gate are live). **Invite flow +
+default-deny on customer pages: not yet built** (see end).
 Supersedes the placeholder `/login` (`POST /login` returns a "not available yet" note) and
 builds on `access_requests` (migration 0050), which becomes the top of the funnel.
 

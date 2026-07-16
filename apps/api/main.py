@@ -36,10 +36,38 @@ from strata_core.models import (
     IdiqRecipient,
     Company,
     AccessRequest,
+    User,
 )
+from strata_core import auth
+from apps.api import auth_web
+from urllib.parse import quote
 
 app = FastAPI(title="Strata UI")
 templates = Jinja2Templates(directory="apps/api/templates")
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    # Resolve the session cookie once per request — only when a cookie is present, so
+    # anonymous traffic (marketing, healthcheck) takes no DB hit. Stash on request.state
+    # so routes and base.html can read the current user.
+    request.state.user = None
+    if request.cookies.get(auth_web.COOKIE_NAME):
+        request.state.user = await auth_web.load_current_user(request)
+
+    # Gate the internal /admin surface behind a staff login.
+    if request.url.path.startswith("/admin"):
+        user = request.state.user
+        if user is None:
+            return RedirectResponse(
+                f"/login?next={quote(request.url.path, safe='/')}", status_code=303
+            )
+        if not user.is_staff:
+            return HTMLResponse("Forbidden", status_code=403)
+
+    return await call_next(request)
+
+
 def _pretty_json(v):
     if isinstance(v, dict):
         v = {k: (json.loads(val) if isinstance(val, str) and val.startswith(('{', '[')) else val)
@@ -201,19 +229,67 @@ async def signup(request: Request, email: str = Form(...)):
     return RedirectResponse("/marketing?requested=1#access", status_code=303)
 
 
+def _safe_next(nxt: str, is_staff: bool) -> str:
+    # only allow local paths (block open-redirect / protocol-relative); sensible default
+    if nxt and nxt.startswith("/") and not nxt.startswith("//"):
+        return nxt
+    return "/admin" if is_staff else "/coverage"
+
+
 @app.get("/login")
-async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+async def login_page(request: Request, next: str = "/"):
+    if getattr(request.state, "user", None):
+        return RedirectResponse(_safe_next(next, request.state.user.is_staff), status_code=303)
+    return templates.TemplateResponse("login.html", {"request": request, "next": next})
 
 
 @app.post("/login")
-async def login_submit(request: Request):
-    # placeholder — real auth to be built next; for now just re-render with a note.
-    return templates.TemplateResponse(
-        "login.html",
-        {"request": request,
-         "message": "Sign-in isn’t available yet — request access and we’ll be in touch."},
-    )
+async def login_submit(
+    request: Request,
+    email: str = Form(...),
+    password: str = Form(...),
+    next: str = Form("/"),
+):
+    email_norm = (email or "").strip().lower()
+    async with AsyncSessionLocal() as db:
+        user = (await db.execute(
+            select(User).where(func.lower(User.email) == email_norm)
+        )).scalar_one_or_none()
+
+        ok = (
+            user is not None
+            and user.status == "active"
+            and user.password_hash
+            and auth.verify_password(password, user.password_hash)
+        )
+        if not ok:
+            # generic message — never reveal whether the email exists
+            return templates.TemplateResponse(
+                "login.html",
+                {"request": request, "message": "Invalid email or password.", "next": next},
+                status_code=401,
+            )
+
+        if auth.needs_rehash(user.password_hash):
+            user.password_hash = auth.hash_password(password)
+        raw = await auth_web.new_session_row(db, user, request)
+        user.last_login_at = datetime.now(timezone.utc)
+        dest = _safe_next(next, user.is_staff)
+        await db.commit()
+
+    resp = RedirectResponse(dest, status_code=303)
+    auth_web.set_session_cookie(resp, raw, request)
+    return resp
+
+
+@app.post("/logout")
+async def logout(request: Request):
+    raw = request.cookies.get(auth_web.COOKIE_NAME)
+    if raw:
+        await auth_web.destroy_session(raw)
+    resp = RedirectResponse("/login", status_code=303)
+    auth_web.clear_session_cookie(resp)
+    return resp
 
 
 @app.get("/admin")
