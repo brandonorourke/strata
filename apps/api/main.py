@@ -56,6 +56,15 @@ def _is_public(path: str) -> bool:
     return path in _PUBLIC_EXACT or path.startswith(_PUBLIC_PREFIXES)
 
 
+# Staff-only surface: everything under /admin, plus the raw source screens. Customer ICFS
+# pages live under /icfs (not /admin), so they only require login, not staff.
+_STAFF_ONLY_PREFIXES = ("/admin", "/usaspending")
+
+
+def _is_staff_only(path: str) -> bool:
+    return path.startswith(_STAFF_ONLY_PREFIXES)
+
+
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next):
     # Resolve the session cookie once per request — only when a cookie is present, so
@@ -70,8 +79,8 @@ async def auth_middleware(request: Request, call_next):
             return RedirectResponse(
                 f"/login?next={quote(path, safe='/')}", status_code=303
             )
-        # /admin additionally requires staff
-        if path.startswith("/admin") and not request.state.user.is_staff:
+        # staff-only surface (all of /admin except the customer ICFS pages, plus raw screens)
+        if _is_staff_only(path) and not request.state.user.is_staff:
             return HTMLResponse("Forbidden", status_code=403)
 
     return await call_next(request)
@@ -212,7 +221,7 @@ async def landing(request: Request):
     # bare domain: logged-in users go to the product, visitors to the marketing page.
     # (retires the old landing.html)
     if getattr(request.state, "user", None):
-        return RedirectResponse("/coverage", status_code=303)
+        return RedirectResponse("/icfs/canonicals", status_code=303)
     return RedirectResponse("/marketing", status_code=303)
 
 
@@ -247,7 +256,7 @@ def _safe_next(nxt: str) -> str:
     # land on the product home. "/" is treated as "no target" so we don't bounce to root.
     if nxt and nxt != "/" and nxt.startswith("/") and not nxt.startswith("//"):
         return nxt
-    return "/coverage"
+    return "/icfs/canonicals"
 
 
 @app.get("/login")
@@ -484,7 +493,7 @@ def _icfs_pleading_citation_url(pleading: IcfsPleadingAndComment) -> str:
     return f"{_ICFS_BASE_URL}/icfs?id=ibfs_pc_summary&sys_id={pleading.source_sys_id}"
 
 
-@app.get("/admin/icfs")
+@app.get("/icfs")
 async def icfs_home(request: Request):
     return templates.TemplateResponse("icfs_home.html", {"request": request, "title": "Strata - ICFS Home"})
 
@@ -1046,7 +1055,7 @@ async def dow_awards_screen(
     })
 
 
-@app.get("/admin/icfs/canonicals")
+@app.get("/icfs/canonicals")
 async def list_icfs_canonicals(request: Request, page: int = 1, page_size: int = 50, q: str | None = None):
     """FCC entity directory. Header KPIs (Active/New = last/first-seen within 90d) are counted
     over the FULL set; the list itself is paginated + server-side name-searched so we never
@@ -1094,7 +1103,7 @@ async def list_icfs_canonicals(request: Request, page: int = 1, page_size: int =
     )
 
 
-@app.get("/admin/icfs/filings/by-number/{file_number:path}")
+@app.get("/icfs/filings/by-number/{file_number:path}")
 async def icfs_filing_by_number(file_number: str):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -1103,10 +1112,10 @@ async def icfs_filing_by_number(file_number: str):
         filing_id = result.scalar_one_or_none()
     if filing_id is None:
         raise HTTPException(status_code=404, detail=f"Filing {file_number} not found")
-    return RedirectResponse(url=f"/admin/icfs/filings/{filing_id}")
+    return RedirectResponse(url=f"/icfs/filings/{filing_id}")
 
 
-@app.get("/admin/icfs/filings")
+@app.get("/icfs/filings")
 async def list_icfs_filings(request: Request, page: int = 1, page_size: int = 50, q: str = ""):
     if page < 1:
         page = 1
@@ -1157,7 +1166,7 @@ async def list_icfs_filings(request: Request, page: int = 1, page_size: int = 50
     )
 
 
-@app.get("/admin/icfs/filings/{filing_id}")
+@app.get("/icfs/filings/{filing_id}")
 async def icfs_filing_detail(request: Request, filing_id: int):
     async with AsyncSessionLocal() as session:
         filing = await session.get(IcfsFiling, filing_id)
@@ -1201,7 +1210,7 @@ async def icfs_filing_detail(request: Request, filing_id: int):
     )
 
 
-@app.get("/admin/icfs/pleadings")
+@app.get("/icfs/pleadings")
 async def list_icfs_pleadings(request: Request, page: int = 1, page_size: int = 50, q: str | None = None):
     page = max(1, page)
     page_size = min(max(page_size, 1), 200)
@@ -1248,7 +1257,7 @@ async def list_icfs_pleadings(request: Request, page: int = 1, page_size: int = 
     )
 
 
-@app.get("/admin/icfs/pleadings/{pleading_id}")
+@app.get("/icfs/pleadings/{pleading_id}")
 async def icfs_pleading_detail(request: Request, pleading_id: int):
     async with AsyncSessionLocal() as session:
         pleading = await session.get(
@@ -1269,7 +1278,7 @@ async def icfs_pleading_detail(request: Request, pleading_id: int):
     )
 
 
-@app.get("/admin/icfs/notices")
+@app.get("/icfs/notices")
 async def list_icfs_notices(request: Request, page: int = 1, page_size: int = 50):
     if page < 1:
         page = 1
@@ -1310,7 +1319,7 @@ async def list_icfs_notices(request: Request, page: int = 1, page_size: int = 50
     )
 
 
-@app.get("/admin/icfs/notices/{notice_id}")
+@app.get("/icfs/notices/{notice_id}")
 async def icfs_notice_detail(request: Request, notice_id: int):
     async with AsyncSessionLocal() as session:
         notice = await session.get(IcfsPublicNotice, notice_id)
@@ -1383,7 +1392,7 @@ async def icfs_signals(request: Request, page: int = 1, page_size: int = 50):
     )
 
 
-@app.get("/admin/icfs/contested")
+@app.get("/icfs/contested")
 async def icfs_contested(request: Request, applicant: str = "", min_pleadings: int = 3):
     async with AsyncSessionLocal() as session:
         result = await session.execute(
@@ -1431,7 +1440,7 @@ async def icfs_contested(request: Request, applicant: str = "", min_pleadings: i
     )
 
 
-@app.get("/admin/icfs/entity/{canonical_id}")
+@app.get("/icfs/entity/{canonical_id}")
 async def icfs_entity_timeline(request: Request, canonical_id: int, tab: str = "timeline"):
     async with AsyncSessionLocal() as session:
         canonical = await session.get(IcfsCanonicalEntity, canonical_id)

@@ -6,7 +6,7 @@
   <form method="get" class="search-tools">
     <input type="text" name="q" value="{{ q }}" placeholder="Search filer, applicant, file number, type…" autocomplete="off">
     <button type="submit">Search</button>
-    {% if q %}<a href="/admin/icfs/pleadings" class="meta">Clear</a>
+    {% if q %}<a href="/icfs/pleadings" class="meta">Clear</a>
       <span class="meta">{{ matched }} match{{ "es" if matched != 1 }}</span>{% endif %}
   </form>
 
@@ -29,10 +29,10 @@
         <td>
           {% if pleading.file_number %}
             {% set fns = pleading.file_number.split(', ') %}
-            <a href="/admin/icfs/pleadings/{{ pleading.id }}">{{ fns[0] }}</a>
+            <a href="/icfs/pleadings/{{ pleading.id }}">{{ fns[0] }}</a>
             {% if fns | length > 1 %}<span class="meta"> +{{ fns | length - 1 }} more</span>{% endif %}
           {% else %}
-            <a href="/admin/icfs/pleadings/{{ pleading.id }}" class="meta">No file number</a>
+            <a href="/icfs/pleadings/{{ pleading.id }}" class="meta">No file number</a>
           {% endif %}
         </td>
         <td>{{ pleading.pleading_type or "—" }}</td>

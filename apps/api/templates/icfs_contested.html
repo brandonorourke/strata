@@ -14,7 +14,7 @@
     <input type="hidden" name="min_pleadings" value="{{ min_pleadings }}">
     <button type="submit" style="padding: 7px 14px; background: var(--accent); color: #fff; border: none; border-radius: 2px; font-size: 0.9em; cursor: pointer;">Filter</button>
     {% if applicant %}
-      <a href="/admin/icfs/contested" class="meta" style="font-size: 0.85em;">clear</a>
+      <a href="/icfs/contested" class="meta" style="font-size: 0.85em;">clear</a>
     {% endif %}
   </form>
 
@@ -35,7 +35,7 @@
         {% for row in rows %}
           <tr>
             <td class="meta">{{ loop.index }}</td>
-            <td style="white-space: nowrap;"><a href="/admin/icfs/filings/{{ row.id }}">{{ row.file_number }}</a></td>
+            <td style="white-space: nowrap;"><a href="/icfs/filings/{{ row.id }}">{{ row.file_number }}</a></td>
             <td>{{ row.applicant_name or "—" }}</td>
             <td class="meta" style="white-space: nowrap;">{{ row.submission_date.strftime("%Y-%m-%d") if row.submission_date else "—" }}</td>
             <td class="meta" style="white-space: nowrap;">

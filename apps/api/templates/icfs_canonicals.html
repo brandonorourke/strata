@@ -18,7 +18,7 @@
 <form method="get" class="search-tools">
   <input type="text" name="q" value="{{ q }}" placeholder="Search company…" autocomplete="off">
   <button type="submit">Search</button>
-  {% if q %}<a href="/admin/icfs/canonicals" class="meta">Clear</a>
+  {% if q %}<a href="/icfs/canonicals" class="meta">Clear</a>
     <span class="meta">{{ matched }} match{{ "es" if matched != 1 }}</span>{% endif %}
 </form>
 
@@ -34,7 +34,7 @@
   <tbody>
   {% for canonical, mention_count in canonicals %}
     <tr>
-      <td><a href="/admin/icfs/entity/{{ canonical.id }}">{{ canonical.canonical_name }}</a></td>
+      <td><a href="/icfs/entity/{{ canonical.id }}">{{ canonical.canonical_name }}</a></td>
       <td class="meta">{{ canonical.first_seen_at.strftime("%Y-%m-%d") if canonical.first_seen_at else "—" }}</td>
       <td class="meta">{{ canonical.last_seen_at.strftime("%Y-%m-%d") if canonical.last_seen_at else "—" }}</td>
       <td class="num">{{ mention_count }}</td>

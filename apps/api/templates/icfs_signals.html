@@ -11,12 +11,12 @@
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
         <div>
           {% if entity.icfs_canonical_entity_id %}
-            <a href="/admin/icfs/entity/{{ entity.icfs_canonical_entity_id }}" style="font-weight: 600;">{{ entity.extracted_name }}</a>
+            <a href="/icfs/entity/{{ entity.icfs_canonical_entity_id }}" style="font-weight: 600;">{{ entity.extracted_name }}</a>
           {% else %}
             <span style="font-weight: 600;">{{ entity.extracted_name }}</span>
           {% endif %}
           <span class="meta" style="margin-left: 8px;">
-            <a href="/admin/icfs/notices/{{ notice.id }}">{{ notice.number }}</a>
+            <a href="/icfs/notices/{{ notice.id }}">{{ notice.number }}</a>
             &middot; {{ notice.public_notice_release_date.strftime("%Y-%m-%d") if notice.public_notice_release_date else "—" }}
             &middot; {{ notice.subsystem }}
           </span>

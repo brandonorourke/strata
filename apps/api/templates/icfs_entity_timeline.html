@@ -28,7 +28,7 @@
         <tbody>
           {% for row in contested_rows %}
             <tr>
-              <td style="white-space: nowrap;"><a href="/admin/icfs/filings/{{ row.id }}">{{ row.file_number }}</a></td>
+              <td style="white-space: nowrap;"><a href="/icfs/filings/{{ row.id }}">{{ row.file_number }}</a></td>
               <td class="meta" style="white-space: nowrap;">{{ row.submission_date.strftime("%Y-%m-%d") if row.submission_date else "—" }}</td>
               <td class="meta" style="white-space: nowrap;">
                 {% if row.years_pending %}
@@ -92,13 +92,13 @@
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
             <div style="font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);">
               {% if card_type == "notice" %}
-                Public Notice{% if notice %} &middot; <a href="/admin/icfs/notices/{{ notice.id }}">{{ notice.number }}</a>{% endif %}
+                Public Notice{% if notice %} &middot; <a href="/icfs/notices/{{ notice.id }}">{{ notice.number }}</a>{% endif %}
               {% elif card_type == "action" %}
                 Action{% if action_label %} &mdash; {{ action_label }}{% endif %}
               {% elif card_type == "filing" %}
                 Filing (pending)
               {% else %}
-                Pleading{% if row.pleading.pleading_type %} &mdash; {{ row.pleading.pleading_type | title }}{% endif %}{% if row.pleading %} &middot; <a href="/admin/icfs/pleadings/{{ row.pleading.id }}">{{ row.pleading.file_number or row.pleading.source_sys_id[:8] }}</a>{% endif %}
+                Pleading{% if row.pleading.pleading_type %} &mdash; {{ row.pleading.pleading_type | title }}{% endif %}{% if row.pleading %} &middot; <a href="/icfs/pleadings/{{ row.pleading.id }}">{{ row.pleading.file_number or row.pleading.source_sys_id[:8] }}</a>{% endif %}
               {% endif %}
             </div>
             {% if ev.signal_tier == "signal" %}
@@ -129,7 +129,7 @@
               <div style="font-size: 0.9em; line-height: 1.5; color: var(--text-secondary); margin-bottom: 6px;">{{ row.filing.brief_description }}</div>
             {% endif %}
             <div style="font-size: 0.8em; color: var(--muted); font-family: 'IBM Plex Mono', monospace;">
-              <a href="/admin/icfs/filings/{{ row.filing.id }}" style="font-family: sans-serif;">{{ row.filing.file_number }}</a>
+              <a href="/icfs/filings/{{ row.filing.id }}" style="font-family: sans-serif;">{{ row.filing.file_number }}</a>
               {% if row.filing.expiration_date %}<span style="font-family: sans-serif; margin-left: 8px;">exp {{ row.filing.expiration_date.strftime("%Y-%m-%d") }}</span>{% endif %}
               {% if row.doc_url %}&nbsp;<a href="{{ row.doc_url }}" target="_blank" style="font-family: sans-serif; font-size: 0.9em;">↗ ICFS</a>{% endif %}
               {% if row.filing.grant_doc_url %}&nbsp;<a href="{{ row.filing.grant_doc_url }}" target="_blank" style="font-family: sans-serif; font-size: 0.9em;">↗ grant PDF</a>{% endif %}

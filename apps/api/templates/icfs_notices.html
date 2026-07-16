@@ -17,7 +17,7 @@
       {% set companies = notice.extracted_events | map(attribute='extracted_name') | unique | list %}
       <tr>
         <td style="white-space: nowrap;">{{ notice.public_notice_release_date.strftime("%Y-%m-%d") if notice.public_notice_release_date else "—" }}</td>
-        <td><a href="/admin/icfs/notices/{{ notice.id }}">{{ notice.number or "—" }}</a>{% if notice.da_number %}<div class="meta">DA {{ notice.da_number }}</div>{% endif %}</td>
+        <td><a href="/icfs/notices/{{ notice.id }}">{{ notice.number or "—" }}</a>{% if notice.da_number %}<div class="meta">DA {{ notice.da_number }}</div>{% endif %}</td>
         <td>{{ notice.type_of_document or "—" }}</td>
         <td>
           {% if companies %}
@@ -41,11 +41,11 @@
   {% if total_pages and total_pages > 1 %}
     <div class="meta" style="margin-top: 12px;">
       {% if page > 1 %}
-        <a href="/admin/icfs/notices?page={{ page - 1 }}&page_size={{ page_size }}">Prev</a>
+        <a href="/icfs/notices?page={{ page - 1 }}&page_size={{ page_size }}">Prev</a>
       {% endif %}
       <span>Page {{ page }} of {{ total_pages }}</span>
       {% if page < total_pages %}
-        <a href="/admin/icfs/notices?page={{ page + 1 }}&page_size={{ page_size }}">Next</a>
+        <a href="/icfs/notices?page={{ page + 1 }}&page_size={{ page_size }}">Next</a>
       {% endif %}
     </div>
   {% endif %}

@@ -3,10 +3,10 @@
   <h2>ICFS — Filings &amp; Actions</h2>
   <div class="meta" style="margin-bottom: 12px;">{{ total }} total</div>
 
-  <form method="get" action="/admin/icfs/filings" style="margin-bottom: 12px;">
+  <form method="get" action="/icfs/filings" style="margin-bottom: 12px;">
     <input type="text" name="q" value="{{ q }}" placeholder="Search applicant or file number…" style="padding: 6px 8px; width: 300px;">
     <button type="submit">Search</button>
-    {% if q %}<a href="/admin/icfs/filings" style="margin-left: 8px;">Clear</a>{% endif %}
+    {% if q %}<a href="/icfs/filings" style="margin-left: 8px;">Clear</a>{% endif %}
   </form>
 
   <table>
@@ -28,7 +28,7 @@
         </td>
         <td>{{ filing.applicant_name or "—" }}</td>
         <td>
-          <div><a href="/admin/icfs/filings/{{ filing.id }}">{{ filing.file_number or "—" }}</a></div>
+          <div><a href="/icfs/filings/{{ filing.id }}">{{ filing.file_number or "—" }}</a></div>
           {% if filing.brief_description %}
             <div class="meta" style="margin-top: 2px;">{{ filing.brief_description }}</div>
           {% endif %}
@@ -54,11 +54,11 @@
   {% if total_pages and total_pages > 1 %}
     <div class="meta" style="margin-top: 12px;">
       {% if page > 1 %}
-        <a href="/admin/icfs/filings?page={{ page - 1 }}&page_size={{ page_size }}&q={{ q }}">Prev</a>
+        <a href="/icfs/filings?page={{ page - 1 }}&page_size={{ page_size }}&q={{ q }}">Prev</a>
       {% endif %}
       <span>Page {{ page }} of {{ total_pages }}</span>
       {% if page < total_pages %}
-        <a href="/admin/icfs/filings?page={{ page + 1 }}&page_size={{ page_size }}&q={{ q }}">Next</a>
+        <a href="/icfs/filings?page={{ page + 1 }}&page_size={{ page_size }}&q={{ q }}">Next</a>
       {% endif %}
     </div>
   {% endif %}

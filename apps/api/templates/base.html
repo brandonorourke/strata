@@ -303,7 +303,7 @@
   <body>
 
     <div id="header">
-      <a href="/coverage" class="wordmark">Strata<span>.</span></a>
+      <a href="/icfs/canonicals" class="wordmark">Strata<span>.</span></a>
       {% if request.state.user %}
         <div class="userbox">
           <span class="who">{{ request.state.user.email }}</span>
@@ -314,23 +314,25 @@
 
     <nav id="sidebar">
       {% set path = request.url.path %}
-      <div class="nav-section">Federal Contracts</div>
+      <div class="nav-section">ICFS (FCC)</div>
+      <a href="/icfs/canonicals" class="nav-item {% if path.startswith('/icfs/canonicals') or path.startswith('/icfs/entity') %}active{% endif %}">Companies</a>
+      <a href="/icfs/contested"  class="nav-item {% if path.startswith('/icfs/contested') %}active{% endif %}">Contested</a>
+      <a href="/icfs/filings"    class="nav-item {% if path.startswith('/icfs/filings') %}active{% endif %}">Filings</a>
+      <a href="/icfs/pleadings"  class="nav-item {% if path.startswith('/icfs/pleadings') %}active{% endif %}">Pleadings</a>
+      <a href="/icfs/notices"    class="nav-item {% if path.startswith('/icfs/notices') %}active{% endif %}">Notices</a>
+
+      <div class="nav-section" style="margin-top: 16px;">Federal Contracts</div>
       <a href="/coverage"              class="nav-item {% if path.startswith('/coverage') or path.startswith('/company/') %}active{% endif %}">Coverage</a>
       <a href="/dow"                   class="nav-item {% if path == '/dow' %}active{% endif %}">DoW Releases</a>
 
-      <div class="nav-section" style="margin-top: 16px;">ICFS (FCC)</div>
-      <a href="/admin/icfs/canonicals" class="nav-item {% if path.startswith('/admin/icfs/canonicals') or path.startswith('/admin/icfs/entity') %}active{% endif %}">Companies</a>
-      <a href="/admin/icfs/contested"  class="nav-item {% if path.startswith('/admin/icfs/contested') %}active{% endif %}">Contested</a>
-      <a href="/admin/icfs/filings"    class="nav-item {% if path.startswith('/admin/icfs/filings') %}active{% endif %}">Filings</a>
-      <a href="/admin/icfs/pleadings"  class="nav-item {% if path.startswith('/admin/icfs/pleadings') %}active{% endif %}">Pleadings</a>
-      <a href="/admin/icfs/notices"    class="nav-item {% if path.startswith('/admin/icfs/notices') %}active{% endif %}">Notices</a>
-
+      {% if request.state.user and request.state.user.is_staff %}
       <div class="nav-section" style="margin-top: 16px;">Admin</div>
       <a href="/admin/icfs/signals"    class="nav-item {% if path.startswith('/admin/icfs/signals') %}active{% endif %}">ICFS · Signal Notices</a>
       <a href="/admin/dow/contracts"   class="nav-item {% if path.startswith('/admin/dow') %}active{% endif %}">DoW · Releases</a>
       <a href="/admin/sam"             class="nav-item {% if path.startswith('/admin/sam') %}active{% endif %}">SAM · Award Notices</a>
       <a href="/usaspending"           class="nav-item {% if path.startswith('/usaspending') %}active{% endif %}">USASpending · Raw Awards</a>
       <a href="/admin/idiq/recipients" class="nav-item {% if path.startswith('/admin/idiq') %}active{% endif %}">IDIQ · UEI Directory</a>
+      {% endif %}
     </nav>
 
     <main id="main">
